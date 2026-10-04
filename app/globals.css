@@ -1232,3 +1232,135 @@ code {
     height: 46px;
   }
 }
+
+
+/* ───────── accounts + leaderboard ───────── */
+
+.topbar-side {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-btn.signed-in {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  font-family: var(--mono);
+}
+
+.account {
+  display: grid;
+  gap: 12px;
+}
+
+.account-hello {
+  margin: 0;
+}
+
+.small-tabs {
+  margin: 0 auto 4px;
+}
+
+.small-tabs button {
+  padding: 6px 16px;
+  font-size: 0.9rem;
+}
+
+.field span {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.field input {
+  width: 100%;
+  height: 46px;
+  padding: 0 12px;
+  font-family: var(--sans);
+  font-size: 1rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+
+.field input:focus {
+  border-color: var(--text);
+}
+
+.stat-nums.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.lb-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.lb-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.lb-list li.me {
+  background: color-mix(in srgb, var(--green) 18%, var(--surface));
+  outline: 1.5px solid var(--green);
+}
+
+.lb-rank {
+  width: 28px;
+  text-align: center;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.lb-name {
+  flex: 1;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-score {
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
+.lb-note {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 420px) {
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+  }
+  .topbar-side {
+    gap: 4px;
+  }
+  .logo-tile {
+    width: 21px;
+    height: 26px;
+    font-size: 0.8rem;
+    border-radius: 5px;
+  }
+  .logo {
+    gap: 2px;
+  }
+}

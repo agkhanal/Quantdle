@@ -8,6 +8,7 @@ import {
   MAX_GUESSES,
   type Difficulty,
   type GuessResponse,
+  type Profile,
   type PuzzleResponse,
   type RevealResponse,
   type Verdict,
@@ -16,6 +17,7 @@ import Logo from "./Logo";
 import Modal from "./Modal";
 import Confetti from "./Confetti";
 import MarketGame from "./MarketGame";
+import { AccountPanel, LeaderboardPanel } from "./Account";
 
 type Mode = "daily" | "practice" | "markets";
 type Status = "loading" | "playing" | "won" | "lost" | "error";
@@ -71,7 +73,9 @@ export default function Game() {
   const [submitting, setSubmitting] = useState(false);
   const [shake, setShake] = useState(false);
   const [reveal, setReveal] = useState<RevealResponse | null>(null);
-  const [modal, setModal] = useState<"help" | "stats" | "result" | null>(null);
+  const [modal, setModal] = useState<"help" | "stats" | "result" | "account" | "leaderboard" | null>(null);
+  const [user, setUser] = useState<Profile | null>(null);
+  const [credited, setCredited] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [quip, setQuip] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -95,6 +99,7 @@ export default function Game() {
     setSolved([]);
     setFeedback(null);
     setReveal(null);
+    setCredited(false);
     setInput("");
     setReasoning("");
     setQuip(Math.floor(Math.random() * LOADING_QUIPS.length));
@@ -126,6 +131,10 @@ export default function Game() {
 
   useEffect(() => {
     setStats(loadStats());
+    fetch("/api/auth")
+      .then((r) => r.json())
+      .then((b) => setUser(b.user))
+      .catch(() => {});
     load("daily", "medium");
     if (!localStorage.getItem("quantdle-seen-help")) {
       setModal("help");
@@ -218,6 +227,10 @@ export default function Game() {
       const newRows = [...rows, { kind: "guess" as const, step, text: input.trim(), verdict: g.verdict, direction: g.direction }];
       setRows(newRows);
       setFeedback({ text: g.feedback, verdict: g.verdict, judgedBy: g.judgedBy });
+      if (g.credited && g.totalSolved !== undefined) {
+        setCredited(true);
+        setUser((u) => (u ? { ...u, solved: g.totalSolved! } : u));
+      }
       setInput("");
 
       if (g.verdict === "green" && g.solved) {
@@ -270,17 +283,41 @@ export default function Game() {
   return (
     <div className="app">
       <header className="topbar">
-        <button className="icon-btn" aria-label="How to play" onClick={() => setModal("help")}>
-          ?
-        </button>
+        <div className="topbar-side">
+          <button className="icon-btn" aria-label="How to play" onClick={() => setModal("help")}>
+            ?
+          </button>
+          <button className="icon-btn" aria-label="Leaderboard" onClick={() => setModal("leaderboard")}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.5A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1A5 5 0 0 1 8.5 12H8a4 4 0 0 1-4-4V5h3V3zm0 4H6v1a2 2 0 0 0 1 1.7V7zm10 0v2.7A2 2 0 0 0 18 8V7h-1z" />
+            </svg>
+          </button>
+        </div>
         <Logo />
-        <button className="icon-btn" aria-label="Statistics" onClick={() => setModal("stats")}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <rect x="3" y="12" width="4" height="9" rx="1" />
-            <rect x="10" y="6" width="4" height="15" rx="1" />
-            <rect x="17" y="9" width="4" height="12" rx="1" />
-          </svg>
-        </button>
+        <div className="topbar-side">
+          <button className="icon-btn" aria-label="Statistics" onClick={() => setModal("stats")}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <rect x="3" y="12" width="4" height="9" rx="1" />
+              <rect x="10" y="6" width="4" height="15" rx="1" />
+              <rect x="17" y="9" width="4" height="12" rx="1" />
+            </svg>
+          </button>
+          <button
+            className={`icon-btn ${user ? "signed-in" : ""}`}
+            aria-label={user ? `Account: ${user.username}` : "Sign in"}
+            title={user ? user.username : "Sign in"}
+            onClick={() => setModal("account")}
+          >
+            {user ? (
+              user.username[0].toUpperCase()
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21a8 8 0 0 1 16 0z" />
+              </svg>
+            )}
+          </button>
+        </div>
       </header>
 
       <nav className="modes" role="tablist">
@@ -484,8 +521,40 @@ export default function Game() {
             ) : (
               <p className="muted">Loading solution…</p>
             )}
+            {status === "won" && (
+              <div className="lb-note">
+                {user ? (
+                  credited ? (
+                    <>
+                      🏆 +1 on the leaderboard. You&apos;ve solved <b>{user.solved}</b>.
+                    </>
+                  ) : (
+                    <>This one didn&apos;t earn a leaderboard point (already solved, or not all steps were solved while signed in).</>
+                  )
+                ) : (
+                  <>
+                    <button className="link" onClick={() => setModal("account")}>
+                      Sign in
+                    </button>{" "}
+                    to save solves and climb the leaderboard.
+                  </>
+                )}
+              </div>
+            )}
             <StatsView stats={stats} compact />
           </div>
+        </Modal>
+      )}
+
+      {modal === "account" && (
+        <Modal title={user ? "Your account" : "Sign in"} onClose={() => setModal(null)}>
+          <AccountPanel user={user} onChange={setUser} />
+        </Modal>
+      )}
+
+      {modal === "leaderboard" && (
+        <Modal title="Leaderboard" onClose={() => setModal(null)}>
+          <LeaderboardPanel onSignIn={() => setModal("account")} />
         </Modal>
       )}
     </div>
@@ -590,7 +659,7 @@ function HowTo() {
       <p>
         Answer in any form: <code>0.25</code>, <code>1/4</code>, <code>25%</code>, <code>1-(5/6)^4</code>,{" "}
         <code>C(52,5)</code>, <code>e</code>. Use <b>Show your work</b> to let the AI judge read your reasoning, or burn a
-        guess on a <b>💡 hint</b>.
+        guess on a <b>💡 hint</b>. Sign in to put your solves on the <b>leaderboard</b>.
       </p>
       <p className="muted small">
         <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> serves fresh AI-generated puzzles from Easy to Expert.

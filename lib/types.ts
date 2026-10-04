@@ -60,6 +60,21 @@ export interface GuessResponse {
   /** Present once a step is solved: the canonical answer and why. */
   solved?: { answerDisplay: string; explanation: string };
   judgedBy: "ai" | "rules";
+  /** Signed-in players only: whether this guess finished the puzzle and earned a leaderboard point. */
+  credited?: boolean;
+  totalSolved?: number;
+}
+
+export interface Profile {
+  username: string;
+  solved: number;
+  rank: number | null;
+}
+
+export interface LeaderboardResponse {
+  top: { rank: number; username: string; solved: number }[];
+  me: Profile | null;
+  storage: "redis" | "memory";
 }
 
 export interface RevealResponse {

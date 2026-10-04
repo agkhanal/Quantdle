@@ -17,6 +17,12 @@ Answers can be typed in any form: `0.25`, `1/4`, `25%`, `1-(5/6)^4`, `C(52,5)`, 
 
   Who trades with you: a **sharp** trader who has peeked at the next die (adverse selection), an **arb** who trades against any mispricing, and **noise** traders who pay your spread, more often when your market is tight.
 
+## Accounts and leaderboard
+
+Players can create an account (username + password, no email) and climb a leaderboard of **most problems solved**. A puzzle earns a point when its steps are solved in order within 6 guesses, and each puzzle counts once. Passwords are hashed with scrypt; sessions are signed cookies.
+
+Scores are stored in Upstash Redis. Without it, an in-memory store is used, which is fine locally but resets on restart and doesn't work reliably on Vercel.
+
 ## How the judging works
 
 1. **Numbers first.** Every step has a single numeric answer. The server parses your expression and checks it against the answer and tolerance. A match is green with no AI call.
@@ -34,7 +40,8 @@ npm run dev                  # http://localhost:3000
 | Variable | Purpose |
 | --- | --- |
 | `ANTHROPIC_API_KEY` | Turns on AI puzzle generation and AI judging. Optional: without it the app uses the puzzle bank and rule-based judging. |
-| `QUANTDLE_SECRET` | Key for encrypting puzzle tokens. Set it in production so tokens survive restarts and work across instances. |
+| `QUANTDLE_SECRET` | Encrypts puzzle tokens and signs login sessions. Set it in production. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Leaderboard and accounts database. On Vercel, add Upstash Redis from the Storage tab and these are set for you (`KV_REST_API_URL`/`KV_REST_API_TOKEN` also work). |
 
 ## Project layout
 
@@ -42,10 +49,15 @@ npm run dev                  # http://localhost:3000
 app/
   page.tsx                   UI entry
   api/puzzle/route.ts        GET a daily or practice puzzle (returns public view + sealed token)
-  api/guess/route.ts         POST a guess -> verdict, direction, feedback
+  api/guess/route.ts         POST a guess -> verdict, direction, feedback; credits leaderboard solves
   api/reveal/route.ts        POST at game end -> full worked solution
+  api/auth/route.ts          Sign up, sign in, sign out, who am I
+  api/leaderboard/route.ts   Top solvers
 components/Game.tsx          The game: board, step chain, input, modals, stats
 components/MarketGame.tsx    The Markets tab UI
+components/Account.tsx       Sign-in form and leaderboard panels
+lib/auth.ts                  Password hashing and session cookies
+lib/store.ts                 Upstash Redis client with an in-memory fallback
 lib/ai.ts                    Claude puzzle generator + judge (structured outputs)
 lib/bank.ts                  Hand-checked puzzles (Daily + offline fallback)
 lib/market.ts                Market-making game: contracts, fair value, counterparties, P&L

@@ -1,0 +1,134 @@
+/**
+ * Tiny key-value store for accounts and the leaderboard.
+ *
+ * In production it talks to Upstash Redis over its REST API (free tier, one click
+ * from Vercel's Storage tab). Without those env vars it falls back to memory, which
+ * is fine for local testing but resets whenever the server restarts.
+ */
+
+type Cmd = (string | number)[];
+
+const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
+export const storeKind: "redis" | "memory" = url && token ? "redis" : "memory";
+
+async function redis<T = unknown>(cmd: Cmd): Promise<T> {
+  const res = await fetch(url!, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(cmd),
+    cache: "no-store",
+  });
+  const body = (await res.json()) as { result?: T; error?: string };
+  if (!res.ok || body.error) throw new Error(`Redis ${cmd[0]} failed: ${body.error ?? res.status}`);
+  return body.result as T;
+}
+
+// ───────────── in-memory fallback ─────────────
+
+interface Mem {
+  kv: Map<string, { v: string; exp?: number }>;
+  sets: Map<string, Set<string>>;
+  zsets: Map<string, Map<string, number>>;
+}
+const g = globalThis as unknown as { __quantdleMem?: Mem };
+const mem: Mem = (g.__quantdleMem ??= { kv: new Map(), sets: new Map(), zsets: new Map() });
+
+function memGet(key: string) {
+  const e = mem.kv.get(key);
+  if (!e) return null;
+  if (e.exp && e.exp < Date.now()) {
+    mem.kv.delete(key);
+    return null;
+  }
+  return e.v;
+}
+
+const sortedDesc = (z: Map<string, number>) => [...z.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+// ───────────── public API ─────────────
+
+export async function get(key: string): Promise<string | null> {
+  if (storeKind === "redis") return redis<string | null>(["GET", key]);
+  return memGet(key);
+}
+
+export async function set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+  if (storeKind === "redis") {
+    await redis(ttlSeconds ? ["SET", key, value, "EX", ttlSeconds] : ["SET", key, value]);
+    return;
+  }
+  mem.kv.set(key, { v: value, exp: ttlSeconds ? Date.now() + ttlSeconds * 1000 : undefined });
+}
+
+/** Set only if the key doesn't exist. Returns true if it was set. */
+export async function setIfAbsent(key: string, value: string): Promise<boolean> {
+  if (storeKind === "redis") return (await redis<string | null>(["SET", key, value, "NX"])) === "OK";
+  if (memGet(key) !== null) return false;
+  mem.kv.set(key, { v: value });
+  return true;
+}
+
+/** Increment a counter; the TTL is applied when the counter is first created. */
+export async function incr(key: string, ttlSeconds: number): Promise<number> {
+  if (storeKind === "redis") {
+    const n = await redis<number>(["INCR", key]);
+    if (n === 1) await redis(["EXPIRE", key, ttlSeconds]);
+    return n;
+  }
+  const n = Number(memGet(key) ?? 0) + 1;
+  const exp = mem.kv.get(key)?.exp ?? Date.now() + ttlSeconds * 1000;
+  mem.kv.set(key, { v: String(n), exp });
+  return n;
+}
+
+/** Add to a set. Returns true if the member was new. */
+export async function addToSet(key: string, member: string): Promise<boolean> {
+  if (storeKind === "redis") return (await redis<number>(["SADD", key, member])) === 1;
+  const s = mem.sets.get(key) ?? new Set<string>();
+  mem.sets.set(key, s);
+  if (s.has(member)) return false;
+  s.add(member);
+  return true;
+}
+
+export async function inSet(key: string, member: string): Promise<boolean> {
+  if (storeKind === "redis") return (await redis<number>(["SISMEMBER", key, member])) === 1;
+  return mem.sets.get(key)?.has(member) ?? false;
+}
+
+export async function zIncr(key: string, member: string, by: number): Promise<number> {
+  if (storeKind === "redis") return Number(await redis<string>(["ZINCRBY", key, by, member]));
+  const z = mem.zsets.get(key) ?? new Map<string, number>();
+  mem.zsets.set(key, z);
+  const v = (z.get(member) ?? 0) + by;
+  z.set(member, v);
+  return v;
+}
+
+export async function zTop(key: string, n: number): Promise<{ member: string; score: number }[]> {
+  if (storeKind === "redis") {
+    const flat = await redis<string[]>(["ZRANGE", key, 0, n - 1, "REV", "WITHSCORES"]);
+    const out: { member: string; score: number }[] = [];
+    for (let i = 0; i < flat.length; i += 2) out.push({ member: flat[i], score: Number(flat[i + 1]) });
+    return out;
+  }
+  return sortedDesc(mem.zsets.get(key) ?? new Map())
+    .slice(0, n)
+    .map(([member, score]) => ({ member, score }));
+}
+
+/** Score and 0-based rank (highest first) of a member, or null if absent. */
+export async function zRankOf(key: string, member: string): Promise<{ score: number; rank: number } | null> {
+  if (storeKind === "redis") {
+    const [score, rank] = await Promise.all([
+      redis<string | null>(["ZSCORE", key, member]),
+      redis<number | null>(["ZREVRANK", key, member]),
+    ]);
+    return score === null || rank === null ? null : { score: Number(score), rank };
+  }
+  const z = mem.zsets.get(key);
+  if (!z?.has(member)) return null;
+  return { score: z.get(member)!, rank: sortedDesc(z).findIndex(([m]) => m === member) };
+}

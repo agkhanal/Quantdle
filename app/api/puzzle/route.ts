@@ -14,7 +14,8 @@ export async function GET(req: Request) {
 
   if (mode === "daily") {
     const n = dailyNumber();
-    const puzzle = dailyPuzzle(n);
+    // A per-day id, so the leaderboard credits each day's puzzle once even though the bank repeats.
+    const puzzle: Puzzle = { ...dailyPuzzle(n), id: `daily-${n}` };
     return json({ token: seal(puzzle), puzzle: toPublic(puzzle), source: "bank", dailyNumber: n });
   }
 
