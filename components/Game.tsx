@@ -15,8 +15,9 @@ import {
 import Logo from "./Logo";
 import Modal from "./Modal";
 import Confetti from "./Confetti";
+import MarketGame from "./MarketGame";
 
-type Mode = "daily" | "practice";
+type Mode = "daily" | "practice" | "markets";
 type Status = "loading" | "playing" | "won" | "lost" | "error";
 
 interface Row {
@@ -177,7 +178,7 @@ export default function Game() {
   function switchMode(m: Mode) {
     if (m === mode) return;
     setMode(m);
-    load(m, difficulty);
+    if (m !== "markets") load(m, difficulty);
   }
 
   function pickDifficulty(d: Difficulty) {
@@ -283,9 +284,9 @@ export default function Game() {
       </header>
 
       <nav className="modes" role="tablist">
-        {(["daily", "practice"] as Mode[]).map((m) => (
+        {(["daily", "practice", "markets"] as Mode[]).map((m) => (
           <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? "on" : ""} onClick={() => switchMode(m)}>
-            {m === "daily" ? "Daily" : "Practice"}
+            {m === "daily" ? "Daily" : m === "practice" ? "Practice" : "Markets"}
           </button>
         ))}
       </nav>
@@ -300,6 +301,11 @@ export default function Game() {
         </div>
       )}
 
+      {mode === "markets" ? (
+        <main>
+          <MarketGame />
+        </main>
+      ) : (
       <main>
         {status === "loading" && <Loading quip={LOADING_QUIPS[quip]} ai={mode === "practice"} />}
 
@@ -438,8 +444,9 @@ export default function Game() {
           </>
         )}
       </main>
+      )}
 
-      {status === "won" && <Confetti />}
+      {status === "won" && mode !== "markets" && <Confetti />}
 
       {modal === "help" && (
         <Modal title="How to play" onClose={() => setModal(null)}>
@@ -587,6 +594,7 @@ function HowTo() {
       </p>
       <p className="muted small">
         <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> serves fresh AI-generated puzzles from Easy to Expert.
+        <b> Markets</b> is a market-making game: quote a bid and ask on a dice contract and try to finish with a profit.
       </p>
     </div>
   );
