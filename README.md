@@ -13,6 +13,9 @@ Answers can be typed in any form: `0.25`, `1/4`, `25%`, `1-(5/6)^4`, `C(52,5)`, 
 
 - **Daily**: one puzzle per day, the same for everyone, taken from a hand-checked bank. Progress survives a refresh.
 - **Practice**: pick Easy / Medium / Hard / Expert and get a fresh puzzle written by Claude. Without an API key it falls back to the built-in bank.
+- **Markets**: a market-making game. A contract settles on some dice (sum of 3 dice, product of 2, highest of 3, ...). Each round you quote a bid and an ask, counterparties trade with you, and one die is revealed. Finish with the best P&L. Each round's tile is green/yellow/grey by how close your mid was to fair value. Runs entirely in the browser, no API key needed.
+
+  Who trades with you: a **sharp** trader who has peeked at the next die (adverse selection), an **arb** who trades against any mispricing, and **noise** traders who pay your spread, more often when your market is tight.
 
 ## How the judging works
 
@@ -33,4 +36,21 @@ npm run dev                  # http://localhost:3000
 | `ANTHROPIC_API_KEY` | Turns on AI puzzle generation and AI judging. Optional: without it the app uses the puzzle bank and rule-based judging. |
 | `QUANTDLE_SECRET` | Key for encrypting puzzle tokens. Set it in production so tokens survive restarts and work across instances. |
 
+## Project layout
 
+```
+app/
+  page.tsx                   UI entry
+  api/puzzle/route.ts        GET a daily or practice puzzle (returns public view + sealed token)
+  api/guess/route.ts         POST a guess -> verdict, direction, feedback
+  api/reveal/route.ts        POST at game end -> full worked solution
+components/Game.tsx          The game: board, step chain, input, modals, stats
+components/MarketGame.tsx    The Markets tab UI
+lib/ai.ts                    Claude puzzle generator + judge (structured outputs)
+lib/bank.ts                  Hand-checked puzzles (Daily + offline fallback)
+lib/market.ts                Market-making game: contracts, fair value, counterparties, P&L
+lib/math.ts                  Safe expression parser for answers
+lib/token.ts                 Encrypt/decrypt puzzle tokens
+```
+
+Built with Next.js and the Anthropic TypeScript SDK (`claude-opus-5-5`). Deploys to Vercel as-is. Set the two env vars in the project settings.
