@@ -1,68 +1,20 @@
 /**
  * Market-making game logic. Pure functions, no network: runs entirely in the browser.
  *
- * A contract settles on some function of a few hidden dice. Each round you quote a
+ * Contracts are generated procedurally: a family (sum of dice, max of dice, product,
+ * coin counts, ...) with random parameters, picked to suit the difficulty. The contract
+ * settles on a function of a few hidden draws (dice or coins). Each round you quote a
  * two-sided market (bid / ask) and three kinds of counterparty may trade with you:
- *  - sharp: sometimes present, has peeked at the NEXT die (adverse selection)
+ *  - sharp: sometimes present, has peeked at the NEXT draw (adverse selection)
  *  - arb:   trades whenever your quote is off from today's fair value (punishes mispricing)
  *  - noise: trades a random side, more often when your market is tight (pays your spread)
- * Then one die is revealed. After the last die the contract settles and we score P&L.
+ * Then one draw is revealed. After the last one the contract settles and we score P&L.
+ *
+ * Fair value is computed exactly by enumerating every remaining outcome.
+ * `scripts/verify-markets.ts` checks that against Monte Carlo simulation.
  */
 
-import type { Verdict } from "./types";
-
-export interface Contract {
-  id: string;
-  name: string;
-  blurb: string;
-  dice: number;
-  /** Widest market you're allowed to quote (ask − bid). */
-  maxWidth: number;
-  settle: (dice: number[]) => number;
-}
-
-export const CONTRACTS: Contract[] = [
-  {
-    id: "sum3",
-    name: "Sum of 3 dice",
-    blurb: "Settles at the sum of three fair dice.",
-    dice: 3,
-    maxWidth: 2,
-    settle: (d) => d.reduce((a, b) => a + b, 0),
-  },
-  {
-    id: "sum4",
-    name: "Sum of 4 dice",
-    blurb: "Settles at the sum of four fair dice.",
-    dice: 4,
-    maxWidth: 3,
-    settle: (d) => d.reduce((a, b) => a + b, 0),
-  },
-  {
-    id: "prod2",
-    name: "Product of 2 dice",
-    blurb: "Settles at the product of two fair dice.",
-    dice: 2,
-    maxWidth: 8,
-    settle: (d) => d[0] * d[1],
-  },
-  {
-    id: "max3",
-    name: "Highest of 3 dice",
-    blurb: "Settles at the highest of three fair dice.",
-    dice: 3,
-    maxWidth: 1,
-    settle: (d) => Math.max(...d),
-  },
-  {
-    id: "zero6",
-    name: "Sum of 3 dice, sixes count as 0",
-    blurb: "Settles at the sum of three fair dice, except any 6 counts as zero.",
-    dice: 3,
-    maxWidth: 2,
-    settle: (d) => d.reduce((a, b) => a + (b === 6 ? 0 : b), 0),
-  },
-];
+import { DIFFICULTIES, type Difficulty, type Verdict } from "./types";
 
 // ───────────── randomness ─────────────
 
@@ -80,30 +32,236 @@ export function mulberry32(seed: number) {
 
 export type Rng = () => number;
 
-const rollDie = (rng: Rng) => 1 + Math.floor(rng() * 6);
+const pick = <T,>(rng: Rng, xs: readonly T[]): T => xs[Math.floor(rng() * xs.length)];
+const int = (rng: Rng, lo: number, hi: number) => lo + Math.floor(rng() * (hi - lo + 1));
+
+// ───────────── contracts ─────────────
+
+/** One hidden draw: a fair die with `sides` faces, or a fair coin (0 = tails, 1 = heads). */
+export type Draw = { kind: "die"; sides: number } | { kind: "coin" };
+
+const outcomes = (d: Draw) => (d.kind === "coin" ? [0, 1] : Array.from({ length: d.sides }, (_, i) => i + 1));
+
+export interface Contract {
+  family: string;
+  name: string;
+  blurb: string;
+  difficulty: Difficulty;
+  draws: Draw[];
+  settle: (xs: number[]) => number;
+  /** Widest market you're allowed to quote (ask − bid). */
+  maxWidth: number;
+  /** Chance per round that the counterparty is the sharp trader rather than the arb. */
+  sharpRate: number;
+}
+
+type Family = (rng: Rng) => Omit<Contract, "difficulty" | "maxWidth" | "sharpRate">;
+
+const dice = (n: number, sides: number): Draw[] => Array.from({ length: n }, () => ({ kind: "die", sides }));
+const coins = (n: number): Draw[] => Array.from({ length: n }, () => ({ kind: "coin" }));
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+const dieName = (s: number) => (s === 6 ? "dice" : `${s}-sided dice`);
+
+const FAMILIES: Record<Difficulty, Record<string, Family>> = {
+  easy: {
+    sum(rng) {
+      const n = int(rng, 2, 3);
+      const s = pick(rng, [4, 6, 8]);
+      return { family: "sum", name: `Sum of ${n} ${dieName(s)}`, blurb: `Settles at the sum of ${n} fair ${dieName(s)}.`, draws: dice(n, s), settle: sum };
+    },
+    heads(rng) {
+      const n = int(rng, 3, 6);
+      const k = pick(rng, [1, 2, 5, 10]);
+      return {
+        family: "heads",
+        name: k === 1 ? `Heads in ${n} flips` : `${k} × heads in ${n} flips`,
+        blurb: `Settles at ${k === 1 ? "" : `${k} times `}the number of heads in ${n} fair coin flips.`,
+        draws: coins(n),
+        settle: (xs) => k * sum(xs),
+      };
+    },
+    single(rng) {
+      const s = pick(rng, [10, 12, 20]);
+      const k = pick(rng, [2, 3, 5]);
+      return {
+        family: "scaled",
+        name: `${k} × d${s} + d${s}`,
+        blurb: `Two fair ${s}-sided dice: settles at ${k} times the first plus the second.`,
+        draws: dice(2, s),
+        settle: (xs) => k * xs[0] + xs[1],
+      };
+    },
+  },
+  medium: {
+    sum(rng) {
+      const n = int(rng, 3, 4);
+      const s = n === 4 ? pick(rng, [6, 8]) : pick(rng, [6, 8, 10, 12]);
+      return { family: "sum", name: `Sum of ${n} ${dieName(s)}`, blurb: `Settles at the sum of ${n} fair ${dieName(s)}.`, draws: dice(n, s), settle: sum };
+    },
+    product(rng) {
+      const s = pick(rng, [4, 6, 8]);
+      return { family: "product", name: `Product of 2 ${dieName(s)}`, blurb: `Settles at the product of two fair ${dieName(s)}.`, draws: dice(2, s), settle: (xs) => xs[0] * xs[1] };
+    },
+    zeroTop(rng) {
+      const n = int(rng, 3, 4);
+      return {
+        family: "zero-top",
+        name: `Sum of ${n} dice, sixes count as 0`,
+        blurb: `Settles at the sum of ${n} fair dice, except any 6 counts as zero.`,
+        draws: dice(n, 6),
+        settle: (xs) => sum(xs.map((x) => (x === 6 ? 0 : x))),
+      };
+    },
+    countFace(rng) {
+      const n = int(rng, 3, 5);
+      const k = pick(rng, [5, 10, 20]);
+      const face = int(rng, 1, 6);
+      return {
+        family: "count-face",
+        name: `${k} × number of ${face}s in ${n} dice`,
+        blurb: `Roll ${n} fair dice. Settles at ${k} for every die that shows a ${face}.`,
+        draws: dice(n, 6),
+        settle: (xs) => k * xs.filter((x) => x === face).length,
+      };
+    },
+  },
+  hard: {
+    max(rng) {
+      const n = int(rng, 2, 4);
+      const s = pick(rng, [6, 8, 10]);
+      return { family: "max", name: `Highest of ${n} ${dieName(s)}`, blurb: `Settles at the highest of ${n} fair ${dieName(s)}.`, draws: dice(n, s), settle: (xs) => Math.max(...xs) };
+    },
+    min(rng) {
+      const n = int(rng, 2, 4);
+      const s = pick(rng, [6, 8, 10]);
+      return { family: "min", name: `Lowest of ${n} ${dieName(s)}`, blurb: `Settles at the lowest of ${n} fair ${dieName(s)}.`, draws: dice(n, s), settle: (xs) => Math.min(...xs) };
+    },
+    topTwo(rng) {
+      const n = int(rng, 3, 4);
+      return {
+        family: "top-two",
+        name: `Top 2 of ${n} dice`,
+        blurb: `Roll ${n} fair dice. Settles at the sum of the two highest.`,
+        draws: dice(n, 6),
+        settle: (xs) => {
+          const s = [...xs].sort((a, b) => b - a);
+          return s[0] + s[1];
+        },
+      };
+    },
+    range(rng) {
+      const n = int(rng, 3, 4);
+      return {
+        family: "range",
+        name: `Range of ${n} dice`,
+        blurb: `Roll ${n} fair dice. Settles at the highest minus the lowest.`,
+        draws: dice(n, 6),
+        settle: (xs) => Math.max(...xs) - Math.min(...xs),
+      };
+    },
+    distinct(rng) {
+      const n = int(rng, 3, 5);
+      const k = pick(rng, [1, 10]);
+      return {
+        family: "distinct",
+        name: `${k === 1 ? "" : `${k} × `}distinct faces in ${n} dice`,
+        blurb: `Roll ${n} fair dice. Settles at ${k === 1 ? "" : `${k} times `}the number of different faces showing.`,
+        draws: dice(n, 6),
+        settle: (xs) => k * new Set(xs).size,
+      };
+    },
+  },
+  expert: {
+    product3(rng) {
+      const s = pick(rng, [4, 6]);
+      return { family: "product3", name: `Product of 3 ${dieName(s)}`, blurb: `Settles at the product of three fair ${dieName(s)}.`, draws: dice(3, s), settle: (xs) => xs[0] * xs[1] * xs[2] };
+    },
+    squares(rng) {
+      const n = int(rng, 2, 3);
+      return { family: "squares", name: `Sum of squares of ${n} dice`, blurb: `Settles at the sum of the squares of ${n} fair dice.`, draws: dice(n, 6), settle: (xs) => sum(xs.map((x) => x * x)) };
+    },
+    evenOdd(rng) {
+      const n = int(rng, 3, 4);
+      return {
+        family: "even-odd",
+        name: `Evens minus odds, ${n} dice`,
+        blurb: `Roll ${n} fair dice. Settles at the sum of the even dice minus the sum of the odd ones. It can be negative.`,
+        draws: dice(n, 6),
+        settle: (xs) => sum(xs.map((x) => (x % 2 === 0 ? x : -x))),
+      };
+    },
+    maxTimesMin(rng) {
+      const n = int(rng, 2, 3);
+      return {
+        family: "max-x-min",
+        name: `Highest × lowest of ${n} dice`,
+        blurb: `Roll ${n} fair dice. Settles at the highest die times the lowest die.`,
+        draws: dice(n, 6),
+        settle: (xs) => Math.max(...xs) * Math.min(...xs),
+      };
+    },
+    headsSquared(rng) {
+      const n = int(rng, 4, 6);
+      return {
+        family: "heads-squared",
+        name: `(Heads in ${n} flips)²`,
+        blurb: `Flip ${n} fair coins. Settles at the square of the number of heads.`,
+        draws: coins(n),
+        settle: (xs) => sum(xs) ** 2,
+      };
+    },
+    diceAndCoin(rng) {
+      const n = int(rng, 2, 3);
+      return {
+        family: "dice-and-coin",
+        name: `Sum of ${n} dice, doubled on heads`,
+        blurb: `Roll ${n} fair dice, then flip a coin. Settles at the dice total, doubled if the coin is heads.`,
+        draws: [...dice(n, 6), { kind: "coin" }],
+        settle: (xs) => sum(xs.slice(0, n)) * (xs[n] === 1 ? 2 : 1),
+      };
+    },
+  },
+};
+
+/** How each difficulty plays: market width (in standard deviations of the contract) and how often the sharp trader shows up. */
+const LEVELS: Record<Difficulty, { widthSd: number; sharpRate: number }> = {
+  easy: { widthSd: 1.0, sharpRate: 0.15 },
+  medium: { widthSd: 0.8, sharpRate: 0.25 },
+  hard: { widthSd: 0.7, sharpRate: 0.3 },
+  expert: { widthSd: 0.65, sharpRate: 0.25 },
+};
+
+export const familyCount = (d: Difficulty) => Object.keys(FAMILIES[d]).length;
 
 // ───────────── fair value ─────────────
 
-/** Exact mean and standard deviation of the settlement, given the dice revealed so far. */
+/** Exact mean and standard deviation of the settlement, given the draws revealed so far. */
 export function fairValue(c: Contract, revealed: number[]): { mean: number; sd: number } {
-  const unknown = c.dice - revealed.length;
-  const combos = Math.pow(6, unknown);
-  let sum = 0;
-  let sumSq = 0;
-  const dice = [...revealed, ...Array(unknown).fill(1)];
-  for (let i = 0; i < combos; i++) {
-    let k = i;
-    for (let j = 0; j < unknown; j++) {
-      dice[revealed.length + j] = (k % 6) + 1;
-      k = Math.floor(k / 6);
+  const rest = c.draws.slice(revealed.length).map(outcomes);
+  const xs = [...revealed, ...rest.map((o) => o[0])];
+  let n = 0;
+  let total = 0;
+  let totalSq = 0;
+  const walk = (j: number) => {
+    if (j === rest.length) {
+      const v = c.settle(xs);
+      n++;
+      total += v;
+      totalSq += v * v;
+      return;
     }
-    const v = c.settle(dice);
-    sum += v;
-    sumSq += v * v;
-  }
-  const mean = sum / combos;
-  return { mean, sd: Math.sqrt(Math.max(0, sumSq / combos - mean * mean)) };
+    for (const o of rest[j]) {
+      xs[revealed.length + j] = o;
+      walk(j + 1);
+    }
+  };
+  walk(0);
+  const mean = total / n;
+  return { mean, sd: Math.sqrt(Math.max(0, totalSq / n - mean * mean)) };
 }
+
+/** Roll a fresh set of hidden draws for a contract. */
+export const sampleDraws = (c: Contract, rng: Rng) => c.draws.map((d) => (d.kind === "coin" ? (rng() < 0.5 ? 1 : 0) : 1 + Math.floor(rng() * d.sides)));
 
 // ───────────── game state ─────────────
 
@@ -126,20 +284,35 @@ export interface RoundResult {
 
 export interface MarketGameState {
   contract: Contract;
-  dice: number[]; // hidden until revealed
+  draws: number[]; // hidden until revealed
   rounds: RoundResult[];
   seed: number;
 }
 
-export function newMarket(seed: number): MarketGameState {
-  const rng = mulberry32(seed);
-  const contract = CONTRACTS[Math.floor(rng() * CONTRACTS.length)];
-  const dice = Array.from({ length: contract.dice }, () => rollDie(rng));
-  return { contract, dice, rounds: [], seed };
+/** Build a contract for a difficulty from a seed (deterministic). */
+export function makeContract(difficulty: Difficulty, rng: Rng): Contract {
+  const fam = pick(rng, Object.values(FAMILIES[difficulty]));
+  const base = fam(rng);
+  const level = LEVELS[difficulty];
+  const draft: Contract = { ...base, difficulty, maxWidth: 1, sharpRate: level.sharpRate };
+  const { sd } = fairValue(draft, []);
+  // Round the allowed width to a friendly increment.
+  draft.maxWidth = Math.max(0.5, Math.round(sd * level.widthSd * 2) / 2);
+  return draft;
 }
 
-export const revealedDice = (g: MarketGameState) => g.dice.slice(0, g.rounds.length);
-export const isOver = (g: MarketGameState) => g.rounds.length >= g.contract.dice;
+export function newMarket(seed: number, difficulty: Difficulty): MarketGameState {
+  const rng = mulberry32(seed);
+  const contract = makeContract(difficulty, rng);
+  return { contract, draws: sampleDraws(contract, rng), rounds: [], seed };
+}
+
+/** The daily market cycles through the difficulties, one per day. */
+export const dailyMarketDifficulty = (dailyNumber: number): Difficulty => DIFFICULTIES[(dailyNumber - 1) % DIFFICULTIES.length];
+export const dailyMarketSeed = (dailyNumber: number) => dailyNumber * 7919 + 13;
+
+export const revealedDraws = (g: MarketGameState) => g.draws.slice(0, g.rounds.length);
+export const isOver = (g: MarketGameState) => g.rounds.length >= g.contract.draws.length;
 
 export function validateQuote(c: Contract, bid: number, ask: number): string | null {
   if (!Number.isFinite(bid) || !Number.isFinite(ask)) return "Enter a bid and an ask.";
@@ -149,7 +322,7 @@ export function validateQuote(c: Contract, bid: number, ask: number): string | n
 }
 
 /**
- * Play one round: the counterparties react to your quote, then the next die is revealed.
+ * Play one round: the counterparties react to your quote, then the next draw is revealed.
  * Uses a per-round RNG derived from the seed, so results don't depend on how many
  * random numbers earlier rounds consumed.
  */
@@ -157,21 +330,21 @@ export function playRound(g: MarketGameState, bid: number, ask: number): MarketG
   const c = g.contract;
   const r = g.rounds.length;
   const rng = mulberry32(g.seed * 31 + r * 7919 + 1);
-  const known = g.dice.slice(0, r);
-  const { mean: fair, sd } = fairValue(c, known);
+  const { mean: fair, sd } = fairValue(c, g.draws.slice(0, r));
 
   const trades: Trade[] = [];
   const unit = Math.max(0.5, c.maxWidth / 2);
   const sizeFor = (edge: number) => Math.min(3, 1 + Math.floor(edge / unit));
 
-  // One of two "smart" traders may act. The sharp has peeked at the next die
-  // (present 40% of the time); otherwise an arb trades against any mispricing.
-  const sharp = rng() < 0.4;
-  const view = sharp ? fairValue(c, g.dice.slice(0, r + 1)).mean : fair;
+  // One "smart" trader may act. The sharp has peeked at the next draw; otherwise an
+  // arb trades against any mispricing relative to today's fair value.
+  const sharp = rng() < c.sharpRate;
+  const view = sharp ? fairValue(c, g.draws.slice(0, r + 1)).mean : fair;
   const who = sharp ? "sharp" : "arb";
-  if (view > ask + 0.25) {
+  const slack = Math.max(0.25, c.maxWidth * 0.1);
+  if (view > ask + slack) {
     trades.push({ side: "sell", size: sizeFor(view - ask), price: ask, who });
-  } else if (view < bid - 0.25) {
+  } else if (view < bid - slack) {
     trades.push({ side: "buy", size: sizeFor(bid - view), price: bid, who });
   }
 
@@ -189,8 +362,18 @@ export function playRound(g: MarketGameState, bid: number, ask: number): MarketG
 
   return {
     ...g,
-    rounds: [...g.rounds, { bid, ask, fair, sd, trades, verdict, revealed: g.dice[r] }],
+    rounds: [...g.rounds, { bid, ask, fair, sd, trades, verdict, revealed: g.draws[r] }],
   };
+}
+
+/** Rebuild a game from its seed and the quotes played (used to restore the daily market). */
+export function replay(seed: number, difficulty: Difficulty, quotes: [number, number][]): MarketGameState {
+  let g = newMarket(seed, difficulty);
+  for (const [b, a] of quotes) {
+    if (isOver(g)) break;
+    g = playRound(g, b, a);
+  }
+  return g;
 }
 
 /** Position in lots (+ long / − short), cash from trades, and settlement P&L. */
@@ -208,9 +391,7 @@ export function book(g: MarketGameState) {
       }
     }
   }
-  const settlement = isOver(g) ? g.contract.settle(g.dice) : null;
+  const settlement = isOver(g) ? g.contract.settle(g.draws) : null;
   const pnl = settlement === null ? null : cash + position * settlement;
-  // Mark-to-fair while the game is running.
-  const mark = fairValue(g.contract, revealedDice(g)).mean;
-  return { position, cash, settlement, pnl, markPnl: cash + position * mark };
+  return { position, cash, settlement, pnl };
 }

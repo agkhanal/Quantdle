@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { evaluate, fmt } from "@/lib/math";
 import { loadJSON, loadStats, recordResult, saveJSON, type Stats } from "@/lib/stats";
+import { dailyNumber } from "@/lib/bank";
 import {
   DIFFICULTIES,
   MAX_GUESSES,
@@ -19,7 +20,9 @@ import Confetti from "./Confetti";
 import MarketGame from "./MarketGame";
 import { AccountPanel, LeaderboardPanel } from "./Account";
 
-type Mode = "daily" | "practice" | "markets";
+type Mode = "daily" | "practice";
+/** Each tab has two tracks: step-by-step probability puzzles, or the market-making game. */
+type Track = "puzzle" | "market";
 type Status = "loading" | "playing" | "won" | "lost" | "error";
 
 interface Row {
@@ -60,6 +63,8 @@ const EMOJI: Record<Verdict, string> = { green: "🟩", yellow: "🟨", grey: "�
 
 export default function Game() {
   const [mode, setMode] = useState<Mode>("daily");
+  const [tracks, setTracks] = useState<Record<Mode, Track>>({ daily: "puzzle", practice: "puzzle" });
+  const [today, setToday] = useState<number | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [data, setData] = useState<PuzzleResponse | null>(null);
   const [status, setStatus] = useState<Status>("loading");
@@ -81,6 +86,8 @@ export default function Game() {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const loadSeq = useRef(0);
+  const loadedKey = useRef("");
+  const track = tracks[mode];
 
   const step = solved.length; // current step index
   const totalSteps = data?.puzzle.steps.length ?? 0;
@@ -93,6 +100,7 @@ export default function Game() {
 
   const load = useCallback(async (m: Mode, d: Difficulty, exclude?: string) => {
     const seq = ++loadSeq.current;
+    loadedKey.current = puzzleKey(m, d);
     setStatus("loading");
     setData(null);
     setRows([]);
@@ -131,6 +139,7 @@ export default function Game() {
 
   useEffect(() => {
     setStats(loadStats());
+    setToday(dailyNumber());
     fetch("/api/auth")
       .then((r) => r.json())
       .then((b) => setUser(b.user))
@@ -184,15 +193,25 @@ export default function Game() {
 
   // ───────────── actions ─────────────
 
-  function switchMode(m: Mode) {
-    if (m === mode) return;
+  /** Load the puzzle for a tab unless it's already the one on screen. */
+  function ensurePuzzle(m: Mode, d: Difficulty) {
+    if (loadedKey.current !== puzzleKey(m, d) || status === "error") load(m, d);
+  }
+
+  function switchMode(m: Mode, t: Track = tracks[m]) {
+    if (m === mode && t === track) return;
     setMode(m);
-    if (m !== "markets") load(m, difficulty);
+    setTracks((ts) => ({ ...ts, [m]: t }));
+    if (t === "puzzle") ensurePuzzle(m, difficulty);
+  }
+
+  function switchTrack(t: Track) {
+    switchMode(mode, t);
   }
 
   function pickDifficulty(d: Difficulty) {
     setDifficulty(d);
-    load("practice", d);
+    if (track === "puzzle") load("practice", d);
   }
 
   function nudgeShake() {
@@ -321,26 +340,43 @@ export default function Game() {
       </header>
 
       <nav className="modes" role="tablist">
-        {(["daily", "practice", "markets"] as Mode[]).map((m) => (
+        {(["daily", "practice"] as Mode[]).map((m) => (
           <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? "on" : ""} onClick={() => switchMode(m)}>
-            {m === "daily" ? "Daily" : m === "practice" ? "Practice" : "Markets"}
+            {m === "daily" ? "Daily" : "Practice"}
           </button>
         ))}
       </nav>
 
+      <div className="tracks" role="tablist" aria-label="Game type">
+        {(["puzzle", "market"] as Track[]).map((t) => (
+          <button key={t} role="tab" aria-selected={track === t} className={track === t ? "on" : ""} onClick={() => switchTrack(t)}>
+            {t === "puzzle" ? (mode === "daily" ? "🎲 Puzzle" : "🎲 Probability") : mode === "daily" ? "📈 Market" : "📈 Market making"}
+          </button>
+        ))}
+      </div>
+
       {mode === "practice" && (
         <div className="diffs">
           {DIFFICULTIES.map((d) => (
-            <button key={d} className={`diff diff-${d} ${difficulty === d ? "on" : ""}`} onClick={() => pickDifficulty(d)} disabled={status === "loading"}>
+            <button
+              key={d}
+              className={`diff diff-${d} ${difficulty === d ? "on" : ""}`}
+              onClick={() => pickDifficulty(d)}
+              disabled={track === "puzzle" && status === "loading"}
+            >
               {DIFF_LABEL[d]}
             </button>
           ))}
         </div>
       )}
 
-      {mode === "markets" ? (
+      {track === "market" ? (
         <main>
-          <MarketGame />
+          {mode === "daily" ? (
+            today !== null && <MarketGame key={`daily-${today}`} daily dailyNumber={today} onPractice={() => switchMode("practice", "market")} />
+          ) : (
+            <MarketGame key="practice" daily={false} difficulty={difficulty} />
+          )}
         </main>
       ) : (
       <main>
@@ -492,7 +528,7 @@ export default function Game() {
       </main>
       )}
 
-      {status === "won" && mode !== "markets" && <Confetti />}
+      {status === "won" && track === "puzzle" && <Confetti />}
 
       {modal === "help" && (
         <Modal title="How to play" onClose={() => setModal(null)}>
@@ -571,6 +607,8 @@ export default function Game() {
 }
 
 // ───────────── pieces ─────────────
+
+const puzzleKey = (m: Mode, d: Difficulty) => (m === "daily" ? "daily" : `practice:${d}`);
 
 function Loading({ quip }: { quip: string; }) {
   return (
@@ -672,7 +710,8 @@ function HowTo() {
       <p className="muted small">
         <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> is endless: puzzles are generated from templates with
         random numbers, and every answer is double-checked by simulation. Skip any you don&apos;t like.
-        <b> Markets</b> is a market-making game: quote a bid and ask on a dice contract and try to finish with a profit.
+        Both tabs also have a <b>📈 Market</b> game: quote a bid and ask on a dice or coin contract and finish with a profit.
+        The daily market can&apos;t be skipped; practice markets come in Easy to Expert.
       </p>
     </div>
   );

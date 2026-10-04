@@ -1364,3 +1364,42 @@ code {
     gap: 2px;
   }
 }
+
+
+/* ───────── tracks (puzzle / market) ───────── */
+
+.tracks {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: -4px 0 14px;
+}
+
+.tracks button {
+  border: 0;
+  background: none;
+  padding: 6px 4px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.tracks button.on {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+
+.tracks button + button {
+  margin-left: 14px;
+}
+
+.die.coin {
+  border-radius: 50%;
+}
+
+.die.shown.coin,
+.die.shown.num {
+  font-size: 1.35rem;
+}
