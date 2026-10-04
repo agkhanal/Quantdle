@@ -11,11 +11,18 @@ Answers can be typed in any form: `0.25`, `1/4`, `25%`, `1-(5/6)^4`, `C(52,5)`, 
 
 ## Modes
 
-- **Daily**: one puzzle per day, the same for everyone, taken from a hand-checked bank. Progress survives a refresh.
-- **Practice**: endless puzzles from Easy to Expert, built by the procedural generator (below). Skip any you don't like.
-- **Markets**: a market-making game. A contract settles on some dice (sum of 3 dice, product of 2, highest of 3, ...). Each round you quote a bid and an ask, counterparties trade with you, and one die is revealed. Finish with the best P&L. Each round's tile is green/yellow/grey by how close your mid was to fair value. Skip to a new market any time.
+Two tabs, each with two games:
 
-  Who trades with you: a **sharp** trader who has peeked at the next die (adverse selection), an **arb** who trades against any mispricing, and **noise** traders who pay your spread, more often when your market is tight.
+| | 🎲 Puzzle / Probability | 📈 Market making |
+| --- | --- | --- |
+| **Daily** | One hand-checked puzzle per day, the same for everyone. | One market per day, the same for everyone. Difficulty rotates daily. Can't be skipped, and progress survives a refresh. |
+| **Practice** | Endless generated puzzles, Easy to Expert. Skip any you don't like. | Endless generated markets, Easy to Expert. Skip any you don't like. |
+
+**Market making:** a contract settles on some hidden dice or coins (sum of dice, product, highest, range, heads squared, ...). Each round you quote a bid and an ask, counterparties trade with you, and one draw is revealed. Finish with the best P&L. Each round's tile is green/yellow/grey by how close your mid was to fair value.
+
+Who trades with you: a **sharp** trader who has peeked at the next draw (adverse selection), an **arb** who trades against any mispricing, and **noise** traders who pay your spread, more often when your market is tight.
+
+Markets are procedural too: 18 contract families with random parameters, grouped by difficulty. Harder levels have trickier payoffs (products, squares, order statistics) and narrower markets relative to the contract's volatility. Fair value is computed exactly by enumerating every outcome.
 
 ## Procedural puzzles
 
@@ -24,9 +31,11 @@ Practice puzzles come from 18 templates in `lib/generators.ts` (dice, cards, Bay
 Every random quantity also has a simulator. Before a puzzle is served, it's simulated thousands of times (Monte Carlo) and thrown away if any exact answer falls outside 5 standard errors of the simulation. To stress-test all templates across many seeds:
 
 ```bash
-npx tsx scripts/verify-generators.ts        # 60 seeds per template
-npx tsx scripts/verify-generators.ts 300    # more
+npx tsx scripts/verify-generators.ts        # puzzles: 60 seeds per template
+npx tsx scripts/verify-markets.ts           # markets: fair values vs simulation, and game balance
 ```
+
+`verify-markets.ts` also plays thousands of markets with simple strategies, to check that quoting around fair value makes money on average at every difficulty and mispricing loses it.
 
 No AI needed. If you'd rather have Claude write Practice puzzles, set `QUANTDLE_AI_PUZZLES=1` along with `ANTHROPIC_API_KEY`.
 
@@ -68,17 +77,18 @@ app/
   api/auth/route.ts          Sign up, sign in, sign out, who am I
   api/leaderboard/route.ts   Top solvers
 components/Game.tsx          The game: board, step chain, input, modals, stats
-components/MarketGame.tsx    The Markets tab
+components/MarketGame.tsx    The market-making game (daily and practice)
 components/Account.tsx       Sign-in form and leaderboard panels
 lib/generators.ts            Procedural puzzle templates + Monte Carlo checks
 lib/bank.ts                  Hand-checked puzzles for the Daily
-lib/market.ts                Market-making game: contracts, fair value, counterparties, P&L
+lib/market.ts                Market contract generator, fair value, counterparties, P&L
 lib/auth.ts                  Password hashing and session cookies
 lib/store.ts                 Upstash Redis client with an in-memory fallback
 lib/ai.ts                    Optional Claude judge and puzzle writer
 lib/math.ts                  Safe expression parser for answers
 lib/token.ts                 Encrypt/decrypt puzzle tokens
-scripts/verify-generators.ts Stress-test every template
+scripts/verify-generators.ts Stress-test every puzzle template
+scripts/verify-markets.ts    Check market fair values and game balance
 ```
 
 Built with Next.js. Deploys to Vercel as-is.
