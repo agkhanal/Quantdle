@@ -344,7 +344,7 @@ export default function Game() {
         </main>
       ) : (
       <main>
-        {status === "loading" && <Loading quip={LOADING_QUIPS[quip]} ai={mode === "practice"} />}
+        {status === "loading" && <Loading quip={LOADING_QUIPS[quip]} />}
 
         {status === "error" && (
           <div className="card center">
@@ -363,9 +363,9 @@ export default function Game() {
                 <span className="chip">{data.puzzle.category}</span>
                 {mode === "daily" && data.dailyNumber && <span className="chip ghost">#{data.dailyNumber}</span>}
                 {data.source === "ai" && <span className="chip ghost">✦ AI-generated</span>}
-                {mode === "practice" && data.source === "bank" && (
-                  <span className="chip ghost" title="Set ANTHROPIC_API_KEY on the server for fresh AI-generated puzzles">
-                    Puzzle bank
+                {data.source === "generated" && (
+                  <span className="chip ghost" title="Generated from a template and checked by Monte Carlo simulation">
+                    ∞ Generated
                   </span>
                 )}
               </div>
@@ -443,14 +443,18 @@ export default function Game() {
                 </form>
 
                 <div className="tools">
-                  <button className="link" onClick={() => setShowWork((v) => !v)} type="button">
-                    {showWork ? "− Hide work" : "+ Show your work"}
-                  </button>
+                  {data.aiJudge ? (
+                    <button className="link" onClick={() => setShowWork((v) => !v)} type="button">
+                      {showWork ? "− Hide work" : "+ Show your work"}
+                    </button>
+                  ) : (
+                    <span />
+                  )}
                   <button className="link" onClick={takeHint} disabled={hintUsed || rowsLeft < 2} type="button" title="Costs one guess">
                     💡 Hint <span className="muted">(costs a guess)</span>
                   </button>
                 </div>
-                {showWork && (
+                {showWork && data.aiJudge && (
                   <textarea
                     className="work"
                     value={reasoning}
@@ -563,7 +567,7 @@ export default function Game() {
 
 // ───────────── pieces ─────────────
 
-function Loading({ quip, ai }: { quip: string; ai: boolean }) {
+function Loading({ quip }: { quip: string; }) {
   return (
     <div className="loading">
       <div className="loading-tiles">
@@ -572,7 +576,6 @@ function Loading({ quip, ai }: { quip: string; ai: boolean }) {
         ))}
       </div>
       <p>{quip}</p>
-      {ai && <p className="muted small">Fresh puzzles are written and double-checked by AI. This can take a little while.</p>}
     </div>
   );
 }
@@ -658,11 +661,12 @@ function HowTo() {
       </div>
       <p>
         Answer in any form: <code>0.25</code>, <code>1/4</code>, <code>25%</code>, <code>1-(5/6)^4</code>,{" "}
-        <code>C(52,5)</code>, <code>e</code>. Use <b>Show your work</b> to let the AI judge read your reasoning, or burn a
+        <code>C(52,5)</code>, <code>e</code>. When the AI judge is on, <b>Show your work</b> lets it read your reasoning. Or burn a
         guess on a <b>💡 hint</b>. Sign in to put your solves on the <b>leaderboard</b>.
       </p>
       <p className="muted small">
-        <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> serves fresh AI-generated puzzles from Easy to Expert.
+        <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> is endless: puzzles are generated from templates with
+        random numbers, and every answer is double-checked by simulation.
         <b> Markets</b> is a market-making game: quote a bid and ask on a dice contract and try to finish with a profit.
       </p>
     </div>

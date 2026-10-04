@@ -39,8 +39,9 @@ export interface PublicPuzzle {
 export interface PuzzleResponse {
   token: string;
   puzzle: PublicPuzzle;
-  source: "ai" | "bank";
+  source: "ai" | "bank" | "generated";
   dailyNumber?: number;
+  aiJudge?: boolean;
 }
 
 export interface GuessRequest {
