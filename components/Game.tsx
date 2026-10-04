@@ -453,6 +453,11 @@ export default function Game() {
                   <button className="link" onClick={takeHint} disabled={hintUsed || rowsLeft < 2} type="button" title="Costs one guess">
                     💡 Hint <span className="muted">(costs a guess)</span>
                   </button>
+                  {mode === "practice" && (
+                    <button className="link" onClick={() => load("practice", difficulty, data.puzzle.id)} type="button">
+                      Skip →
+                    </button>
+                  )}
                 </div>
                 {showWork && data.aiJudge && (
                   <textarea
@@ -666,7 +671,7 @@ function HowTo() {
       </p>
       <p className="muted small">
         <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> is endless: puzzles are generated from templates with
-        random numbers, and every answer is double-checked by simulation.
+        random numbers, and every answer is double-checked by simulation. Skip any you don&apos;t like.
         <b> Markets</b> is a market-making game: quote a bid and ask on a dice contract and try to finish with a profit.
       </p>
     </div>

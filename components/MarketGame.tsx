@@ -173,6 +173,12 @@ export default function MarketGame() {
           <p className={`quote-note ${error ? "bad" : ""}`}>
             {error || (Number.isFinite(width) ? `Width ${fmt(width)} / max ${c.maxWidth}` : `Max width ${c.maxWidth}. Tighter markets attract more noise trades.`)}
           </p>
+          <div className="tools">
+            <span />
+            <button className="link" type="button" onClick={() => start(false)}>
+              Skip this market →
+            </button>
+          </div>
         </form>
       )}
 

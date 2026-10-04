@@ -12,8 +12,8 @@ Answers can be typed in any form: `0.25`, `1/4`, `25%`, `1-(5/6)^4`, `C(52,5)`, 
 ## Modes
 
 - **Daily**: one puzzle per day, the same for everyone, taken from a hand-checked bank. Progress survives a refresh.
-- **Practice**: endless puzzles from Easy to Expert, built by the procedural generator (below).
-- **Markets**: a market-making game. A contract settles on some dice (sum of 3 dice, product of 2, highest of 3, ...). Each round you quote a bid and an ask, counterparties trade with you, and one die is revealed. Finish with the best P&L. Each round's tile is green/yellow/grey by how close your mid was to fair value.
+- **Practice**: endless puzzles from Easy to Expert, built by the procedural generator (below). Skip any you don't like.
+- **Markets**: a market-making game. A contract settles on some dice (sum of 3 dice, product of 2, highest of 3, ...). Each round you quote a bid and an ask, counterparties trade with you, and one die is revealed. Finish with the best P&L. Each round's tile is green/yellow/grey by how close your mid was to fair value. Skip to a new market any time.
 
   Who trades with you: a **sharp** trader who has peeked at the next die (adverse selection), an **arb** who trades against any mispricing, and **noise** traders who pay your spread, more often when your market is tight.
 
