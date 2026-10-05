@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { aiEnabled, judgeGuess } from "@/lib/ai";
-import { LEADERBOARD, sessionUser } from "@/lib/auth";
+import { sessionUser } from "@/lib/auth";
 import { evaluate, relativeError } from "@/lib/math";
-import { addToSet, get, incr, inSet, set, zIncr } from "@/lib/store";
+import { isSolved, markLost, markSolved, progressTtl, recordLoss, recordWin } from "@/lib/profile";
+import { get, incr, set } from "@/lib/store";
 import { unseal } from "@/lib/token";
-import { MAX_GUESSES, type GuessRequest, type GuessResponse, type Puzzle, type Verdict } from "@/lib/types";
+import { MAX_GUESSES, type Award, type GuessRequest, type GuessResponse, type Puzzle, type Verdict } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /** Within this relative error, a wrong answer is "close" (yellow) even without the AI judge. */
 const NEAR = 0.15;
-const WEEK = 7 * 86_400;
 
 export async function POST(req: Request) {
   let body: GuessRequest;
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const user = sessionUser(req);
 
   if (relErr <= tol) {
-    const credit = user ? await recordSolve(user, puzzle, body.step) : {};
+    const award = user ? await recordSolve(user, puzzle, body.step) : undefined;
     return json({
       verdict: "green",
       feedback: pick(["Nailed it.", "Clean.", "Exactly right.", "Spot on.", "That's the one."]),
@@ -44,11 +44,11 @@ export async function POST(req: Request) {
       value,
       solved: { answerDisplay: step.answerDisplay, explanation: step.explanation },
       judgedBy: "rules",
-      ...credit,
+      award,
     });
   }
 
-  if (user) await countGuess(user, puzzle.id);
+  const loss = user ? await countMiss(user, puzzle) : undefined;
 
   // Baseline from the numbers alone.
   let verdict: Verdict = relErr <= NEAR ? "yellow" : "grey";
@@ -81,33 +81,39 @@ export async function POST(req: Request) {
     }
   }
 
-  return json({ verdict, feedback, direction, value, judgedBy });
+  return json({ verdict, feedback, direction, value, judgedBy, award: loss });
 }
 
-// ───────────── leaderboard accounting (signed-in players) ─────────────
-// Guesses are never blocked; a puzzle just doesn't earn a point unless its steps
-// were solved in order within MAX_GUESSES guesses. Each puzzle counts once.
+// ───────────── points, Elo and streak accounting (signed-in players) ─────────────
+// Guesses are never blocked; a puzzle just doesn't score unless its steps were solved in
+// order within MAX_GUESSES guesses (a hint counts as one). Each puzzle scores once.
 
 const triesKey = (user: string, id: string) => `tries:${user.toLowerCase()}:${id}`;
 const progressKey = (user: string, id: string) => `prog:${user.toLowerCase()}:${id}`;
-const solvedKey = (user: string) => `solved:${user.toLowerCase()}`;
 
 function countGuess(user: string, id: string) {
-  return incr(triesKey(user, id), WEEK);
+  return incr(triesKey(user, id), progressTtl);
 }
 
-async function recordSolve(user: string, puzzle: Puzzle, stepIndex: number): Promise<Partial<GuessResponse>> {
+/** A wrong guess. If it was the last one available, the puzzle is lost (once). */
+async function countMiss(user: string, puzzle: Puzzle): Promise<Award | undefined> {
   const tries = await countGuess(user, puzzle.id);
-  if (await inSet(solvedKey(user), puzzle.id)) return { credited: false };
+  if (tries < MAX_GUESSES || (await isSolved(user, puzzle.id))) return undefined;
+  return (await markLost(user, puzzle.id)) ? recordLoss(user, puzzle) : undefined;
+}
+
+async function recordSolve(user: string, puzzle: Puzzle, stepIndex: number): Promise<Award | undefined> {
+  const tries = await countGuess(user, puzzle.id);
+  if (await isSolved(user, puzzle.id)) return undefined;
 
   const progress = Number((await get(progressKey(user, puzzle.id))) ?? 0);
-  if (stepIndex !== progress) return { credited: false }; // skipped ahead, or repeating a step
-  await set(progressKey(user, puzzle.id), String(progress + 1), WEEK);
+  if (stepIndex !== progress) return undefined; // skipped ahead, or repeating a step
+  await set(progressKey(user, puzzle.id), String(progress + 1), progressTtl);
 
   const finished = progress + 1 === puzzle.steps.length;
-  if (!finished || tries > MAX_GUESSES) return { credited: false };
-  if (!(await addToSet(solvedKey(user), puzzle.id))) return { credited: false };
-  return { credited: true, totalSolved: await zIncr(LEADERBOARD, user, 1) };
+  if (!finished || tries > MAX_GUESSES) return undefined;
+  if (!(await markSolved(user, puzzle.id))) return undefined;
+  return recordWin(user, puzzle, tries);
 }
 
 function pick<T>(xs: T[]): T {

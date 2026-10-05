@@ -1734,3 +1734,368 @@ code {
     bottom: 68px;
   }
 }
+
+/* ───────── profiles, schools, leaderboards, awards ───────── */
+
+.avatar {
+  display: inline-block;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.avatar-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.icon-btn .avatar {
+  display: block;
+}
+
+.icon-btn.signed-in {
+  padding: 0;
+  overflow: hidden;
+}
+
+.school-logo {
+  flex: none;
+  border-radius: 6px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--border);
+}
+
+.school-logo-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.profile {
+  gap: 16px;
+}
+
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-id {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.profile-id h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-school {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.profile-school span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-linkedin {
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.profile-linkedin:hover {
+  text-decoration: underline;
+}
+
+.profile-photo-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+
+.profile-stats > div {
+  padding: 10px 4px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.profile-stats b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 1.15rem;
+}
+
+.profile-stats span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.profile-sub {
+  margin: -6px 0 0;
+  text-align: center;
+}
+
+.profile-form {
+  display: grid;
+  gap: 12px;
+}
+
+div.field {
+  display: block;
+}
+
+.school-picker {
+  position: relative;
+}
+
+.school-picker input {
+  width: 100%;
+  height: 46px;
+  padding: 0 12px;
+  font-family: var(--sans);
+  font-size: 1rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+
+.school-picker input:focus {
+  border-color: var(--text);
+}
+
+.school-results {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.school-results li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.school-results li.on {
+  background: var(--surface-2);
+}
+
+.school-results li.school-empty {
+  cursor: default;
+}
+
+.school-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.school-selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.how-scored {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.how-scored summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.how-scored ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.how-scored li {
+  margin: 4px 0;
+}
+
+.leaderboard {
+  display: grid;
+  gap: 10px;
+}
+
+.period-tabs {
+  margin-bottom: 0;
+}
+
+.lb-sub {
+  margin: 0;
+  text-align: center;
+}
+
+.lb-person {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lb-person.static {
+  cursor: default;
+}
+
+button.lb-person:hover .lb-name {
+  text-decoration: underline;
+}
+
+.lb-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.lb-list {
+  margin-bottom: 0;
+}
+
+.award {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--green) 14%, var(--surface));
+  outline: 1.5px solid color-mix(in srgb, var(--green) 55%, transparent);
+}
+
+.award-total {
+  font-family: var(--mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.award-total span {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.award-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 0.9rem;
+}
+
+.award-lines li {
+  display: flex;
+  justify-content: space-between;
+}
+
+.award-lines b,
+.award-meta b {
+  font-family: var(--mono);
+}
+
+.award-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.award .pos {
+  color: var(--green);
+}
+
+.award .neg {
+  color: #d1495b;
+}
+
+@media (max-width: 420px) {
+  .profile-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.profile-id h3 {
+  font-family: var(--sans);
+  font-size: 1.35rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+
+/* The form-label rule (.field span) shouldn't style the picker's own text. */
+.field .school-selected span:not(.school-logo-initial),
+.field .school-results span:not(.school-logo-initial) {
+  display: inline;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.field .school-results span.muted {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.field .school-logo-initial {
+  display: inline-flex;
+  margin: 0;
+}

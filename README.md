@@ -39,11 +39,29 @@ npx tsx scripts/verify-markets.ts           # markets: fair values vs simulation
 
 No AI needed. If you'd rather have Claude write Practice puzzles, set `QUANTDLE_AI_PUZZLES=1` along with `ANTHROPIC_API_KEY`.
 
-## Accounts and leaderboard
+## Accounts, points and leaderboards
 
-Players can create an account (username + password, no email) and climb a leaderboard of **most problems solved**. A puzzle earns a point when its steps are solved in order within 6 guesses, and each puzzle counts once. Passwords are hashed with scrypt; sessions are signed cookies.
+Players sign in with a username and password (no email) or with Google. Signed-in players get a profile with points, games won, a daily streak, an Elo rating, an optional photo, school and LinkedIn link.
 
-Scores are stored in Upstash Redis. Without it, an in-memory store is used, which is fine locally but resets on restart and doesn't work reliably on Vercel.
+**Points** (for puzzles solved in order within 6 guesses; a hint costs a guess; each puzzle scores once):
+
+| | Easy | Medium | Hard | Expert |
+| --- | --- | --- | --- | --- |
+| Base points | 10 | 20 | 35 | 50 |
+
+- **Efficiency:** the base is multiplied from 1.0 (every guess was a step answer) down to 0.5 (all six guesses used).
+- **Daily puzzle:** worth double, plus +2 per day of streak (up to +20).
+- **Practice:** capped at 100 points per UTC day (wins and Elo still count).
+- **Elo:** starts at 1200. Each puzzle is an opponent rated 1000 / 1200 / 1400 / 1600 by difficulty. A clean win scores more than a slow one, and running out of guesses is a loss.
+- **Streak:** consecutive daily puzzles won. A missed day or a lost daily resets it.
+
+All of this lives in `lib/scoring.ts` (pure functions; `npx tsx scripts/verify-scoring.ts` prints the points table and checks the rules). Days reset at 00:00 UTC and weeks start Monday.
+
+**Leaderboards** rank players, and schools (the sum of their players' points), by points for today, this week, and all time. Schools come from [Hipo's university-domains-list](https://github.com/Hipo/university-domains-list) (MIT licensed, trimmed into `lib/schools-data.json`); logos are fetched from Google's favicon service by the server and cached.
+
+Passwords are hashed with scrypt; sessions are signed cookies. Profile pictures are shrunk to a 192px JPEG in the browser, checked server-side (JPEG/PNG/WebP only, 80 KB max) and served with `nosniff`.
+
+Everything is stored in Upstash Redis. Without it, an in-memory store is used, which is fine locally but resets on restart and doesn't work reliably on Vercel.
 
 ## How the judging works
 
@@ -73,18 +91,26 @@ npm run dev                  # http://localhost:3000
 app/
   page.tsx                   UI entry
   api/puzzle/route.ts        GET a daily or practice puzzle (returns public view + sealed token)
-  api/guess/route.ts         POST a guess -> verdict, direction, feedback; credits leaderboard solves
+  api/guess/route.ts         POST a guess -> verdict, direction, feedback; scores wins and losses (points, Elo, streak)
   api/reveal/route.ts        POST at game end -> full worked solution
   api/auth/route.ts          Sign up, sign in, sign out, who am I
   api/auth/google/           Sign in with Google (redirect + callback)
-  api/leaderboard/route.ts   Top solvers
+  api/hint/route.ts          POST a hint request (costs a guess for signed-in players)
+  api/profile/route.ts       GET a public profile, POST edits to your own (school, LinkedIn)
+  api/avatar/                Upload, remove and serve profile pictures
+  api/schools/, school-logo/ School search and cached logos
+  api/leaderboard/route.ts   Players and schools boards (daily / weekly / all time)
 components/Game.tsx          The game: board, step chain, input, modals, stats
 components/MarketGame.tsx    The market-making game (daily and practice)
-components/Account.tsx       Sign-in form and leaderboard panels
+components/Account.tsx       Sign-in form
+components/Profile.tsx       Your profile and public profiles
+components/Leaderboard.tsx   Players / schools leaderboard panel
 lib/generators.ts            Procedural puzzle templates + Monte Carlo checks
 lib/bank.ts                  Hand-checked puzzles for the Daily
 lib/market.ts                Market contract generator, fair value, counterparties, P&L
 lib/auth.ts                  Password hashing and session cookies
+lib/scoring.ts               Points, Elo, tiers, UTC day/week helpers
+lib/profile.ts               Profiles, awards, leaderboards
 lib/store.ts                 Upstash Redis client with an in-memory fallback
 lib/ai.ts                    Optional Claude judge and puzzle writer
 lib/math.ts                  Safe expression parser for answers

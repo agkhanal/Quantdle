@@ -7,6 +7,7 @@ import { dailyNumber } from "@/lib/bank";
 import {
   DIFFICULTIES,
   MAX_GUESSES,
+  type Award,
   type Difficulty,
   type GuessResponse,
   type Profile,
@@ -18,7 +19,10 @@ import Logo from "./Logo";
 import Modal from "./Modal";
 import Confetti from "./Confetti";
 import MarketGame from "./MarketGame";
-import { AUTH_ERRORS, AccountPanel, LeaderboardPanel } from "./Account";
+import { AUTH_ERRORS, AccountPanel } from "./Account";
+import { Avatar } from "./Avatar";
+import { LeaderboardPanel } from "./Leaderboard";
+import { PublicProfile } from "./Profile";
 import Verity from "./Verity";
 
 type Mode = "daily" | "practice";
@@ -79,12 +83,13 @@ export default function Game() {
   const [submitting, setSubmitting] = useState(false);
   const [shake, setShake] = useState(false);
   const [reveal, setReveal] = useState<RevealResponse | null>(null);
-  const [modal, setModal] = useState<"help" | "stats" | "result" | "account" | "leaderboard" | null>(null);
+  const [modal, setModal] = useState<"help" | "stats" | "result" | "account" | "leaderboard" | "player" | null>(null);
   const [user, setUser] = useState<Profile | null>(null);
   const [googleOn, setGoogleOn] = useState(false);
   const [authError, setAuthError] = useState("");
   const [pendingName, setPendingName] = useState<string | null>(null);
-  const [credited, setCredited] = useState(false);
+  const [award, setAward] = useState<Award | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [quip, setQuip] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -98,7 +103,8 @@ export default function Game() {
   const rowsLeft = MAX_GUESSES - rows.length;
   const over = status === "won" || status === "lost";
   const preview = useMemo(() => (input.trim() ? evaluate(input) : undefined), [input]);
-  const hintUsed = rows.some((r) => r.kind === "hint" && r.step === step);
+  const hintRow = rows.find((r) => r.kind === "hint" && r.step === step);
+  const hintUsed = hintRow !== undefined;
 
   // ───────────── loading puzzles ─────────────
 
@@ -111,7 +117,7 @@ export default function Game() {
     setSolved([]);
     setFeedback(null);
     setReveal(null);
-    setCredited(false);
+    setAward(null);
     setInput("");
     setReasoning("");
     setQuip(Math.floor(Math.random() * LOADING_QUIPS.length));
@@ -263,9 +269,9 @@ export default function Game() {
       const newRows = [...rows, { kind: "guess" as const, step, text: input.trim(), verdict: g.verdict, direction: g.direction }];
       setRows(newRows);
       setFeedback({ text: g.feedback, verdict: g.verdict, judgedBy: g.judgedBy });
-      if (g.credited && g.totalSolved !== undefined) {
-        setCredited(true);
-        setUser((u) => (u ? { ...u, solved: g.totalSolved! } : u));
+      if (g.award) {
+        setAward(g.award);
+        setUser(g.award.profile);
       }
       setInput("");
 
@@ -285,9 +291,23 @@ export default function Game() {
     }
   }
 
-  function takeHint() {
-    if (status !== "playing" || hintUsed || rowsLeft < 2) return;
-    setRows([...rows, { kind: "hint", step, text: "hint" }]);
+  async function takeHint() {
+    if (!data || status !== "playing" || hintUsed || rowsLeft < 2 || submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/hint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: data.token, step }),
+      });
+      const body = await res.json();
+      if (!res.ok) return setFeedback({ text: body.error ?? "Couldn't get a hint.", verdict: "grey", judgedBy: "rules" });
+      setRows((rs) => [...rs, { kind: "hint", step, text: String(body.hint) }]);
+    } catch {
+      setFeedback({ text: "Network hiccup. Try again.", verdict: "grey", judgedBy: "rules" });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function shareText() {
@@ -345,7 +365,7 @@ export default function Game() {
             onClick={() => setModal("account")}
           >
             {user ? (
-              user.username[0].toUpperCase()
+              <Avatar name={user.username} src={user.avatar} size={28} />
             ) : (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <circle cx="12" cy="8" r="4" />
@@ -465,7 +485,7 @@ export default function Game() {
                 </div>
                 <p className="question">{data.puzzle.steps[step].question}</p>
 
-                {hintUsed && <p className="hint">💡 {data.puzzle.steps[step].hint}</p>}
+                {hintRow && <p className="hint">💡 {hintRow.text}</p>}
 
                 <form
                   className="answer"
@@ -568,6 +588,18 @@ export default function Game() {
       {modal === "result" && data && (
         <Modal title={status === "won" ? "Solved! 🎉" : "Out of guesses"} onClose={() => setModal(null)}>
           <div className="result">
+            {user && award && <AwardCard award={award} />}
+            {!user && (
+              <div className="lb-note">
+                <button className="link" onClick={() => setModal("account")}>
+                  Sign in
+                </button>{" "}
+                to earn points, build a streak, and rank on the leaderboard.
+              </div>
+            )}
+            {user && !award && status !== "playing" && (
+              <div className="lb-note">This puzzle didn&apos;t score (already played, or not all steps were solved in order while signed in).</div>
+            )}
             <pre className="share-preview">{shareText()}</pre>
             <button className="btn primary wide" onClick={share}>
               {copied ? "Copied!" : "Share result"}
@@ -589,26 +621,6 @@ export default function Game() {
             ) : (
               <p className="muted">Loading solution…</p>
             )}
-            {status === "won" && (
-              <div className="lb-note">
-                {user ? (
-                  credited ? (
-                    <>
-                      🏆 +1 on the leaderboard. You&apos;ve solved <b>{user.solved}</b>.
-                    </>
-                  ) : (
-                    <>This one didn&apos;t earn a leaderboard point (already solved, or not all steps were solved while signed in).</>
-                  )
-                ) : (
-                  <>
-                    <button className="link" onClick={() => setModal("account")}>
-                      Sign in
-                    </button>{" "}
-                    to save solves and climb the leaderboard.
-                  </>
-                )}
-              </div>
-            )}
             <StatsView stats={stats} compact />
           </div>
         </Modal>
@@ -620,9 +632,20 @@ export default function Game() {
         </Modal>
       )}
 
+      {modal === "player" && viewing && (
+        <Modal title="Player" onClose={() => setModal("leaderboard")}>
+          <PublicProfile username={viewing} />
+        </Modal>
+      )}
+
       {modal === "leaderboard" && (
         <Modal title="Leaderboard" onClose={() => setModal(null)}>
-          <LeaderboardPanel onSignIn={() => setModal("account")} />
+          <LeaderboardPanel
+            me={user?.username ?? null}
+            mySchoolId={user?.school?.id ?? null}
+            onSignIn={() => setModal("account")}
+            onOpenPlayer={(u) => (u === user?.username ? setModal("account") : (setViewing(u), setModal("player")))}
+          />
         </Modal>
       )}
     </div>
@@ -630,6 +653,39 @@ export default function Game() {
 }
 
 // ───────────── pieces ─────────────
+
+/** What a finished puzzle was worth: points itemised, Elo and streak. */
+function AwardCard({ award }: { award: Award }) {
+  const delta = award.elo.after - award.elo.before;
+  return (
+    <div className="award">
+      {award.result === "win" ? (
+        <>
+          <div className="award-total">
+            +{award.points} <span>points</span>
+          </div>
+          <ul className="award-lines">
+            {award.breakdown.map((b) => (
+              <li key={b.label}>
+                <span>{b.label}</span>
+                <b className={b.value < 0 ? "neg" : ""}>{b.value > 0 ? `+${b.value}` : b.value}</b>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <div className="award-total">No points this time</div>
+      )}
+      <div className="award-meta">
+        <span>
+          Elo {award.elo.after} <b className={delta >= 0 ? "pos" : "neg"}>({delta >= 0 ? "+" : ""}{delta})</b>
+        </span>
+        {award.streak > 0 && <span>🔥 {award.streak}-day streak</span>}
+        <span>{award.profile.points.toLocaleString()} total</span>
+      </div>
+    </div>
+  );
+}
 
 const puzzleKey = (m: Mode, d: Difficulty) => (m === "daily" ? "daily" : `practice:${d}`);
 
@@ -728,7 +784,7 @@ function HowTo() {
       <p>
         Answer in any form: <code>0.25</code>, <code>1/4</code>, <code>25%</code>, <code>1-(5/6)^4</code>,{" "}
         <code>C(52,5)</code>, <code>e</code>. When the AI judge is on, <b>Show your work</b> lets it read your reasoning. Or burn a
-        guess on a <b>💡 hint</b>. Sign in to put your solves on the <b>leaderboard</b>.
+        guess on a <b>💡 hint</b>. Sign in to earn <b>points</b>, build a streak, and climb the <b>leaderboards</b>.
       </p>
       <p className="muted small">
         <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> is endless: puzzles are generated from templates with

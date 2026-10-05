@@ -31,9 +31,10 @@ interface Mem {
   kv: Map<string, { v: string; exp?: number }>;
   sets: Map<string, Set<string>>;
   zsets: Map<string, Map<string, number>>;
+  hashes: Map<string, Map<string, string>>;
 }
 const g = globalThis as unknown as { __quantdleMem?: Mem };
-const mem: Mem = (g.__quantdleMem ??= { kv: new Map(), sets: new Map(), zsets: new Map() });
+const mem: Mem = (g.__quantdleMem ??= { kv: new Map(), sets: new Map(), zsets: new Map(), hashes: new Map() });
 
 function memGet(key: string) {
   const e = mem.kv.get(key);
@@ -98,8 +99,12 @@ export async function inSet(key: string, member: string): Promise<boolean> {
   return mem.sets.get(key)?.has(member) ?? false;
 }
 
-export async function zIncr(key: string, member: string, by: number): Promise<number> {
-  if (storeKind === "redis") return Number(await redis<string>(["ZINCRBY", key, by, member]));
+export async function zIncr(key: string, member: string, by: number, ttlSeconds?: number): Promise<number> {
+  if (storeKind === "redis") {
+    const v = Number(await redis<string>(["ZINCRBY", key, by, member]));
+    if (ttlSeconds) await redis(["EXPIRE", key, ttlSeconds]);
+    return v;
+  }
   const z = mem.zsets.get(key) ?? new Map<string, number>();
   mem.zsets.set(key, z);
   const v = (z.get(member) ?? 0) + by;
@@ -131,4 +136,66 @@ export async function zRankOf(key: string, member: string): Promise<{ score: num
   const z = mem.zsets.get(key);
   if (!z?.has(member)) return null;
   return { score: z.get(member)!, rank: sortedDesc(z).findIndex(([m]) => m === member) };
+}
+
+/** Add `by` to a counter (created at 0). The TTL is applied when the counter is first created. */
+export async function incrBy(key: string, by: number, ttlSeconds: number): Promise<number> {
+  if (storeKind === "redis") {
+    const n = await redis<number>(["INCRBY", key, by]);
+    if (n === by) await redis(["EXPIRE", key, ttlSeconds]);
+    return n;
+  }
+  const n = Number(memGet(key) ?? 0) + by;
+  const exp = mem.kv.get(key)?.exp ?? Date.now() + ttlSeconds * 1000;
+  mem.kv.set(key, { v: String(n), exp });
+  return n;
+}
+
+export async function del(key: string): Promise<void> {
+  if (storeKind === "redis") {
+    await redis(["DEL", key]);
+    return;
+  }
+  mem.kv.delete(key);
+}
+
+// ───────────── hashes (profiles) ─────────────
+
+export async function hGetAll(key: string): Promise<Record<string, string>> {
+  if (storeKind === "redis") {
+    const flat = (await redis<string[] | null>(["HGETALL", key])) ?? [];
+    const out: Record<string, string> = {};
+    for (let i = 0; i < flat.length; i += 2) out[flat[i]] = flat[i + 1];
+    return out;
+  }
+  return Object.fromEntries(mem.hashes.get(key) ?? []);
+}
+
+export async function hSet(key: string, fields: Record<string, string | number>): Promise<void> {
+  const entries = Object.entries(fields);
+  if (entries.length === 0) return;
+  if (storeKind === "redis") {
+    await redis(["HSET", key, ...entries.flatMap(([f, v]) => [f, String(v)])]);
+    return;
+  }
+  const h = mem.hashes.get(key) ?? new Map<string, string>();
+  mem.hashes.set(key, h);
+  for (const [f, v] of entries) h.set(f, String(v));
+}
+
+export async function hDel(key: string, field: string): Promise<void> {
+  if (storeKind === "redis") {
+    await redis(["HDEL", key, field]);
+    return;
+  }
+  mem.hashes.get(key)?.delete(field);
+}
+
+export async function hIncrBy(key: string, field: string, by: number): Promise<number> {
+  if (storeKind === "redis") return Number(await redis<number>(["HINCRBY", key, field, by]));
+  const h = mem.hashes.get(key) ?? new Map<string, string>();
+  mem.hashes.set(key, h);
+  const v = Number(h.get(field) ?? 0) + by;
+  h.set(field, String(v));
+  return v;
 }

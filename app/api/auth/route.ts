@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { claimGoogleUsername, googleEnabled } from "@/lib/google";
+import { getProfile as profile } from "@/lib/profile";
 import {
   SESSION_DAYS,
   checkLogin,
@@ -7,7 +8,6 @@ import {
   makeSession,
   pendingCookie,
   pendingGoogle,
-  profile,
   rateLimited,
   sessionCookie,
   sessionUser,

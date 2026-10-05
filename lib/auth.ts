@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { promisify } from "node:util";
-import { get, incr, setIfAbsent, zRankOf } from "./store";
+import { get, incr, setIfAbsent } from "./store";
 
 /**
  * Username + password accounts. Passwords are hashed with scrypt; the session is a
@@ -14,7 +14,6 @@ const sessionKey = crypto.createHash("sha256").update(`session:${secret}`).diges
 
 export const SESSION_COOKIE = "qd_session";
 export const SESSION_DAYS = 30;
-export const LEADERBOARD = "lb:solved";
 
 const USERNAME_RE = /^[A-Za-z0-9_-]{3,20}$/;
 
@@ -138,9 +137,4 @@ export const sessionCookie = (value: string, maxAgeSeconds: number) => ({
 export async function rateLimited(req: Request, bucket: string, max: number, windowSeconds: number) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
   return (await incr(`rl:${bucket}:${ip}`, windowSeconds)) > max;
-}
-
-export async function profile(username: string) {
-  const r = await zRankOf(LEADERBOARD, username);
-  return { username, solved: r?.score ?? 0, rank: r ? r.rank + 1 : null };
 }

@@ -33,7 +33,7 @@ export interface PublicPuzzle {
   category: string;
   difficulty: Difficulty;
   story: string;
-  steps: { question: string; hint: string }[];
+  steps: { question: string }[];
 }
 
 export interface PuzzleResponse {
@@ -61,20 +61,71 @@ export interface GuessResponse {
   /** Present once a step is solved: the canonical answer and why. */
   solved?: { answerDisplay: string; explanation: string };
   judgedBy: "ai" | "rules";
-  /** Signed-in players only: whether this guess finished the puzzle and earned a leaderboard point. */
-  credited?: boolean;
-  totalSolved?: number;
+  /** Signed-in players only: set when this guess ended the puzzle (a win or the sixth miss). */
+  award?: Award;
+}
+
+export interface School {
+  id: string;
+  name: string;
+  country: string;
 }
 
 export interface Profile {
   username: string;
-  solved: number;
+  points: number;
+  wins: number;
+  losses: number;
+  /** Consecutive daily puzzles won, ending yesterday or today. */
+  streak: number;
+  bestStreak: number;
+  elo: number;
+  tier: string;
+  /** All-time points rank, 1 = best; null until the first point is earned. */
   rank: number | null;
+  school: School | null;
+  /** LinkedIn handle, i.e. the part after linkedin.com/in/ */
+  linkedin: string | null;
+  /** URL of the profile picture, or null for the default initials avatar. */
+  avatar: string | null;
+}
+
+/** What finishing a puzzle did to a signed-in player. */
+export interface Award {
+  result: "win" | "loss";
+  points: number;
+  breakdown: { label: string; value: number }[];
+  elo: { before: number; after: number };
+  streak: number;
+  profile: Profile;
+}
+
+export const PERIODS = ["daily", "weekly", "all"] as const;
+export type Period = (typeof PERIODS)[number];
+
+export interface PlayerEntry {
+  rank: number;
+  username: string;
+  points: number;
+  avatar: string | null;
+  school: School | null;
+}
+
+export interface SchoolEntry {
+  rank: number;
+  school: School;
+  points: number;
 }
 
 export interface LeaderboardResponse {
-  top: { rank: number; username: string; solved: number }[];
-  me: Profile | null;
+  type: "players" | "schools";
+  period: Period;
+  /** When the current daily/weekly window ends (ms since epoch); null for all-time. */
+  resetsAt: number | null;
+  players?: PlayerEntry[];
+  schools?: SchoolEntry[];
+  /** The signed-in player's own standing (or their school's, on the schools board). */
+  me: { rank: number | null; points: number } | null;
   storage: "redis" | "memory";
 }
 
@@ -92,6 +143,6 @@ export function toPublic(p: Puzzle): PublicPuzzle {
     category: p.category,
     difficulty: p.difficulty,
     story: p.story,
-    steps: p.steps.map((s) => ({ question: s.question, hint: s.hint })),
+    steps: p.steps.map((s) => ({ question: s.question })),
   };
 }
