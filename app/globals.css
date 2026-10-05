@@ -1416,3 +1416,37 @@ code {
 .die.shown.num {
   font-size: 1.35rem;
 }
+
+.legal {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  line-height: 1.6;
+}
+
+.legal h1 {
+  margin: 16px 0 4px;
+}
+
+.legal h2 {
+  margin: 28px 0 8px;
+  font-size: 1.15rem;
+}
+
+.legal ul {
+  padding-left: 20px;
+}
+
+.legal li {
+  margin: 6px 0;
+}
+
+.legal a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.legal-back {
+  text-decoration: none !important;
+  color: var(--muted) !important;
+}

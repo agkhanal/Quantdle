@@ -154,6 +154,10 @@ export function AccountPanel({
         {busy ? "…" : tab === "login" ? "Sign in" : "Create account"}
       </button>
       <p className="muted small">Sign in to save your solves and climb the leaderboard. No email needed.</p>
+      <p className="muted small">
+        By continuing you agree to the <a href="/terms" target="_blank" rel="noreferrer">Terms</a> and{" "}
+        <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+      </p>
     </form>
   );
 }
