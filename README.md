@@ -63,6 +63,7 @@ npm run dev                  # http://localhost:3000
 | --- | --- |
 | `QUANTDLE_SECRET` | Encrypts puzzle tokens and signs login sessions. Set it in production. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Leaderboard and accounts database. On Vercel, add Upstash Redis from the Storage tab and these are set for you (`KV_REST_API_URL`/`KV_REST_API_TOKEN` also work). |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional. Turns on "Continue with Google". Add `<your origin>/api/auth/google/callback` as an authorized redirect URI in the Google Cloud console. `GOOGLE_REDIRECT_URI` overrides the inferred callback URL. Only the `openid profile` scopes are requested, and only the Google account ID is stored (no email or name). |
 | `ANTHROPIC_API_KEY` | Optional. Turns on the AI judge. |
 | `QUANTDLE_AI_PUZZLES` | Optional. `1` makes Claude write Practice puzzles instead of the generator. |
 
@@ -75,6 +76,7 @@ app/
   api/guess/route.ts         POST a guess -> verdict, direction, feedback; credits leaderboard solves
   api/reveal/route.ts        POST at game end -> full worked solution
   api/auth/route.ts          Sign up, sign in, sign out, who am I
+  api/auth/google/           Sign in with Google (redirect + callback)
   api/leaderboard/route.ts   Top solvers
 components/Game.tsx          The game: board, step chain, input, modals, stats
 components/MarketGame.tsx    The market-making game (daily and practice)

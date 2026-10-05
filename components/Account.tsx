@@ -3,15 +3,36 @@
 import { useEffect, useState } from "react";
 import type { LeaderboardResponse, Profile } from "@/lib/types";
 
+export const AUTH_ERRORS: Record<string, string> = {
+  google_denied: "Google sign-in was cancelled.",
+  google_failed: "Google sign-in failed. Try again.",
+  google_disabled: "Google sign-in isn't set up on this server.",
+  rate_limited: "Too many attempts. Try again in a few minutes.",
+};
+
 /** Sign in / sign up form, or the signed-in profile with a sign-out button. */
-export function AccountPanel({ user, onChange }: { user: Profile | null; onChange: (u: Profile | null) => void }) {
+export function AccountPanel({
+  user,
+  onChange,
+  google = false,
+  initialError = "",
+  pending = null,
+  onSignedIn,
+}: {
+  user: Profile | null;
+  onChange: (u: Profile | null) => void;
+  google?: boolean;
+  initialError?: string;
+  pending?: string | null;
+  onSignedIn?: () => void;
+}) {
   const [tab, setTab] = useState<"login" | "signup">("login");
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(pending ?? "");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
   const [busy, setBusy] = useState(false);
 
-  async function send(action: "login" | "signup" | "logout") {
+  async function send(action: "login" | "signup" | "logout" | "google_username") {
     setBusy(true);
     setError("");
     try {
@@ -24,6 +45,7 @@ export function AccountPanel({ user, onChange }: { user: Profile | null; onChang
       if (!res.ok) return setError(body.error ?? "Something went wrong.");
       setPassword("");
       onChange(body.user);
+      if (body.user) onSignedIn?.();
     } catch {
       setError("Network hiccup. Try again.");
     } finally {
@@ -54,6 +76,31 @@ export function AccountPanel({ user, onChange }: { user: Profile | null; onChang
           Sign out
         </button>
       </div>
+    );
+  }
+
+  if (pending !== null) {
+    return (
+      <form
+        className="account"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send("google_username");
+        }}
+      >
+        <p className="account-hello">
+          Signed in with Google. Choose the username that will appear on the leaderboard. You can&apos;t change it later.
+        </p>
+        <label className="field">
+          <span>Username</span>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="off" autoFocus maxLength={20} />
+        </label>
+        {error && <p className="quote-note bad">{error}</p>}
+        <button className="btn primary wide" disabled={busy || !username}>
+          {busy ? "…" : "Continue"}
+        </button>
+        <p className="muted small">3–20 characters: letters, numbers, _ or -. We only keep your Google account ID. Your name and email are not stored.</p>
+      </form>
     );
   }
 
@@ -89,7 +136,28 @@ export function AccountPanel({ user, onChange }: { user: Profile | null; onChang
       <button className="btn primary wide" disabled={busy || !username || !password}>
         {busy ? "…" : tab === "login" ? "Sign in" : "Create account"}
       </button>
+      {google && (
+        <>
+          <p className="muted small or-line">or</p>
+          <a className="btn wide google-btn" href="/api/auth/google">
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
+              <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
+              <path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.1z" />
+              <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+            </svg>
+            Continue with Google
+          </a>
+          <p className="muted small or-line">
+            Google only shares your name and profile ID, never your email or password. We keep just the ID, to recognize you next time.
+          </p>
+        </>
+      )}
       <p className="muted small">Sign in to save your solves and climb the leaderboard. No email needed.</p>
+      <p className="muted small">
+        By continuing you agree to the <a href="/terms" target="_blank" rel="noreferrer">Terms</a> and{" "}
+        <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+      </p>
     </form>
   );
 }
