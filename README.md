@@ -81,6 +81,7 @@ npm run dev                  # http://localhost:3000
 | `QUANTDLE_SECRET` | Encrypts puzzle tokens and signs login sessions. Set it in production. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Leaderboard and accounts database. On Vercel, add Upstash Redis from the Storage tab and these are set for you (`KV_REST_API_URL`/`KV_REST_API_TOKEN` also work). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional. Turns on "Continue with Google". Add `<your origin>/api/auth/google/callback` as an authorized redirect URI in the Google Cloud console. `GOOGLE_REDIRECT_URI` overrides the inferred callback URL. Only the `openid profile` scopes are requested, and only the Google account ID is stored (no email or name). |
+| `QUANTDLE_ADMIN_SECRET` | Optional. Turns on `POST /api/admin/points` (`{ "username", "points", "reason" }` with `Authorization: Bearer <secret>`) so an owner can add or remove points; every adjustment is logged in the database. Off when unset. |
 | `ANTHROPIC_API_KEY` | Optional. Turns on the AI judge. |
 | `QUANTDLE_AI_PUZZLES` | Optional. `1` makes Claude write Practice puzzles instead of the generator. |
 

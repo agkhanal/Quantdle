@@ -122,7 +122,7 @@ export async function findUser(name: string): Promise<string | null> {
 // ───────────── earning points ─────────────
 
 async function addPoints(username: string, school: string | null, points: number, now = Date.now()) {
-  if (points <= 0) return;
+  if (points === 0) return;
   const jobs: Promise<unknown>[] = [
     zIncr(boardKey("u", "all", now), username, points),
     zIncr(boardKey("u", "daily", now), username, points, DAILY_TTL),
@@ -214,6 +214,18 @@ export const markSolved = (username: string, puzzleId: string) => addToSet(solve
 export const isSolved = (username: string, puzzleId: string) => inSet(solvedKey(username), puzzleId);
 export const markLost = (username: string, puzzleId: string) => addToSet(lostKey(username), puzzleId);
 export const progressTtl = WEEK;
+
+// ───────────── admin adjustments ─────────────
+
+/** Adds (or, if negative, removes) points from a player, on every board, and records who/why. Returns null for an unknown player. */
+export async function adminAdjustPoints(name: string, points: number, reason: string): Promise<Profile | null> {
+  const username = await findUser(name);
+  if (!username) return null;
+  const s = await load(username);
+  await Promise.all([hIncrBy(profKey(username), "points", points), addPoints(username, s.school, points)]);
+  await set(`admin:grant:${Date.now()}:${username.toLowerCase()}`, JSON.stringify({ username, points, reason, at: new Date().toISOString() }));
+  return getProfile(username);
+}
 
 // ───────────── easter egg ─────────────
 
