@@ -501,7 +501,8 @@ export default function Game() {
                     <span className="solved-tag">{i === totalSteps - 1 ? "Final" : `Step ${i + 1}`} ✓</span>
                     <span className="solved-q"><RichText text={data.puzzle.steps[i].question} /></span>
                     <span className="solved-a">{s.answerDisplay}</span>
-                    <span className="solved-why"><RichText text={s.explanation} /></span>
+                    {/* Prefer the server's current text: a restored daily may hold explanations saved before math was typeset. */}
+                    <span className="solved-why"><RichText text={reveal?.steps[i]?.explanation ?? s.explanation} /></span>
                   </div>
                 ))}
               </section>
