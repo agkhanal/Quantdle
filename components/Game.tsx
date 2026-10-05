@@ -97,6 +97,7 @@ export default function Game() {
   const [viewFrom, setViewFrom] = useState<"leaderboard" | "search" | "chat" | "admin">("leaderboard");
   const [toast, setToast] = useState("");
   const [eggPops, setEggPops] = useState(0);
+  const [leaving, setLeaving] = useState(false); // old content fading out before a mode/track/difficulty switch
   const [stats, setStats] = useState<Stats | null>(null);
   const [quip, setQuip] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -228,11 +229,24 @@ export default function Game() {
     if (loadedKey.current !== puzzleKey(m, d) || status === "error") load(m, d);
   }
 
+  /** Fade the current content out, then make the change (the new content fades in). */
+  function swap(change: () => void) {
+    if (leaving) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return change();
+    setLeaving(true);
+    setTimeout(() => {
+      change();
+      setLeaving(false);
+    }, 140);
+  }
+
   function switchMode(m: Mode, t: Track = tracks[m]) {
     if (m === mode && t === track) return;
-    setMode(m);
-    setTracks((ts) => ({ ...ts, [m]: t }));
-    if (t === "puzzle") ensurePuzzle(m, difficulty);
+    swap(() => {
+      setMode(m);
+      setTracks((ts) => ({ ...ts, [m]: t }));
+      if (t === "puzzle") ensurePuzzle(m, difficulty);
+    });
   }
 
   function switchTrack(t: Track) {
@@ -240,8 +254,11 @@ export default function Game() {
   }
 
   function pickDifficulty(d: Difficulty) {
-    setDifficulty(d);
-    if (track === "puzzle") load("practice", d);
+    if (d === difficulty) return;
+    swap(() => {
+      setDifficulty(d);
+      if (track === "puzzle") load("practice", d);
+    });
   }
 
   /** Opens someone's public profile (your own goes to your account); closing it returns to where you came from. */
@@ -442,31 +459,36 @@ export default function Game() {
         ))}
       </div>
 
-      {mode === "practice" && (
-        <div className="diffs">
-          {DIFFICULTIES.map((d) => (
-            <button
-              key={d}
-              className={`diff diff-${d} ${difficulty === d ? "on" : ""}`}
-              onClick={() => pickDifficulty(d)}
-              disabled={track === "puzzle" && status === "loading"}
-            >
-              {DIFF_LABEL[d]}
-            </button>
-          ))}
+      <div className={`diffs-wrap${mode === "practice" ? " open" : ""}`} aria-hidden={mode !== "practice"} inert={mode !== "practice"}>
+        <div className="diffs-clip">
+          <div className="diffs">
+            {DIFFICULTIES.map((d) => (
+              <button
+                key={d}
+                className={`diff diff-${d} ${difficulty === d ? "on" : ""}`}
+                onClick={() => pickDifficulty(d)}
+                disabled={track === "puzzle" && status === "loading"}
+              >
+                {DIFF_LABEL[d]}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
+      </div>
 
       {track === "market" ? (
-        <main>
-          {mode === "daily" ? (
-            today !== null && <MarketGame key={`daily-${today}`} daily dailyNumber={today} onPractice={() => switchMode("practice", "market")} />
-          ) : (
-            <MarketGame key="practice" daily={false} difficulty={difficulty} />
-          )}
+        <main key={`${mode}-market`} className={leaving ? "leaving" : undefined}>
+          <div className="content-in">
+            {mode === "daily" ? (
+              today !== null && <MarketGame key={`daily-${today}`} daily dailyNumber={today} onPractice={() => switchMode("practice", "market")} />
+            ) : (
+              <MarketGame key="practice" daily={false} difficulty={difficulty} />
+            )}
+          </div>
         </main>
       ) : (
-      <main>
+      <main key={`${mode}-puzzle`} className={leaving ? "leaving" : undefined}>
+       <div className="content-in" key={status === "loading" ? "loading" : (data?.puzzle.id ?? status)}>
         {status === "loading" && <Loading quip={LOADING_QUIPS[quip]} />}
 
         {status === "error" && (
@@ -620,6 +642,7 @@ export default function Game() {
             )}
           </>
         )}
+       </div>
       </main>
       )}
 

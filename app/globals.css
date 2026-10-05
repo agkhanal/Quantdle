@@ -186,7 +186,27 @@ code {
   justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  padding-bottom: 16px;
+}
+
+.diffs-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* The row is always mounted and grows open / shrinks shut, so the page below glides instead of jumping. */
+.diffs-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+  transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease;
+}
+
+.diffs-wrap.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .diff {
@@ -3143,5 +3163,38 @@ body {
   to {
     transform: translateY(8px);
     opacity: 0;
+  }
+}
+
+/* ───────── switching between Daily / Practice / game types ───────── */
+
+main {
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+main.leaving {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+.content-in {
+  animation: content-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main,
+  .diffs-wrap {
+    transition: none;
+  }
+  .content-in {
+    animation: none;
   }
 }
