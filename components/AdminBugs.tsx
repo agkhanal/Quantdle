@@ -172,6 +172,7 @@ function BugDetail({
         </dl>
       )}
 
+      <div className="bug-handle">
       <label className="field">
         <span>Note to the reporter (optional, they can see it)</span>
         <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} placeholder="e.g. Fixed in the latest version. Thanks!" autoComplete="off" />
@@ -214,6 +215,7 @@ function BugDetail({
             Reopen
           </button>
         )}
+      </div>
       </div>
     </div>
   );

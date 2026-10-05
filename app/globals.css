@@ -3547,3 +3547,10 @@ main.leaving {
   flex: 1;
   padding: 0 12px;
 }
+
+/* A little more air between the report itself and the controls for handling it. */
+.bug-handle {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
