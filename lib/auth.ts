@@ -78,7 +78,7 @@ export function makeSession(username: string): string {
 
 /** The signed-in display username for a request, or null. */
 /** Accounts that can use the admin tools (adjusting points). Matched case-insensitively against the signed-in username. */
-export const ADMIN_USERNAMES = ["quantdle"];
+export const ADMIN_USERNAMES = ["quantdle", "aggyg"];
 export const isAdmin = (username: string | null | undefined) => !!username && ADMIN_USERNAMES.includes(username.toLowerCase());
 
 export function sessionUser(req: Request): string | null {
