@@ -2449,3 +2449,13 @@ html.verity-quake .app {
     transform: translate(-50%, 16px);
   }
 }
+
+/* A very slight hover on the egg tile. Brightness only: the tile's entrance animation owns its transform. */
+.logo-tile.egg-tile {
+  transition: filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.logo-tile.egg-tile:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+}

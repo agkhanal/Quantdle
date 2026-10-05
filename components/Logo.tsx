@@ -9,7 +9,7 @@ export default function Logo({ onTileClick, eggTile, pops = 0 }: { onTileClick?:
       {LETTERS.map((l, i) => (
         <span
           key={i}
-          className={`logo-tile ${COLORS[i]}${eggTile === i && pops > 0 ? ` egg-pop-${pops % 2}` : ""}`}
+          className={`logo-tile ${COLORS[i]}${onTileClick && eggTile === i ? " egg-tile" : ""}${eggTile === i && pops > 0 ? ` egg-pop-${pops % 2}` : ""}`}
           style={{ animationDelay: eggTile === i && pops > 0 ? "0s" : `${i * 0.08}s` }}
           onClick={onTileClick ? () => onTileClick(i) : undefined}
         >
