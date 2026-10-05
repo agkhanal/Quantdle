@@ -365,7 +365,7 @@ export default function Game() {
             onClick={() => setModal("account")}
           >
             {user ? (
-              <Avatar name={user.username} src={user.avatar} size={28} />
+              <Avatar name={user.username} src={user.avatar} size={38} />
             ) : (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <circle cx="12" cy="8" r="4" />
