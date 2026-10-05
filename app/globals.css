@@ -3245,6 +3245,15 @@ textarea,
   user-select: text;
 }
 
+/* An empty box's placeholder isn't content, so Select All shouldn't paint a highlight over it
+   (typed text still highlights normally). */
+input:placeholder-shown::selection,
+textarea:placeholder-shown::selection,
+input::placeholder::selection,
+textarea::placeholder::selection {
+  background: transparent;
+}
+
 /* ───────── bug reports ───────── */
 
 .bug-fab {
