@@ -23,6 +23,7 @@ import { AUTH_ERRORS, AccountPanel } from "./Account";
 import { Avatar } from "./Avatar";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
+import { RichText } from "./RichText";
 import Verity, { isVerity, summonVerity } from "./Verity";
 
 type Mode = "daily" | "practice";
@@ -474,7 +475,7 @@ export default function Game() {
                 )}
               </div>
               <h1>{data.puzzle.title}</h1>
-              <p className="story">{data.puzzle.story}</p>
+              <p className="story"><RichText text={data.puzzle.story} /></p>
             </section>
 
             <StepChain steps={totalSteps} current={step} rows={rows} over={over} />
@@ -488,7 +489,7 @@ export default function Game() {
             {feedback && (
               <div key={rows.length} className={`feedback fb-${feedback.verdict}`} role="status">
                 <span className="fb-dot" />
-                <span>{feedback.text}</span>
+                <span><RichText text={feedback.text} /></span>
                 {feedback.judgedBy === "ai" && <span className="fb-by">AI judge</span>}
               </div>
             )}
@@ -498,9 +499,9 @@ export default function Game() {
                 {solved.map((s, i) => (
                   <div key={i} className="solved">
                     <span className="solved-tag">{i === totalSteps - 1 ? "Final" : `Step ${i + 1}`} ✓</span>
-                    <span className="solved-q">{data.puzzle.steps[i].question}</span>
+                    <span className="solved-q"><RichText text={data.puzzle.steps[i].question} /></span>
                     <span className="solved-a">{s.answerDisplay}</span>
-                    <span className="solved-why">{s.explanation}</span>
+                    <span className="solved-why"><RichText text={s.explanation} /></span>
                   </div>
                 ))}
               </section>
@@ -514,9 +515,13 @@ export default function Game() {
                     {rowsLeft} {rowsLeft === 1 ? "guess" : "guesses"} left
                   </span>
                 </div>
-                <p className="question">{data.puzzle.steps[step].question}</p>
+                <p className="question"><RichText text={data.puzzle.steps[step].question} /></p>
 
-                {hintRow && <p className="hint">💡 {hintRow.text}</p>}
+                {hintRow && (
+                  <p className="hint">
+                    💡 <RichText text={hintRow.text} />
+                  </p>
+                )}
 
                 <form
                   className="answer"
@@ -650,13 +655,13 @@ export default function Game() {
                 <ol className="walk">
                   {reveal.steps.map((s, i) => (
                     <li key={i}>
-                      <div className="walk-q">{s.question}</div>
+                      <div className="walk-q"><RichText text={s.question} /></div>
                       <div className="walk-a">{s.answerDisplay}</div>
-                      <div className="walk-why">{s.explanation}</div>
+                      <div className="walk-why"><RichText text={s.explanation} /></div>
                     </li>
                   ))}
                 </ol>
-                <p className="solution">{reveal.solution}</p>
+                <p className="solution"><RichText text={reveal.solution} /></p>
               </>
             ) : (
               <p className="muted">Loading solution…</p>

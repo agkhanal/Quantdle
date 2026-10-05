@@ -31,6 +31,20 @@ function frac(n: number, d: number): string {
   return b === 1 ? `${a}` : `${a}/${b} ≈ ${num(a / b)}`;
 }
 
+/** LaTeX stacked fraction (reduced like `frac`), for display text only. */
+function texFrac(n: number, d: number): string {
+  const g = gcd(n, d) || 1;
+  const [a, b] = [n / g, d / g];
+  return b === 1 ? `${a}` : `\\frac{${a}}{${b}}`;
+}
+
+/** LaTeX version of `frac`: reduced fraction plus decimal approximation. Display text only. */
+function texFracApprox(n: number, d: number): string {
+  const g = gcd(n, d) || 1;
+  const [a, b] = [n / g, d / g];
+  return b === 1 ? `${a}` : `\\frac{${a}}{${b}} \\approx ${num(a / b)}`;
+}
+
 /** Up to 4 decimals, or 4 significant figures for small numbers. */
 function num(x: number): string {
   if (Number.isInteger(x)) return x.toLocaleString("en-US");
@@ -111,7 +125,7 @@ const diceSum: Template = {
       category: "Probability",
       story: `${name} rolls two fair ${s}-sided dice (faces 1 to ${s}). What is the probability the total is exactly ${k}?`,
       steps: [
-        step("How many equally likely ordered outcomes are there?", s * s, `${s * s}`, `Each die has ${s} faces.`, `${s} × ${s} = ${s * s}.`),
+        step("How many equally likely ordered outcomes are there?", s * s, `${s * s}`, `Each die has ${s} faces.`, `\\(${s} \\times ${s} = ${s * s}\\).`),
         step(
           `How many of those outcomes sum to ${k}?`,
           ways,
@@ -121,15 +135,15 @@ const diceSum: Template = {
           { sim: (r) => ind(die(r, s) + die(r, s) === k) * s * s },
         ),
         step(
-          `What is P(total = ${k})?`,
+          `What is \\(P(\\text{total} = ${k})\\)?`,
           ways / (s * s),
           frac(ways, s * s),
           "Favourable over total.",
-          `${ways}/${s * s}.`,
+          `\\(\\frac{${ways}}{${s * s}}\\).`,
           { sim: (r) => ind(die(r, s) + die(r, s) === k) },
         ),
       ],
-      solution: `There are ${s * s} ordered outcomes, and ${ways} of them total ${k}, so P = ${frac(ways, s * s)}. Sums near the middle (${s + 1}) are the most likely.`,
+      solution: `There are ${s * s} ordered outcomes, and ${ways} of them total ${k}, so \\(P = ${texFracApprox(ways, s * s)}\\). Sums near the middle (${s + 1}) are the most likely.`,
     };
   },
 };
@@ -162,19 +176,19 @@ const atLeastOne: Template = {
           Math.pow(q, n),
           num(Math.pow(q, n)),
           "The rolls are independent, so multiply.",
-          `(${frac(s - m, s).split(" ")[0]})^${n} ≈ ${num(Math.pow(q, n))}.`,
+          `\\(\\left(${texFrac(s - m, s)}\\right)^{${n}} \\approx ${num(Math.pow(q, n))}\\).`,
           { sim: (r) => ind(Array.from({ length: n }).every(() => !isHit(r))) },
         ),
         step(
-          `What is P(at least one hit)? (4 decimals)`,
+          `What is \\(P(\\text{at least one hit})\\)? (4 decimals)`,
           1 - Math.pow(q, n),
           num(1 - Math.pow(q, n)),
           "'At least one' is the complement of 'none'.",
-          `1 − ${num(Math.pow(q, n))} = ${num(1 - Math.pow(q, n))}.`,
+          `\\(1 - ${num(Math.pow(q, n))} = ${num(1 - Math.pow(q, n))}\\).`,
           { sim: (r) => ind(Array.from({ length: n }).some(() => isHit(r))) },
         ),
       ],
-      solution: `Use the complement: P(no hit in ${n} rolls) = (${s - m}/${s})^${n} ≈ ${num(Math.pow(q, n))}, so P(at least one) ≈ ${num(1 - Math.pow(q, n))}.`,
+      solution: `Use the complement: \\(P(\\text{no hit}) = \\left(\\frac{${s - m}}{${s}}\\right)^{${n}} \\approx ${num(Math.pow(q, n))}\\), so \\(P(\\text{at least one}) \\approx ${num(1 - Math.pow(q, n))}\\).`,
     };
   },
 };
@@ -194,7 +208,7 @@ const reroll: Template = {
       category: "Expected Value",
       story: `A game pays you the face value of a fair ${s}-sided die, in dollars. After seeing your first roll you may re-roll once, but then you must keep the second roll. With optimal play, what is the game worth?`,
       steps: [
-        step("What is the expected value of a single roll?", ev, num(ev), `Average the faces 1 through ${s}.`, `(1 + ${s})/2 = ${num(ev)}.`, {
+        step("What is the expected value of a single roll?", ev, num(ev), `Average the faces 1 through ${s}.`, `\\(\\frac{1 + ${s}}{2} = ${num(ev)}\\).`, {
           sim: (r) => die(r, s),
         }),
         step(
@@ -208,8 +222,8 @@ const reroll: Template = {
           "What is the game worth with optimal play?",
           value,
           num(value),
-          `With probability ${s - t + 1}/${s} you keep a roll from ${t} to ${s}; otherwise you get a fresh roll worth ${num(ev)}.`,
-          `(${t} + … + ${s})/${s} + (${t - 1}/${s})·${num(ev)} = ${num(value)}.`,
+          `With probability \\(\\frac{${s - t + 1}}{${s}}\\) you keep a roll from ${t} to ${s}; otherwise you get a fresh roll worth ${num(ev)}.`,
+          `\\(\\frac{${t} + \\cdots + ${s}}{${s}} + \\frac{${t - 1}}{${s}} \\cdot ${num(ev)} = ${num(value)}\\).`,
           {
             sim: (r) => {
               const x = die(r, s);
@@ -218,7 +232,7 @@ const reroll: Template = {
           },
         ),
       ],
-      solution: `A fresh roll is worth ${num(ev)}, so keep ${t}+ and re-roll the rest. EV = ${num(value)}. That's backward induction: value the last decision first.`,
+      solution: `A fresh roll is worth ${num(ev)}, so keep ${t}+ and re-roll the rest. \\(\\text{EV} = ${num(value)}\\). That's backward induction: value the last decision first.`,
     };
   },
 };
@@ -253,7 +267,7 @@ const cardsBoth: Template = {
       category: "Probability",
       story: `You draw two cards without replacement from a well-shuffled standard 52-card deck. What is the probability both are ${label}?`,
       steps: [
-        step(`What is the probability the first card is one of the ${label}?`, c / 52, frac(c, 52), `There are ${c} of them in 52 cards.`, `${c}/52.`, {
+        step(`What is the probability the first card is one of the ${label}?`, c / 52, frac(c, 52), `There are ${c} of them in 52 cards.`, `\\(\\frac{${c}}{52}\\).`, {
           sim: (r) => ind(draw2(r)[0]),
         }),
         step(
@@ -269,14 +283,14 @@ const cardsBoth: Template = {
             },
           },
         ),
-        step(`What is P(both are ${label})?`, both, frac(c * (c - 1), 52 * 51), "Multiply the two previous answers.", `(${c}/52)·(${c - 1}/51).`, {
+        step(`What is \\(P(\\text{both are ${label}})\\)?`, both, frac(c * (c - 1), 52 * 51), "Multiply the two previous answers.", `\\(\\frac{${c}}{52} \\cdot \\frac{${c - 1}}{51}\\).`, {
           sim: (r) => {
             const [x, y] = draw2(r);
             return ind(x && y);
           },
         }),
       ],
-      solution: `Chain rule: P = (${c}/52)·(${c - 1}/51) = ${frac(c * (c - 1), 52 * 51)}. Without replacement, the second draw is slightly less likely to match.`,
+      solution: `Chain rule: \\(P = \\frac{${c}}{52} \\cdot \\frac{${c - 1}}{51} = ${texFracApprox(c * (c - 1), 52 * 51)}\\). Without replacement, the second draw is slightly less likely to match.`,
     };
   },
 };
@@ -295,20 +309,20 @@ const binomialHeads: Template = {
       category: "Combinatorics",
       story: `You flip a fair coin ${n} times. What is the probability of getting exactly ${k} heads?`,
       steps: [
-        step(`How many equally likely sequences of ${n} flips are there?`, total, `${total}`, "Two outcomes per flip.", `2^${n} = ${total}.`),
+        step(`How many equally likely sequences of ${n} flips are there?`, total, `${total}`, "Two outcomes per flip.", `\\(2^{${n}} = ${total}\\).`),
         step(
           `How many of them have exactly ${k} heads?`,
           ways,
           `${ways}`,
           `Choose which ${k} of the ${n} positions are heads.`,
-          `C(${n}, ${k}) = ${ways}.`,
+          `\\(\\binom{${n}}{${k}} = ${ways}\\).`,
           { sim: (r) => ind(heads(r) === k) * total },
         ),
-        step(`What is P(exactly ${k} heads)?`, ways / total, frac(ways, total), "Favourable over total.", `${ways}/${total}.`, {
+        step(`What is \\(P(\\text{exactly ${k} heads})\\)?`, ways / total, frac(ways, total), "Favourable over total.", `\\(\\frac{${ways}}{${total}}\\).`, {
           sim: (r) => ind(heads(r) === k),
         }),
       ],
-      solution: `P = C(${n}, ${k}) / 2^${n} = ${ways}/${total} = ${frac(ways, total)}.`,
+      solution: `\\(P = \\frac{\\binom{${n}}{${k}}}{2^{${n}}} = \\frac{${ways}}{${total}} = ${texFracApprox(ways, total)}\\).`,
     };
   },
 };
@@ -326,6 +340,7 @@ const bayes: Template = {
     const pos = joint + (1 - prev) * fpr;
     const post = joint / pos;
     const pct = (x: number) => `${+(x * 100).toFixed(1)}%`;
+    const pctTex = (x: number) => `${+(x * 100).toFixed(1)}\\%`;
     const sample = (r: Rng) => {
       const sick = flip(r, prev);
       return [sick, flip(r, sick ? sens : fpr)] as const;
@@ -340,7 +355,11 @@ const bayes: Template = {
       category: "Statistics",
       story: `${thing[0]} ${pct(prev)} of cases. A screen flags ${pct(sens)} of true cases, but also wrongly flags ${pct(fpr)} of clean ones. ${thing[1][0].toUpperCase() + thing[1].slice(1)} gets flagged. What is the probability it really ${thing[2]}?`,
       steps: [
-        step("What is P(true case AND flagged)? (4 significant figures)", joint, num(joint), "P(case) × P(flagged | case).", `${prev} × ${sens} = ${num(joint)}.`, {
+        step("What is \\(P(\\text{true case and flagged})\\)? (4 significant figures)",
+          joint,
+          num(joint),
+          "\\(P(\\text{case}) \\times P(\\text{flagged} \\mid \\text{case})\\).",
+          `\\(${prev} \\times ${sens} = ${num(joint)}\\).`, {
           sim: (r) => {
             const [a, b] = sample(r);
             return ind(a && b);
@@ -348,14 +367,18 @@ const bayes: Template = {
           trials: 200_000,
         }),
         step(
-          "What is the overall P(flagged)? (4 significant figures)",
+          "What is the overall \\(P(\\text{flagged})\\)? (4 significant figures)",
           pos,
           num(pos),
-          `Add true flags and false flags: ${prev}·${sens} + ${num(1 - prev)}·${fpr}.`,
-          `${num(joint)} + ${num((1 - prev) * fpr)} = ${num(pos)}.`,
+          `Add true flags and false flags: \\(${prev} \\cdot ${sens} + ${num(1 - prev)} \\cdot ${fpr}\\).`,
+          `\\(${num(joint)} + ${num((1 - prev) * fpr)} = ${num(pos)}\\).`,
           { sim: (r) => ind(sample(r)[1]), trials: 200_000 },
         ),
-        step("What is P(true case | flagged)? (4 decimals)", post, num(post), "Bayes: divide step 1 by step 2.", `${num(joint)} / ${num(pos)} ≈ ${num(post)}.`, {
+        step("What is \\(P(\\text{true case} \\mid \\text{flagged})\\)? (4 decimals)",
+          post,
+          num(post),
+          "Bayes: divide step 1 by step 2.",
+          `\\(\\frac{${num(joint)}}{${num(pos)}} \\approx ${num(post)}\\).`, {
           sim: (r) => {
             const [a, b] = sample(r);
             return b ? ind(a) : NaN;
@@ -363,7 +386,7 @@ const bayes: Template = {
           trials: 400_000,
         }),
       ],
-      solution: `Bayes: P(case | flag) = ${num(joint)} / ${num(pos)} ≈ ${pct(post)}. When the base rate is low, false flags from the large clean population can swamp the true ones.`,
+      solution: `Bayes: \\(P(\\text{case} \\mid \\text{flag}) = \\frac{${num(joint)}}{${num(pos)}} \\approx ${pctTex(post)}\\). When the base rate is low, false flags from the large clean population can swamp the true ones.`,
     };
   },
 };
@@ -388,9 +411,9 @@ const patterns: Template = {
     return {
       title: pick(rng, ["HH vs HT", "Pattern Wait", "Streak Hunter"]),
       category: "Expected Value",
-      story: `A biased coin lands heads with probability ${p}. You flip it repeatedly. On average, how many flips until you see two heads in a row (HH)?`,
+      story: `A biased coin lands heads with probability ${p}. You flip it repeatedly. On average, how many flips until you see two heads in a row (\\(\\text{HH}\\))?`,
       steps: [
-        step("Warm-up: expected number of flips to see the first H?", eH, num(eH), "Geometric distribution.", `1/p = 1/${p} = ${num(eH)}.`, {
+        step("Warm-up: expected number of flips to see the first H?", eH, num(eH), "Geometric distribution.", `\\(\\frac{1}{p} = \\frac{1}{${p}} = ${num(eH)}\\).`, {
           sim: (r) => {
             let n = 1;
             while (!flip(r, p)) n++;
@@ -398,23 +421,23 @@ const patterns: Template = {
           },
         }),
         step(
-          "Expected number of flips to see the pattern HT?",
+          "Expected number of flips to see the pattern \\(\\text{HT}\\)?",
           eHT,
           num(eHT),
           "Wait for an H. After that, extra H's don't set you back; you just wait for a T.",
-          `1/p + 1/q = 1/(pq) = ${num(eHT)}.`,
+          `\\(\\frac{1}{p} + \\frac{1}{q} = \\frac{1}{pq} = ${num(eHT)}\\).`,
           { sim: (r) => waitFor(r, "HT") },
         ),
         step(
-          "Expected number of flips to see HH?",
+          "Expected number of flips to see \\(\\text{HH}\\)?",
           eHH,
           num(eHH),
-          "Let E be the answer. After an H, a T sends you back to the start: E = 1/p + 1 + q·E.",
-          `Solving gives E = (1 + p)/p² = ${num(eHH)}.`,
+          "Let \\(E\\) be the answer. After an H, a T sends you back to the start: \\(E = \\frac{1}{p} + 1 + q \\cdot E\\).",
+          `Solving gives \\(E = \\frac{1 + p}{p^{2}} = ${num(eHH)}\\).`,
           { sim: (r) => waitFor(r, "HH") },
         ),
       ],
-      solution: `HT takes 1/(pq) = ${num(eHT)} flips but HH takes (1+p)/p² = ${num(eHH)}. Chasing HH, a tail after a head wipes out your progress; chasing HT, an extra head keeps you where you were.`,
+      solution: `\\(\\text{HT}\\) takes \\(\\frac{1}{pq} = ${num(eHT)}\\) flips but \\(\\text{HH}\\) takes \\(\\frac{1 + p}{p^{2}} = ${num(eHH)}\\). Chasing \\(\\text{HH}\\), a tail after a head wipes out your progress; chasing \\(\\text{HT}\\), an extra head keeps you where you were.`,
     };
   },
 };
@@ -436,8 +459,8 @@ const distinctFaces: Template = {
           `What is the probability that face 1 never shows up? (4 decimals)`,
           miss,
           num(miss),
-          `Each roll misses face 1 with probability ${s - 1}/${s}.`,
-          `(${s - 1}/${s})^${n} ≈ ${num(miss)}.`,
+          `Each roll misses face 1 with probability \\(\\frac{${s - 1}}{${s}}\\).`,
+          `\\(\\left(\\frac{${s - 1}}{${s}}\\right)^{${n}} \\approx ${num(miss)}\\).`,
           { sim: (r) => ind(Array.from({ length: n }).every(() => die(r, s) !== 1)) },
         ),
         step(
@@ -445,7 +468,7 @@ const distinctFaces: Template = {
           1 - miss,
           num(1 - miss),
           "Complement.",
-          `1 − ${num(miss)} = ${num(1 - miss)}.`,
+          `\\(1 - ${num(miss)} = ${num(1 - miss)}\\).`,
           { sim: (r) => ind(Array.from({ length: n }).some(() => die(r, s) === 1)) },
         ),
         step(
@@ -453,11 +476,11 @@ const distinctFaces: Template = {
           s * (1 - miss),
           num(s * (1 - miss)),
           "Linearity of expectation: add up an indicator for each face, even though they're dependent.",
-          `${s} × ${num(1 - miss)} = ${num(s * (1 - miss))}.`,
+          `\\(${s} \\times ${num(1 - miss)} = ${num(s * (1 - miss))}\\).`,
           { sim: distinct },
         ),
       ],
-      solution: `Write the count as a sum of ${s} indicators, one per face. Each face appears with probability 1 − (${s - 1}/${s})^${n}, so E = ${s}·(1 − ${num(miss)}) ≈ ${num(s * (1 - miss))}. Linearity doesn't care that the indicators are dependent.`,
+      solution: `Write the count as a sum of ${s} indicators, one per face. Each face appears with probability \\(1 - \\left(\\frac{${s - 1}}{${s}}\\right)^{${n}}\\), so \\(\\mathbb{E} = ${s} \\cdot (1 - ${num(miss)}) \\approx ${num(s * (1 - miss))}\\). Linearity doesn't care that the indicators are dependent.`,
     };
   },
 };
@@ -485,7 +508,7 @@ const coupon: Template = {
           s / (s - 1),
           frac(s, s - 1),
           `${s - 1} of the ${s} are new. That's a geometric wait.`,
-          `Success probability ${s - 1}/${s}, so wait ${frac(s, s - 1).split(" ")[0]} on average.`,
+          `Success probability \\(\\frac{${s - 1}}{${s}}\\), so wait \\(${texFrac(s, s - 1)}\\) on average.`,
           {
             sim: (r) => {
               let n = 1;
@@ -499,7 +522,7 @@ const coupon: Template = {
           s,
           `${s}`,
           "Only one is new now.",
-          `Success probability 1/${s}, so ${s}.`,
+          `Success probability \\(\\frac{1}{${s}}\\), so ${s}.`,
           {
             sim: (r) => {
               let n = 1;
@@ -512,8 +535,8 @@ const coupon: Template = {
           `What is the total expected number of ${thing[1]}? (4 significant figures)`,
           total,
           num(total),
-          `Add the geometric waits: ${s}/${s} + ${s}/${s - 1} + … + ${s}/1.`,
-          `${s}·(1 + 1/2 + … + 1/${s}) ≈ ${num(total)}.`,
+          `Add the geometric waits: \\(\\frac{${s}}{${s}} + \\frac{${s}}{${s - 1}} + \\cdots + \\frac{${s}}{1}\\).`,
+          `\\(${s} \\cdot \\left(1 + \\frac{1}{2} + \\cdots + \\frac{1}{${s}}\\right) \\approx ${num(total)}\\).`,
           {
             sim: (r) => {
               const seen = new Set<number>();
@@ -528,7 +551,7 @@ const coupon: Template = {
           },
         ),
       ],
-      solution: `Split the process into stages. With k seen, a new one arrives with probability (${s}−k)/${s}, so that stage takes ${s}/(${s}−k) on average. Total = ${s}·H_${s} ≈ ${num(total)}.`,
+      solution: `Split the process into stages. With \\(k\\) seen, a new one arrives with probability \\(\\frac{${s} - k}{${s}}\\), so that stage takes \\(\\frac{${s}}{${s} - k}\\) on average. Total = \\(${s} \\cdot H_{${s}} \\approx ${num(total)}\\).`,
     };
   },
 };
@@ -552,7 +575,7 @@ const duel: Template = {
       category: "Probability",
       story: `${a} and ${B} take turns rolling a fair ${s}-sided die, ${a} first. The first to roll ${what} wins. What is the probability ${a} wins?`,
       steps: [
-        step(`What is the probability ${a} wins on the very first roll?`, p, frac(m, s), `${m} winning face${m > 1 ? "s" : ""} out of ${s}.`, `${frac(m, s).split(" ")[0]}.`, {
+        step(`What is the probability ${a} wins on the very first roll?`, p, frac(m, s), `${m} winning face${m > 1 ? "s" : ""} out of ${s}.`, `\\(${texFrac(m, s)}\\).`, {
           sim: (r) => ind(die(r, s) > s - m),
         }),
         step(
@@ -560,19 +583,19 @@ const duel: Template = {
           q * q,
           frac((s - m) * (s - m), s * s),
           "Both have to miss.",
-          `(${s - m}/${s})² = ${frac((s - m) * (s - m), s * s)}.`,
+          `\\(\\left(\\frac{${s - m}}{${s}}\\right)^{2} = ${texFracApprox((s - m) * (s - m), s * s)}\\).`,
           { sim: (r) => ind(die(r, s) <= s - m && die(r, s) <= s - m) },
         ),
         step(
-          `What is P(${a} wins)? (4 decimals)`,
+          `What is \\(P(\\text{${a} wins})\\)? (4 decimals)`,
           p / (1 - q * q),
           num(p / (1 - q * q)),
-          `If the first round is a wash, the game restarts. So P = p + q²·P.`,
-          `P = p/(1 − q²) = 1/(2 − p) = ${num(p / (1 - q * q))}.`,
+          `If the first round is a wash, the game restarts. So \\(P = p + q^{2} P\\).`,
+          `\\(P = \\frac{p}{1 - q^{2}} = \\frac{1}{2 - p} = ${num(p / (1 - q * q))}\\).`,
           { sim: aWins },
         ),
       ],
-      solution: `Self-similarity: P = p + q²P, so P = p/(1 − q²) = 1/(2 − p) ≈ ${num(p / (1 - q * q))}. Going first is worth more when hits are likely.`,
+      solution: `Self-similarity: \\(P = p + q^{2} P\\), so \\(P = \\frac{p}{1 - q^{2}} = \\frac{1}{2 - p} \\approx ${num(p / (1 - q * q))}\\). Going first is worth more when hits are likely.`,
     };
   },
 };
@@ -607,27 +630,27 @@ const gamblersRuin: Template = {
           i / N,
           frac(i, N),
           "A fair game is a martingale: expected final wealth equals starting wealth.",
-          `${N}·P = ${i}, so P = ${frac(i, N).split(" ")[0]}.`,
+          `\\(${N} \\cdot P = ${i}\\), so \\(P = ${texFrac(i, N)}\\).`,
           { sim: (r) => ind(walk(r, 0.5)[0]) },
         ),
         step(
           "With a fair coin, what is the expected number of bets until the game ends?",
           i * (N - i),
           `${i * (N - i)}`,
-          `For a symmetric walk between 0 and N started at i, the expected duration is i·(N − i).`,
-          `${i} × ${N - i} = ${i * (N - i)}.`,
+          `For a symmetric walk between \\(0\\) and \\(N\\) started at \\(i\\), the expected duration is \\(i \\cdot (N - i)\\).`,
+          `\\(${i} \\times ${N - i} = ${i * (N - i)}\\).`,
           { sim: (r) => walk(r, 0.5)[1], tolerance: 0 },
         ),
         step(
           `Now you win each bet with probability ${p}. What is the probability you reach $${N}? (4 decimals)`,
           biased,
           num(biased),
-          "With r = q/p, P = (1 − r^i)/(1 − r^N).",
-          `r = ${num(r_)}. P = (1 − r^${i})/(1 − r^${N}) ≈ ${num(biased)}.`,
+          "With \\(r = q/p\\), \\(P = \\frac{1 - r^{i}}{1 - r^{N}}\\).",
+          `\\(r = ${num(r_)}\\). \\(P = \\frac{1 - r^{${i}}}{1 - r^{${N}}} \\approx ${num(biased)}\\).`,
           { sim: (r) => ind(walk(r, p)[0]) },
         ),
       ],
-      solution: `Fair game: P = ${i}/${N} and duration ${i}·${N - i} = ${i * (N - i)}. With p = ${p}, use r = q/p: P = (1 − r^${i})/(1 − r^${N}) ≈ ${num(biased)}. A small edge changes the odds a lot.`,
+      solution: `Fair game: \\(P = \\frac{${i}}{${N}}\\) and duration \\(${i} \\cdot ${N - i} = ${i * (N - i)}\\). With \\(p = ${p}\\), use \\(r = q/p\\): \\(P = \\frac{1 - r^{${i}}}{1 - r^{${N}}} \\approx ${num(biased)}\\). A small edge changes the odds a lot.`,
     };
   },
 };
@@ -641,25 +664,31 @@ const orderStats: Template = {
     return {
       title: pick(rng, ["Max and Min", "Order Statistics", "Spread of Points"]),
       category: "Probability",
-      story: `${n} points are dropped independently and uniformly at random on [0, 1]. What is the expected distance between the leftmost and rightmost points?`,
+      story: `${n} points are dropped independently and uniformly at random on \\([0, 1]\\). What is the expected distance between the leftmost and rightmost points?`,
       steps: [
         step(
-          "What is E[max]?",
+          "What is \\(\\mathbb{E}[\\max]\\)?",
           n / (n + 1),
           frac(n, n + 1),
-          `P(max ≤ t) = t^${n}. Differentiate for the density, or use symmetry.`,
-          `∫ t · ${n}t^${n - 1} dt = ${n}/${n + 1}.`,
+          `\\(P(\\max \\leq t) = t^{${n}}\\). Differentiate for the density, or use symmetry.`,
+          `\\(\\int_0^1 t \\cdot ${n}t^{${n - 1}}\\,dt = \\frac{${n}}{${n + 1}}\\).`,
           { sim: (r) => Math.max(...sample(r)) },
         ),
-        step("What is E[min]?", 1 / (n + 1), frac(1, n + 1), "By symmetry, min is distributed like 1 − max.", `1 − ${n}/${n + 1} = 1/${n + 1}.`, {
+        step(
+          "What is \\(\\mathbb{E}[\\min]\\)?",
+          1 / (n + 1),
+          frac(1, n + 1),
+          "By symmetry, \\(\\min\\) is distributed like \\(1 - \\max\\).",
+          `\\(1 - \\frac{${n}}{${n + 1}} = \\frac{1}{${n + 1}}\\).`,
+          {
           sim: (r) => Math.min(...sample(r)),
         }),
         step(
-          "What is E[max − min]?",
+          "What is \\(\\mathbb{E}[\\max - \\min]\\)?",
           (n - 1) / (n + 1),
           frac(n - 1, n + 1),
           "Expectation is linear.",
-          `${n}/${n + 1} − 1/${n + 1} = ${frac(n - 1, n + 1).split(" ")[0]}.`,
+          `\\(\\frac{${n}}{${n + 1}} - \\frac{1}{${n + 1}} = ${texFrac(n - 1, n + 1)}\\).`,
           {
             sim: (r) => {
               const xs = sample(r);
@@ -668,7 +697,7 @@ const orderStats: Template = {
           },
         ),
       ],
-      solution: `${n} uniform points split [0, 1] into ${n + 1} gaps of equal expected length 1/${n + 1}. So E[min] = 1/${n + 1}, E[max] = ${n}/${n + 1}, and E[range] = ${frac(n - 1, n + 1)}.`,
+      solution: `${n} uniform points split \\([0, 1]\\) into ${n + 1} gaps of equal expected length \\(\\frac{1}{${n + 1}}\\). So \\(\\mathbb{E}[\\min] = \\frac{1}{${n + 1}}\\), \\(\\mathbb{E}[\\max] = \\frac{${n}}{${n + 1}}\\), and \\(\\mathbb{E}[\\text{range}] = ${texFracApprox(n - 1, n + 1)}\\).`,
     };
   },
 };
@@ -706,14 +735,14 @@ const optimalStopping: Template = {
             k === 1
               ? `Average the faces 1 to ${s}.`
               : `After your first roll, compare it with the value of the ${k - 1}-roll game (${num(V[k - 1])}). Keep it only if it's bigger.`,
-            k === 1 ? `(1 + ${s})/2 = ${num(V[1])}.` : `E[max(X, ${num(V[k - 1])})] = ${num(V[k])}.`,
+            k === 1 ? `\\(\\frac{1 + ${s}}{2} = ${num(V[1])}\\).` : `\\(\\mathbb{E}[\\max(X, ${num(V[k - 1])})] = ${num(V[k])}\\).`,
             { sim: (r) => play(r, k), tolerance: 0.005 },
           );
         }),
       ],
-      solution: `Backward induction: V₁ = ${num(V[1])}, and V_{k+1} = E[max(X, V_k)]. Keep a roll only if it beats what the remaining rolls are worth. ${V.slice(1)
-        .map((v, k) => `V${k + 1} = ${num(v)}`)
-        .join(", ")}.`,
+      solution: `Backward induction: \\(V_1 = ${num(V[1])}\\), and \\(V_{k+1} = \\mathbb{E}[\\max(X, V_k)]\\). Keep a roll only if it beats what the remaining rolls are worth. \\(${V.slice(1)
+        .map((v, k) => `V_{${k + 1}} = ${num(v)}`)
+        .join(", ")}\\).`,
     };
   },
 };
@@ -740,7 +769,7 @@ const derangement: Template = {
       category: "Combinatorics",
       story: `${name} puts ${n} letters into ${n} addressed envelopes completely at random. What is the probability that no letter ends up in its correct envelope?`,
       steps: [
-        step("What is the probability that letter 1 lands in its own envelope?", 1 / n, frac(1, n), "It's equally likely to be in any envelope.", `1/${n}.`, {
+        step("What is the probability that letter 1 lands in its own envelope?", 1 / n, frac(1, n), "It's equally likely to be in any envelope.", `\\(\\frac{1}{${n}}\\).`, {
           sim: (r) => ind(perm(r)[0] === 0),
         }),
         step(
@@ -748,19 +777,19 @@ const derangement: Template = {
           1,
           "1",
           "Linearity: add up the probability for each letter.",
-          `${n} × 1/${n} = 1, whatever n is.`,
+          `\\(${n} \\times \\frac{1}{${n}} = 1\\), whatever \\(n\\) is.`,
           { sim: (r) => perm(r).filter((x, i) => x === i).length },
         ),
         step(
-          "What is P(no letter is in its correct envelope)? (4 decimals)",
+          "What is \\(P(\\text{no letter is in its correct envelope})\\)? (4 decimals)",
           d / factorial(n),
           frac(d, factorial(n)),
-          "Inclusion–exclusion: Σ (−1)^k / k! for k = 0..n.",
-          `D_${n}/${n}! = ${d}/${factorial(n)} ≈ ${num(d / factorial(n))}.`,
+          "Inclusion–exclusion: \\(\\sum_{k=0}^{n} \\frac{(-1)^{k}}{k!}\\).",
+          `\\(\\frac{D_{${n}}}{${n}!} = \\frac{${d}}{${factorial(n)}} \\approx ${num(d / factorial(n))}\\).`,
           { sim: (r) => ind(perm(r).every((x, i) => x !== i)) },
         ),
       ],
-      solution: `By inclusion–exclusion, P(no fixed point) = Σ_{k=0}^{${n}} (−1)^k/k! = ${d}/${factorial(n)} ≈ ${num(d / factorial(n))}, already very close to 1/e ≈ 0.3679. The expected number of matches is exactly 1 for any n.`,
+      solution: `By inclusion–exclusion, \\(P(\\text{no fixed point}) = \\sum_{k=0}^{${n}} \\frac{(-1)^{k}}{k!} = \\frac{${d}}{${factorial(n)}} \\approx ${num(d / factorial(n))}\\), already very close to \\(\\frac{1}{e} \\approx 0.3679\\). The expected number of matches is exactly 1 for any \\(n\\).`,
     };
   },
 };
@@ -793,33 +822,33 @@ const binomialTree: Template = {
     return {
       title: pick(rng, ["Binomial Tree", "Price the Call", "Up, Down, Strike"]),
       category: "Markets",
-      story: `A stock trades at $${S0}. Each period it moves up ×${u} or down ×${d}. Interest rates are zero. Price a European call with strike $${K} expiring after ${n} periods.`,
+      story: `A stock trades at $${S0}. Each period it moves up \\(\\times ${u}\\) or down \\(\\times ${d}\\). Interest rates are zero. Price a European call with strike $${K} expiring after ${n} periods.`,
       steps: [
         step(
           "What is the risk-neutral probability of an up move? (4 decimals)",
           q,
           num(q),
-          `With r = 0 the stock is a martingale: ${S0} = q·${S0 * u} + (1 − q)·${S0 * d}.`,
-          `q = (1 − d)/(u − d) = ${num(q)}.`,
+          `With \\(r = 0\\) the stock is a martingale: \\(${S0} = q \\cdot ${num(S0 * u)} + (1 - q) \\cdot ${num(S0 * d)}\\).`,
+          `\\(q = \\frac{1 - d}{u - d} = ${num(q)}\\).`,
         ),
         step(
-          "Under that probability, what is P(the call finishes in the money)? (4 decimals)",
+          "Under that probability, what is \\(P(\\text{the call finishes in the money})\\)? (4 decimals)",
           itm,
           num(itm),
           `List the ${n + 1} terminal prices and add up the binomial probabilities of the ones above $${K}.`,
-          `Σ C(${n}, j) q^j (1 − q)^(${n}−j) over terminal prices > ${K} = ${num(itm)}.`,
+          `\\(\\sum_{j:\\, S_j > ${K}} \\binom{${n}}{j} q^{j} (1 - q)^{${n} - j} = ${num(itm)}\\).`,
           { sim: (r) => ind(terminal(r) > K) },
         ),
         step(
           "What is the call worth today? (2 decimals)",
           price,
           `$${price.toFixed(2)}`,
-          "Average the payoff max(S − K, 0) over terminal nodes using the risk-neutral probabilities. No discounting since r = 0.",
-          `Σ C(${n}, j) q^j (1 − q)^(${n}−j) · max(S_j − ${K}, 0) = ${price.toFixed(4)}.`,
+          "Average the payoff \\(\\max(S - K, 0)\\) over terminal nodes using the risk-neutral probabilities. No discounting since \\(r = 0\\).",
+          `\\(\\sum_{j=0}^{${n}} \\binom{${n}}{j} q^{j} (1 - q)^{${n} - j} \\cdot \\max(S_j - ${K}, 0) = ${price.toFixed(4)}\\).`,
           { sim: (r) => Math.max(terminal(r) - K, 0), tolerance: 0.005 },
         ),
       ],
-      solution: `Risk-neutral q = (1 − d)/(u − d) = ${num(q)}. The price is the q-weighted average payoff over the ${n + 1} terminal nodes: ≈ $${price.toFixed(2)}. Real-world probabilities never enter.`,
+      solution: `Risk-neutral \\(q = \\frac{1 - d}{u - d} = ${num(q)}\\). The price is the \\(q\\)-weighted average payoff over the ${n + 1} terminal nodes: \\(\\approx\\) $${price.toFixed(2)}. Real-world probabilities never enter.`,
     };
   },
 };
@@ -838,28 +867,28 @@ const kelly: Template = {
     return {
       title: pick(rng, ["Bet Like Kelly", "How Much to Bet", "Growth Optimal"]),
       category: "Markets",
-      story: `You're offered a repeated ${odds} bet (win $${b} per $1 staked, or lose the $1) that you win with probability ${p}. You stake a fixed fraction f of your bankroll each round. What fraction maximizes long-run growth, and how fast do you grow?`,
+      story: `You're offered a repeated ${odds} bet (win $${b} per $1 staked, or lose the $1) that you win with probability ${p}. You stake a fixed fraction \\(f\\) of your bankroll each round. What fraction maximizes long-run growth, and how fast do you grow?`,
       steps: [
-        step("What is your expected profit per $1 staked?", edge, num(edge), `Win $${b} with probability ${p}, lose $1 with probability ${num(q)}.`, `${p}·${b} − ${num(q)} = ${num(edge)}.`, {
+        step("What is your expected profit per $1 staked?", edge, num(edge), `Win $${b} with probability ${p}, lose $1 with probability ${num(q)}.`, `\\(${p} \\cdot ${b} - ${num(q)} = ${num(edge)}\\).`, {
           sim: (r) => (flip(r, p) ? b : -1),
         }),
         step(
-          "What fraction f maximizes expected log growth per round? (4 decimals)",
+          "What fraction \\(f\\) maximizes expected log growth per round? (4 decimals)",
           f,
           num(f),
-          `Maximize g(f) = ${p}·ln(1 + ${b}f) + ${num(q)}·ln(1 − f). Set g′(f) = 0.`,
-          `f* = p − q/b = ${num(f)}.`,
+          `Maximize \\(g(f) = ${p} \\cdot \\ln(1 + ${b}f) + ${num(q)} \\cdot \\ln(1 - f)\\). Set \\(g'(f) = 0\\).`,
+          `\\(f^{*} = p - \\frac{q}{b} = ${num(f)}\\).`,
         ),
         step(
           "At that fraction, what is the expected log growth per round? (4 significant figures)",
           g,
           num(g),
-          `Plug f* into g(f).`,
-          `${p}·ln(${num(1 + b * f)}) + ${num(q)}·ln(${num(1 - f)}) ≈ ${num(g)}.`,
+          `Plug \\(f^{*}\\) into \\(g(f)\\).`,
+          `\\(${p} \\cdot \\ln(${num(1 + b * f)}) + ${num(q)} \\cdot \\ln(${num(1 - f)}) \\approx ${num(g)}\\).`,
           { sim: (r) => (flip(r, p) ? Math.log(1 + b * f) : Math.log(1 - f)), trials: 200_000 },
         ),
       ],
-      solution: `Kelly: f* = p − q/b = ${num(f)}, giving growth g ≈ ${num(g)} per round (compounded). Over-betting past about 2f* turns long-run growth negative even with an edge.`,
+      solution: `Kelly: \\(f^{*} = p - \\frac{q}{b} = ${num(f)}\\), giving growth \\(g \\approx ${num(g)}\\) per round (compounded). Over-betting past about \\(2f^{*}\\) turns long-run growth negative even with an edge.`,
     };
   },
 };
@@ -881,29 +910,35 @@ const uniformSum: Template = {
     return {
       title: pick(rng, ["Over the Line", "Summing Uniforms", "Cross the Threshold"]),
       category: "Probability",
-      story: `You keep drawing independent Uniform(0, 1) numbers and adding them up. Let N be the number of draws needed for the running sum to exceed ${t}. What is E[N]?`,
+      story: `You keep drawing independent \\(\\text{Uniform}(0, 1)\\) numbers and adding them up. Let \\(N\\) be the number of draws needed for the running sum to exceed ${t}. What is \\(\\mathbb{E}[N]\\)?`,
       steps: [
-        step(`What is P(U₁ + U₂ < ${t})? (4 decimals)`, (t * t) / 2, num((t * t) / 2), `Area of the triangle x + y < ${t} in the unit square.`, `${t}²/2 = ${num((t * t) / 2)}.`, {
+        step(
+          `What is \\(P(U_1 + U_2 < ${t})\\)? (4 decimals)`,
+          (t * t) / 2,
+          num((t * t) / 2),
+          `Area of the triangle \\(x + y < ${t}\\) in the unit square.`,
+          `\\(\\frac{${t}^{2}}{2} = ${num((t * t) / 2)}\\).`,
+          {
           sim: (r) => ind(r() + r() < t),
         }),
         step(
-          `What is P(U₁ + U₂ + U₃ < ${t})? (4 decimals)`,
+          `What is \\(P(U_1 + U_2 + U_3 < ${t})\\)? (4 decimals)`,
           Math.pow(t, 3) / 6,
           num(Math.pow(t, 3) / 6),
-          "Volume of a corner simplex. In general it's t^n / n!.",
-          `${t}³/6 = ${num(Math.pow(t, 3) / 6)}.`,
+          "Volume of a corner simplex. In general it's \\(\\frac{t^{n}}{n!}\\).",
+          `\\(\\frac{${t}^{3}}{6} = ${num(Math.pow(t, 3) / 6)}\\).`,
           { sim: (r) => ind(r() + r() + r() < t) },
         ),
         step(
-          "What is E[N]? (4 decimals)",
+          "What is \\(\\mathbb{E}[N]\\)? (4 decimals)",
           Math.exp(t),
           num(Math.exp(t)),
-          "E[N] = Σ P(N > n) for n ≥ 0, and N > n exactly when the first n draws sum to less than t.",
-          `Σ t^n/n! = e^${t} ≈ ${num(Math.exp(t))}.`,
+          "\\(\\mathbb{E}[N] = \\sum_{n \\geq 0} P(N > n)\\), and \\(N > n\\) exactly when the first \\(n\\) draws sum to less than \\(t\\).",
+          `\\(\\sum_{n \\geq 0} \\frac{${t}^{n}}{n!} = e^{${t}} \\approx ${num(Math.exp(t))}\\).`,
           { sim: draws, tolerance: 0.005 },
         ),
       ],
-      solution: `P(N > n) = P(U₁ + … + Uₙ < ${t}) = ${t}^n/n!. Tail-sum: E[N] = Σ_{n≥0} ${t}^n/n! = e^${t} ≈ ${num(Math.exp(t))}.${t === 1 ? " With t = 1 that's Euler's number itself." : ""}`,
+      solution: `\\(P(N > n) = P(U_1 + \\cdots + U_n < ${t}) = \\frac{${t}^{n}}{n!}\\). Tail-sum: \\(\\mathbb{E}[N] = \\sum_{n \\geq 0} \\frac{${t}^{n}}{n!} = e^{${t}} \\approx ${num(Math.exp(t))}\\).${t === 1 ? " With \\(t = 1\\) that's Euler's number itself." : ""}`,
     };
   },
 };
@@ -949,18 +984,18 @@ const ballot: Template = {
           choose(a + b, a),
           `${choose(a + b, a)}`,
           `Choose which ${a} of the ${a + b} positions are ${A}'s.`,
-          `C(${a + b}, ${a}) = ${choose(a + b, a)}.`,
+          `\\(\\binom{${a + b}}{${a}} = ${choose(a + b, a)}\\).`,
         ),
         step(
-          `What is P(${A} is strictly ahead throughout)?`,
+          `What is \\(P(\\text{${A} is strictly ahead throughout})\\)?`,
           (a - b) / (a + b),
           frac(a - b, a + b),
           `Bertrand's ballot theorem. Or: bad orders that start with ${B} can be reflected one-to-one onto bad orders that start with ${A}.`,
-          `(a − b)/(a + b) = ${frac(a - b, a + b).split(" ")[0]}.`,
+          `\\(\\frac{a - b}{a + b} = ${texFrac(a - b, a + b)}\\).`,
           { sim: (r) => ind(alwaysAhead(count(r))) },
         ),
       ],
-      solution: `Bertrand's ballot theorem: P = (a − b)/(a + b) = ${frac(a - b, a + b)}. Proof sketch: every bad order starting with ${B} reflects one-to-one onto a bad order starting with ${A}, so P(bad) = 2·P(first is ${B}) = 2b/(a + b).`,
+      solution: `Bertrand's ballot theorem: \\(P = \\frac{a - b}{a + b} = ${texFracApprox(a - b, a + b)}\\). Proof sketch: every bad order starting with ${B} reflects one-to-one onto a bad order starting with ${A}, so \\(P(\\text{bad}) = 2 \\cdot P(\\text{first is ${B}}) = \\frac{2b}{a + b}\\).`,
     };
   },
 };

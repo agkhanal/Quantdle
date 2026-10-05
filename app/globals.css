@@ -2459,3 +2459,26 @@ html.verity-quake .app {
   filter: brightness(1.1);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
 }
+
+/* ───────── math (KaTeX) ───────── */
+
+.katex {
+  font-size: 1.08em;
+  color: inherit;
+}
+
+.math-inline {
+  white-space: nowrap;
+}
+
+.math-display {
+  display: block;
+  margin: 0.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+}
+
+.math-display .katex-display {
+  margin: 0;
+}

@@ -89,7 +89,8 @@ Rules:
 - If an answer is irrational or a messy decimal, say in the question how many decimals to give.
 - Correctness is critical. Work the problem out completely and double-check every number before answering, ideally two different ways.
 - Hints nudge without revealing. Never put the answer in a question or hint.
-- Prefer classic interview ideas with a fresh twist over textbook drills.`;
+- Prefer classic interview ideas with a fresh twist over textbook drills.
+- Write math as LaTeX in \\( ... \\) delimiters (e.g. \\(P(A \\mid B) = \\frac{1}{6}\\), \\(2^{10}\\), \\(\\sum_{k=0}^{n} \\frac{1}{k!}\\)) in the story, questions, hints, explanations and solution. Keep ordinary words outside the delimiters, and never use $ for math: dollar signs mean money. Keep answerDisplay plain text, like "1/6 ≈ 0.1667".`;
 
 export async function generatePuzzle(difficulty: Difficulty): Promise<Puzzle | null> {
   const category = CATEGORIES[crypto.randomInt(CATEGORIES.length)];
@@ -151,7 +152,7 @@ Verdicts:
 Feedback rules:
 - Never state or imply the correct number, and never give a formula that trivially produces it.
 - Point at the specific mistake you suspect if you can infer it from their number or reasoning ("Looks like you counted ordered pairs; does order matter here?").
-- Maximum 2 short sentences. Plain text, no markdown. Warm, a little playful.`;
+- Maximum 2 short sentences. Plain text, no markdown. Warm, a little playful. If you need to write math, use LaTeX inside \\( ... \\) (never $).`;
 
 export interface JudgeInput {
   puzzle: Puzzle;
