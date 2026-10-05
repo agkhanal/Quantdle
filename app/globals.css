@@ -3198,3 +3198,21 @@ main.leaving {
     animation: none;
   }
 }
+
+/* ───────── interface chrome you can't (and shouldn't) highlight ───────── */
+
+.admin-tab,
+.admin-head,
+.admin-filters,
+.admin-points summary,
+.admin-foot,
+.chip,
+.icon-btn,
+.logo,
+.logo-tile,
+.modes,
+.tracks,
+.chain {
+  -webkit-user-select: none;
+  user-select: none;
+}
