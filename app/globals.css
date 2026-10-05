@@ -1259,6 +1259,19 @@ code {
   justify-content: center;
   gap: 10px;
   text-decoration: none;
+  color: var(--text);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.google-btn:hover {
+  background: color-mix(in srgb, var(--text) 9%, var(--surface));
+  border-color: var(--text);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.google-btn:active {
+  transform: translateY(1px);
 }
 
 .or-line {
