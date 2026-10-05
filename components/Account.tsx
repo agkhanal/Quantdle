@@ -16,19 +16,23 @@ export function AccountPanel({
   onChange,
   google = false,
   initialError = "",
+  pending = null,
+  onSignedIn,
 }: {
   user: Profile | null;
   onChange: (u: Profile | null) => void;
   google?: boolean;
   initialError?: string;
+  pending?: string | null;
+  onSignedIn?: () => void;
 }) {
   const [tab, setTab] = useState<"login" | "signup">("login");
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(pending ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(initialError);
   const [busy, setBusy] = useState(false);
 
-  async function send(action: "login" | "signup" | "logout") {
+  async function send(action: "login" | "signup" | "logout" | "google_username") {
     setBusy(true);
     setError("");
     try {
@@ -41,6 +45,7 @@ export function AccountPanel({
       if (!res.ok) return setError(body.error ?? "Something went wrong.");
       setPassword("");
       onChange(body.user);
+      if (body.user) onSignedIn?.();
     } catch {
       setError("Network hiccup. Try again.");
     } finally {
@@ -71,6 +76,31 @@ export function AccountPanel({
           Sign out
         </button>
       </div>
+    );
+  }
+
+  if (pending !== null) {
+    return (
+      <form
+        className="account"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send("google_username");
+        }}
+      >
+        <p className="account-hello">
+          Signed in with Google. Choose the username that will appear on the leaderboard. You can&apos;t change it later.
+        </p>
+        <label className="field">
+          <span>Username</span>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="off" autoFocus maxLength={20} />
+        </label>
+        {error && <p className="quote-note bad">{error}</p>}
+        <button className="btn primary wide" disabled={busy || !username}>
+          {busy ? "…" : "Continue"}
+        </button>
+        <p className="muted small">3–20 characters: letters, numbers, _ or -. Your Google email is never shown or stored.</p>
+      </form>
     );
   }
 

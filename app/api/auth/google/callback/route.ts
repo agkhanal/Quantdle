@@ -1,11 +1,11 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { SESSION_DAYS, makeSession, sessionCookie } from "@/lib/auth";
-import { OAUTH_COOKIE, finishOAuth, googleEnabled, usernameForGoogle } from "@/lib/google";
+import { SESSION_DAYS, makePending, makeSession, pendingCookie, sessionCookie } from "@/lib/auth";
+import { OAUTH_COOKIE, finishOAuth, googleEnabled, linkedUsername, suggestUsername } from "@/lib/google";
 
 export const dynamic = "force-dynamic";
 
-/** Google redirects back here with ?code&state. Verifies state, links the account, starts a session. */
+/** Google redirects back here with ?code&state. Verifies state, starts a session (or a pending username choice for new users). */
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const fail = (reason: string) => {
@@ -29,10 +29,15 @@ export async function GET(req: Request) {
   try {
     const identity = await finishOAuth(req, code, verifier);
     if (!identity) return fail("google_failed");
-    const username = await usernameForGoogle(identity);
+    const username = await linkedUsername(identity.sub);
 
     const res = NextResponse.redirect(`${url.origin}/`);
-    res.cookies.set(sessionCookie(makeSession(username), SESSION_DAYS * 86_400));
+    if (username) {
+      res.cookies.set(sessionCookie(makeSession(username), SESSION_DAYS * 86_400));
+    } else {
+      // First time with Google: let them pick a username before the account exists.
+      res.cookies.set(pendingCookie(makePending(identity.sub, suggestUsername(identity.name)), 15 * 60));
+    }
     res.cookies.set({ name: OAUTH_COOKIE, value: "", path: "/api/auth/google", maxAge: 0 });
     return res;
   } catch {

@@ -82,6 +82,7 @@ export default function Game() {
   const [user, setUser] = useState<Profile | null>(null);
   const [googleOn, setGoogleOn] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [pendingName, setPendingName] = useState<string | null>(null);
   const [credited, setCredited] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [quip, setQuip] = useState(0);
@@ -147,6 +148,10 @@ export default function Game() {
       .then((b) => {
         setUser(b.user);
         setGoogleOn(Boolean(b.google));
+        if (b.pending) {
+          setPendingName(b.pending.suggested);
+          setModal("account");
+        }
       })
       .catch(() => {});
     const authErr = new URLSearchParams(window.location.search).get("auth_error");
@@ -603,8 +608,8 @@ export default function Game() {
       )}
 
       {modal === "account" && (
-        <Modal title={user ? "Your account" : "Sign in"} onClose={() => setModal(null)}>
-          <AccountPanel user={user} onChange={setUser} google={googleOn} initialError={authError} />
+        <Modal title={user ? "Your account" : pendingName ? "Pick a username" : "Sign in"} onClose={() => setModal(null)}>
+          <AccountPanel user={user} onChange={setUser} google={googleOn} initialError={authError} pending={pendingName} onSignedIn={() => setPendingName(null)} />
         </Modal>
       )}
 

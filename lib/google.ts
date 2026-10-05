@@ -77,26 +77,23 @@ export async function finishOAuth(req: Request, code: string, verifier: string):
 }
 
 /** Suggests a public username from a Google display name (never the email). */
-function candidateName(name?: string): string {
+export function suggestUsername(name?: string): string {
   const base = (name ?? "").split(/\s+/)[0].replace(/[^A-Za-z0-9_-]/g, "").slice(0, 14);
   return base.length >= 3 ? base : "player";
 }
 
-/** The Quantdle username linked to this Google account, creating one on first sign-in. */
-export async function usernameForGoogle(id: GoogleIdentity): Promise<string> {
-  const linkKey = `google:${id.sub}`;
-  const existing = await get(linkKey);
-  if (existing) return existing;
+/** The Quantdle username already linked to this Google account, if any. */
+export const linkedUsername = (sub: string) => get(`google:${sub}`);
 
-  const base = candidateName(id.name);
-  for (let i = 0; i < 20; i++) {
-    const username = i === 0 && base !== "player" ? base : `${base}${crypto.randomInt(100, 10000)}`;
-    // Password-less record: no salt/hash, so password login can never succeed for it.
-    const record = { username, salt: "", hash: "", created: Date.now(), google: true };
-    if (await setIfAbsent(`user:${username.toLowerCase()}`, JSON.stringify(record))) {
-      await set(linkKey, username);
-      return username;
-    }
-  }
-  throw new Error("Could not allocate a username");
+/**
+ * Creates the account for a Google identity under the chosen username.
+ * Returns the username, or null if it's taken (or the Google account got linked in the meantime).
+ */
+export async function claimGoogleUsername(sub: string, username: string): Promise<string | null> {
+  if (await linkedUsername(sub)) return null;
+  // Password-less record: no salt/hash, so password login can never succeed for it.
+  const record = { username, salt: "", hash: "", created: Date.now(), google: true };
+  if (!(await setIfAbsent(`user:${username.toLowerCase()}`, JSON.stringify(record)))) return null;
+  await set(`google:${sub}`, username);
+  return username;
 }

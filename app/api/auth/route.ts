@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { googleEnabled } from "@/lib/google";
+import { claimGoogleUsername, googleEnabled } from "@/lib/google";
 import {
   SESSION_DAYS,
   checkLogin,
   createUser,
   makeSession,
+  pendingCookie,
+  pendingGoogle,
   profile,
   rateLimited,
   sessionCookie,
   sessionUser,
   validateCredentials,
+  validateUsername,
 } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -17,16 +20,40 @@ export const dynamic = "force-dynamic";
 /** Who am I? */
 export async function GET(req: Request) {
   const username = sessionUser(req);
-  return NextResponse.json({ user: username ? await profile(username) : null, google: googleEnabled() });
+  const pending = username ? null : pendingGoogle(req);
+  return NextResponse.json({
+    user: username ? await profile(username) : null,
+    google: googleEnabled(),
+    pending: pending ? { suggested: pending.suggested } : null,
+  });
 }
 
-/** { action: "signup" | "login" | "logout", username?, password? } */
+/** { action: "signup" | "login" | "logout" | "google_username", username?, password? } */
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { action?: string; username?: string; password?: string };
 
   if (body.action === "logout") {
     const res = NextResponse.json({ user: null });
     res.cookies.set(sessionCookie("", 0));
+    res.cookies.set(pendingCookie("", 0));
+    return res;
+  }
+
+  if (body.action === "google_username") {
+    const pending = pendingGoogle(req);
+    if (!pending) {
+      return NextResponse.json({ error: "Your Google sign-in expired. Please sign in with Google again." }, { status: 401 });
+    }
+    if (await rateLimited(req, "auth", 20, 600)) {
+      return NextResponse.json({ error: "Too many attempts. Try again in a few minutes." }, { status: 429 });
+    }
+    const problem = validateUsername(body.username);
+    if (problem) return NextResponse.json({ error: problem }, { status: 400 });
+    const name = await claimGoogleUsername(pending.sub, body.username as string);
+    if (!name) return NextResponse.json({ error: "That username is taken." }, { status: 409 });
+    const res = NextResponse.json({ user: await profile(name) });
+    res.cookies.set(sessionCookie(makeSession(name), SESSION_DAYS * 86_400));
+    res.cookies.set(pendingCookie("", 0));
     return res;
   }
 

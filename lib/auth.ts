@@ -27,6 +27,12 @@ interface UserRecord {
 
 const userKey = (username: string) => `user:${username.toLowerCase()}`;
 
+export function validateUsername(username: unknown): string | null {
+  return typeof username === "string" && USERNAME_RE.test(username)
+    ? null
+    : "Usernames are 3–20 characters: letters, numbers, _ or -.";
+}
+
 export function validateCredentials(username: unknown, password: unknown): string | null {
   if (typeof username !== "string" || !USERNAME_RE.test(username)) {
     return "Usernames are 3–20 characters: letters, numbers, _ or -.";
@@ -83,6 +89,38 @@ export function sessionUser(req: Request): string | null {
   if (Number(exp) < Date.now()) return null;
   return Buffer.from(name, "base64url").toString("utf8");
 }
+
+// ───────────── pending Google sign-ins (verified with Google, username not chosen yet) ─────────────
+
+export const PENDING_COOKIE = "qd_pending";
+const PENDING_MINUTES = 15;
+
+export function makePending(sub: string, suggested: string): string {
+  const payload = `${Buffer.from(sub).toString("base64url")}.${Buffer.from(suggested).toString("base64url")}.${Date.now() + PENDING_MINUTES * 60_000}`;
+  return `${payload}.${sign(`pending:${payload}`)}`;
+}
+
+export function pendingGoogle(req: Request): { sub: string; suggested: string } | null {
+  const cookie = req.headers.get("cookie") ?? "";
+  const match = cookie.match(new RegExp(`(?:^|;\\s*)${PENDING_COOKIE}=([^;]+)`));
+  if (!match) return null;
+  const [sub, suggested, exp, sig] = decodeURIComponent(match[1]).split(".");
+  if (!sub || !suggested || !exp || !sig) return null;
+  const expected = sign(`pending:${sub}.${suggested}.${exp}`);
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  if (Number(exp) < Date.now()) return null;
+  return { sub: Buffer.from(sub, "base64url").toString("utf8"), suggested: Buffer.from(suggested, "base64url").toString("utf8") };
+}
+
+export const pendingCookie = (value: string, maxAgeSeconds: number) => ({
+  name: PENDING_COOKIE,
+  value,
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: maxAgeSeconds,
+});
 
 export const sessionCookie = (value: string, maxAgeSeconds: number) => ({
   name: SESSION_COOKIE,
