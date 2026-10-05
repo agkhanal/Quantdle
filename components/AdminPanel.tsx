@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ActivityEvent, ActivityType, Profile } from "@/lib/types";
+import { AdminBugs } from "./AdminBugs";
 
 const KEEP = 500;
 const STORE_KEY = "quantdle-admin-open";
@@ -12,6 +13,7 @@ const FILTERS: { key: string; label: string; types: ActivityType[] | null }[] = 
   { key: "profile", label: "Profile", types: ["profile"] },
   { key: "accounts", label: "Accounts", types: ["account"] },
   { key: "chat", label: "Chat", types: ["chat"] },
+  { key: "bugs", label: "Bugs", types: ["bug"] },
   { key: "admin", label: "Admin", types: ["admin"] },
 ];
 
@@ -25,6 +27,7 @@ const LABEL: Record<ActivityType, string> = {
   chat: "chat",
   admin: "admin",
   egg: "egg",
+  bug: "bug",
 };
 
 function stamp(at: number, now: number) {
@@ -99,6 +102,8 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
   const [query, setQuery] = useState("");
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [view, setView] = useState<"activity" | "bugs">("activity");
+  const [bugsOpen, setBugsOpen] = useState(0);
 
   const list = useRef<HTMLDivElement>(null);
   const lastId = useRef<number | null>(null);
@@ -143,9 +148,10 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
         try {
           const res = await fetch(lastId.current === null ? "/api/admin/activity" : `/api/admin/activity?after=${lastId.current}`, { cache: "no-store" });
           if (!res.ok) throw new Error();
-          const body = (await res.json()) as { events: ActivityEvent[]; latest: number };
+          const body = (await res.json()) as { events: ActivityEvent[]; latest: number; bugsOpen?: number };
           if (stopped) return;
           lastId.current = Math.max(lastId.current ?? 0, body.latest);
+          setBugsOpen(body.bugsOpen ?? 0);
           idle.current = body.events.length ? 0 : idle.current + 1;
           merge(body.events);
           setLoaded(true);
@@ -191,8 +197,21 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
       </button>
 
       <aside className={`admin-panel ${open ? "open" : ""}`} aria-label="Admin activity log" aria-hidden={!open} inert={!open}>
+        <div className="admin-views" role="tablist" aria-label="Admin sections">
+          <button role="tab" aria-selected={view === "activity"} className={view === "activity" ? "on" : ""} onClick={() => setView("activity")}>
+            Activity log
+          </button>
+          <button role="tab" aria-selected={view === "bugs"} className={view === "bugs" ? "on" : ""} onClick={() => setView("bugs")}>
+            Bug reports{bugsOpen > 0 && <span className="admin-badge">{bugsOpen}</span>}
+          </button>
+        </div>
+
+        {view === "bugs" ? (
+          <AdminBugs onOpenPlayer={onOpenPlayer} />
+        ) : (
+          <>
         <header className="admin-head">
-          <b>Activity log</b>
+          <b className="muted small">Everyone&apos;s actions, live</b>
           <span className={`admin-live ${live ? "on" : ""}`} aria-hidden />
           <button className="link" onClick={() => setLive((l) => !l)}>
             {live ? "Pause" : "Resume"}
@@ -237,11 +256,13 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
             </div>
           ))}
         </div>
-        <AdjustPoints me={me} onChange={onMeChange} />
-
         <footer className="admin-foot muted small">
           {events.length > 0 ? `${shown.length} of ${events.length} shown · ` : ""}the newest few thousand actions are kept
         </footer>
+          </>
+        )}
+
+        <AdjustPoints me={me} onChange={onMeChange} />
       </aside>
     </>
   );

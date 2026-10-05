@@ -22,6 +22,7 @@ import MarketGame from "./MarketGame";
 import { AUTH_ERRORS, AccountPanel } from "./Account";
 import { AdminPanel } from "./AdminPanel";
 import { Avatar } from "./Avatar";
+import { BugReport } from "./BugReport";
 import { Chat } from "./Chat";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
@@ -97,6 +98,7 @@ export default function Game() {
   const [viewFrom, setViewFrom] = useState<"leaderboard" | "search" | "chat" | "admin">("leaderboard");
   const [toast, setToast] = useState("");
   const [eggPops, setEggPops] = useState(0);
+  const [bugUpdates, setBugUpdates] = useState(0);
   const [leaving, setLeaving] = useState(false); // old content fading out before a mode/track/difficulty switch
   const [stats, setStats] = useState<Stats | null>(null);
   const [quip, setQuip] = useState(0);
@@ -163,6 +165,10 @@ export default function Game() {
       .then((b) => {
         setUser(b.user);
         setGoogleOn(Boolean(b.google));
+        if (b.bugUpdates > 0) {
+          setBugUpdates(b.bugUpdates);
+          showToast("🐞 One of your bug reports was updated. Open the bug button to see it.");
+        }
         if (b.pending) {
           setPendingName(b.pending.suggested);
           setModal("account");
@@ -653,6 +659,14 @@ export default function Game() {
       </footer>
 
       {user?.admin && <AdminPanel me={user} onMeChange={setUser} onOpenPlayer={(u) => openPlayer(u, "admin")} />}
+
+      <BugReport
+        user={user}
+        context={`${mode} · ${track}${data?.puzzle ? ` · ${data.puzzle.title}` : ""}`}
+        updates={bugUpdates}
+        onSignIn={() => setModal("account")}
+        onSeen={() => setBugUpdates(0)}
+      />
 
       <Chat user={user} onSignIn={() => setModal("account")} onOpenPlayer={(u) => openPlayer(u, "chat")} />
 

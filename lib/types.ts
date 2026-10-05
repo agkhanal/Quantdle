@@ -161,7 +161,7 @@ export interface ChatMessage {
   del?: number;
 }
 
-export type ActivityType = "account" | "guess" | "hint" | "win" | "loss" | "profile" | "chat" | "admin" | "egg";
+export type ActivityType = "account" | "guess" | "hint" | "win" | "loss" | "profile" | "chat" | "admin" | "egg" | "bug";
 
 /** One entry in the admin activity log. */
 export interface ActivityEvent {
@@ -170,4 +170,27 @@ export interface ActivityEvent {
   type: ActivityType;
   user: string;
   text: string;
+}
+
+export const BUG_CATEGORIES = ["Gameplay", "Display", "Account", "Chat", "Other"] as const;
+export type BugCategory = (typeof BUG_CATEGORIES)[number];
+export type BugStatus = "open" | "resolved" | "dismissed";
+
+/** A bug report from a player, handled by admins. */
+export interface BugReport {
+  id: number;
+  at: number;
+  user: string;
+  category: BugCategory;
+  title: string;
+  body: string;
+  /** Technical details the reporter chose to include. */
+  tech?: { path: string; viewport: string; ua: string; game: string };
+  status: BugStatus;
+  handledBy?: string;
+  handledAt?: number;
+  /** Message to the reporter from the admin who handled it. */
+  note?: string;
+  /** Points awarded to the reporter for this report. */
+  points?: number;
 }

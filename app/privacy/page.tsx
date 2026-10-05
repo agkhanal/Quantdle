@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Privacy Policy · Quantdle" };
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 9, 2026">
+    <LegalPage title="Privacy Policy" updated="October 10, 2026">
       <p>
         Quantdle is a daily quant puzzle game. This page explains what information the site handles and why. You can
         play without an account, and nothing below applies to guest play beyond the short notes on cookies and logs.
@@ -49,6 +49,11 @@ export default function Privacy() {
           attempts, wins and losses, hints, profile changes and chat messages. Only site administrators can see it, and we use it
           to run the game, prevent abuse and fix problems. It does not include your passwords or the numbers you type as
           answers, and only the newest few thousand entries are kept: older ones are deleted automatically.
+        </li>
+        <li>
+          <b>Bug reports.</b> If you report a bug, we store what you write, your username, and (only if you leave the box
+          ticked) technical details: the page you were on, your screen size, your browser, and what you were playing. Only
+          you and the site administrators can see a report. Reports are kept so fixes and rewards can be tracked.
         </li>
         <li>
           <b>IP address.</b> Your IP address is used briefly to limit sign-in attempts and prevent abuse. Our hosting

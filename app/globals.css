@@ -3222,3 +3222,328 @@ main.leaving {
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* ───────── bug reports ───────── */
+
+.bug-fab {
+  position: fixed;
+  right: 78px;
+  bottom: 22px;
+  z-index: 16;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.bug-fab:hover {
+  transform: translateY(-2px);
+  color: var(--text);
+  border-color: var(--text);
+}
+
+.bug-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d1495b;
+  border: 2px solid var(--surface);
+}
+
+.bug-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.bug-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  resize: vertical;
+}
+
+.bug-form textarea:focus {
+  border-color: var(--text);
+}
+
+.bug-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bug-cats button,
+.bug-quick button {
+  padding: 5px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bug-cats button.on {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.bug-quick {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.bug-quick button:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.bug-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.bug-check input {
+  margin-top: 3px;
+}
+
+.bug-thanks p {
+  margin: 0;
+}
+
+.bug-mine {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bug-card {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border-left: 4px solid var(--border);
+  background: var(--surface-2);
+}
+
+.bug-card.st-resolved {
+  border-left-color: var(--green);
+}
+
+.bug-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bug-card-title {
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.bug-pill {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--muted);
+}
+
+.bug-pill.st-open {
+  color: var(--yellow);
+}
+
+.bug-pill.st-resolved {
+  color: var(--green);
+}
+
+.bug-note {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.bug-points {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--green);
+}
+
+/* admin side */
+
+.admin-views {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.admin-views button {
+  flex: 1;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-views button.on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.admin-badge {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #d1495b;
+  color: #fff;
+  font-size: 0.7rem;
+}
+
+.bug-row {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 0;
+  border-left: 3px solid var(--yellow);
+  border-radius: 0 8px 8px 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bug-row:hover {
+  background: var(--surface-2);
+}
+
+.bug-row.st-resolved {
+  border-left-color: var(--green);
+}
+
+.bug-row.st-dismissed {
+  border-left-color: var(--grey);
+}
+
+.bug-row-top {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.bug-row-title {
+  overflow-wrap: anywhere;
+}
+
+.bug-row-by {
+  font-size: 0.74rem;
+}
+
+.bug-detail {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  font-size: 0.88rem;
+}
+
+.bug-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bug-detail h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.bug-detail .muted {
+  margin: 0;
+}
+
+.bug-body {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.bug-tech {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+  font-size: 0.76rem;
+}
+
+.bug-tech dt {
+  color: var(--muted);
+}
+
+.bug-tech dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.bug-detail .field input {
+  height: 38px;
+}
+
+.bug-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bug-actions .btn,
+.bug-actions .btn.primary {
+  height: 40px;
+  width: auto;
+  flex: 1;
+  padding: 0 12px;
+}

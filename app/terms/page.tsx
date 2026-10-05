@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Terms of Service · Quantdle" };
 
 export default function Terms() {
   return (
-    <LegalPage title="Terms of Service" updated="October 8, 2026">
+    <LegalPage title="Terms of Service" updated="October 10, 2026">
       <p>By using Quantdle you agree to these terms. If you don&apos;t agree, please don&apos;t use the site.</p>
 
       <h2>The service</h2>
@@ -39,6 +39,13 @@ export default function Terms() {
         <li>Don&apos;t post spoilers for the daily puzzle&apos;s answers.</li>
         <li>Moderators may delete messages and mute or remove accounts at any time, without notice.</li>
         <li>Messages are kept only briefly and may be lost; don&apos;t rely on the chat to keep anything.</li>
+      </ul>
+
+      <h2>Bug reports and rewards</h2>
+      <ul>
+        <li>Report real problems honestly. Don&apos;t submit spam, abuse, or reports meant to mislead.</li>
+        <li>Points for a report are a thank-you given at the administrators&apos; discretion. Not every report earns them, and they have no cash value.</li>
+        <li>Don&apos;t exploit a bug for gain instead of reporting it; see Fair play above.</li>
       </ul>
 
       <h2>Content and ownership</h2>

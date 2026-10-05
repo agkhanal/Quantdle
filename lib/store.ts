@@ -304,3 +304,11 @@ export async function zTrim(key: string, keep: number): Promise<void> {
   const sorted = [...z.entries()].sort((a, b) => a[1] - b[1]);
   for (const [m] of sorted.slice(0, Math.max(0, sorted.length - keep))) z.delete(m);
 }
+
+
+/** Several keys at once (null for missing ones). */
+export async function mget(keys: string[]): Promise<(string | null)[]> {
+  if (keys.length === 0) return [];
+  if (storeKind === "redis") return (await redis<(string | null)[]>(["MGET", ...keys])) ?? keys.map(() => null);
+  return keys.map((k) => memGet(k));
+}

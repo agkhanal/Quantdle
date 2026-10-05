@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { logActivity } from "@/lib/activity";
+import { unseenUpdates } from "@/lib/bugs";
 import { claimGoogleUsername, googleEnabled } from "@/lib/google";
 import { getProfile as profile } from "@/lib/profile";
 import {
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
     user: username ? await profile(username) : null,
     google: googleEnabled(),
     pending: pending ? { suggested: pending.suggested } : null,
+    bugUpdates: username ? await unseenUpdates(username) : 0,
   });
 }
 
