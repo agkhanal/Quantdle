@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logActivity } from "@/lib/activity";
 import { claimGoogleUsername, googleEnabled } from "@/lib/google";
 import { getProfile as profile } from "@/lib/profile";
 import {
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
     if (problem) return NextResponse.json({ error: problem }, { status: 400 });
     const name = await claimGoogleUsername(pending.sub, body.username as string);
     if (!name) return NextResponse.json({ error: "That username is taken." }, { status: 409 });
+    logActivity("account", name, "created an account with Google");
     const res = NextResponse.json({ user: await profile(name) });
     res.cookies.set(sessionCookie(makeSession(name), SESSION_DAYS * 86_400));
     res.cookies.set(pendingCookie("", 0));
@@ -79,6 +81,8 @@ export async function POST(req: Request) {
     if (!name) return NextResponse.json({ error: "Wrong username or password." }, { status: 401 });
   }
 
+  // (Failed sign-ins are deliberately not logged: a mistyped password could end up in the log.)
+  logActivity("account", name, body.action === "signup" ? "created an account" : "signed in");
   const res = NextResponse.json({ user: await profile(name) });
   res.cookies.set(sessionCookie(makeSession(name), SESSION_DAYS * 86_400));
   return res;

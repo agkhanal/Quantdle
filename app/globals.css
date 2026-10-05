@@ -2833,3 +2833,262 @@ html.verity-quake .app {
     animation: none;
   }
 }
+
+/* ───────── admin panel (left drawer) ───────── */
+
+:root {
+  --admin-w: 360px;
+}
+
+body {
+  transition: padding-left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* With room to spare, opening the drawer pushes the whole page right so it stays centred in what's left. */
+@media (min-width: 1100px) {
+  body.admin-open {
+    padding-left: var(--admin-w);
+  }
+}
+
+.admin-tab {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  z-index: 13;
+  transform: translateY(-50%);
+  padding: 14px 7px;
+  border: 1.5px solid var(--border);
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.15s ease;
+}
+
+.admin-tab span {
+  display: block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.admin-tab:hover {
+  color: var(--text);
+}
+
+.admin-tab.open {
+  left: min(var(--admin-w), 100vw);
+}
+
+.admin-panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 12;
+  width: min(var(--admin-w), 100vw);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 10px;
+  border-right: 1.5px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transform: translateX(-102%);
+  visibility: hidden;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.3s;
+}
+
+.admin-panel.open {
+  transform: none;
+  visibility: visible;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.admin-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-head b {
+  margin-right: auto;
+}
+
+.admin-live {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--grey);
+}
+
+.admin-live.on {
+  background: var(--green);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 60%, transparent);
+  animation: admin-pulse 1.8s ease-out infinite;
+}
+
+@keyframes admin-pulse {
+  to {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-filters button {
+  padding: 4px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-filters button.on {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.admin-search {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+
+.admin-search:focus {
+  border-color: var(--text);
+}
+
+.admin-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-empty {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.admin-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--border);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.admin-row:hover {
+  background: var(--surface-2);
+}
+
+.admin-time {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.admin-type {
+  justify-self: end;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.admin-what {
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+}
+
+.admin-user {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-user:hover {
+  text-decoration: underline;
+}
+
+.admin-row.t-win {
+  border-left-color: var(--green);
+}
+.admin-row.t-win .admin-type {
+  color: var(--green);
+}
+.admin-row.t-loss {
+  border-left-color: #d1495b;
+}
+.admin-row.t-loss .admin-type {
+  color: #d1495b;
+}
+.admin-row.t-hint {
+  border-left-color: var(--yellow);
+}
+.admin-row.t-egg {
+  border-left-color: var(--yellow);
+}
+.admin-row.t-profile {
+  border-left-color: var(--accent);
+}
+.admin-row.t-profile .admin-type {
+  color: var(--accent);
+}
+.admin-row.t-admin {
+  border-left-color: #e08a3c;
+}
+.admin-row.t-admin .admin-type {
+  color: #e08a3c;
+}
+.admin-row.t-chat {
+  border-left-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.admin-foot {
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .admin-tab,
+  .admin-panel,
+  .admin-panel.open {
+    transition: none;
+  }
+  .admin-live.on {
+    animation: none;
+  }
+}

@@ -20,6 +20,7 @@ import Modal from "./Modal";
 import Confetti from "./Confetti";
 import MarketGame from "./MarketGame";
 import { AUTH_ERRORS, AccountPanel } from "./Account";
+import { AdminPanel } from "./AdminPanel";
 import { Avatar } from "./Avatar";
 import { Chat } from "./Chat";
 import { LeaderboardPanel } from "./Leaderboard";
@@ -93,7 +94,7 @@ export default function Game() {
   const [pendingName, setPendingName] = useState<string | null>(null);
   const [award, setAward] = useState<Award | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
-  const [viewFrom, setViewFrom] = useState<"leaderboard" | "search" | "chat">("leaderboard");
+  const [viewFrom, setViewFrom] = useState<"leaderboard" | "search" | "chat" | "admin">("leaderboard");
   const [toast, setToast] = useState("");
   const [eggPops, setEggPops] = useState(0);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -244,7 +245,7 @@ export default function Game() {
   }
 
   /** Opens someone's public profile (your own goes to your account); closing it returns to where you came from. */
-  function openPlayer(username: string, from: "leaderboard" | "search" | "chat") {
+  function openPlayer(username: string, from: "leaderboard" | "search" | "chat" | "admin") {
     if (username === user?.username) return setModal("account");
     setViewing(username);
     setViewFrom(from);
@@ -628,6 +629,8 @@ export default function Game() {
         <a href="/terms">Terms</a>
       </footer>
 
+      {user?.admin && <AdminPanel onOpenPlayer={(u) => openPlayer(u, "admin")} />}
+
       <Chat user={user} onSignIn={() => setModal("account")} onOpenPlayer={(u) => openPlayer(u, "chat")} />
 
       {toast && (
@@ -704,7 +707,7 @@ export default function Game() {
       )}
 
       {modal === "player" && viewing && (
-        <Modal title="Player" onClose={() => setModal(viewFrom === "chat" ? null : viewFrom)}>
+        <Modal title="Player" onClose={() => setModal(viewFrom === "chat" || viewFrom === "admin" ? null : viewFrom)}>
           <PublicProfile username={viewing} />
         </Modal>
       )}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin, sessionUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 import { muteUser } from "@/lib/chat";
 import { findUser } from "@/lib/profile";
 
@@ -14,5 +15,6 @@ export async function POST(req: Request) {
   if (isAdmin(target)) return NextResponse.json({ error: "Admins can't be muted." }, { status: 400 });
   const minutes = Math.min(Math.max(Number(body.minutes) || 60, 1), 7 * 24 * 60);
   await muteUser(target, minutes);
+  logActivity("admin", sessionUser(req) ?? "admin", `muted ${target} in chat for ${minutes} min`);
   return NextResponse.json({ muted: target, minutes });
 }

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { SESSION_DAYS, makePending, makeSession, pendingCookie, sessionCookie } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 import { OAUTH_COOKIE, finishOAuth, googleEnabled, linkedUsername, suggestUsername } from "@/lib/google";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export async function GET(req: Request) {
 
     const res = NextResponse.redirect(`${url.origin}/`);
     if (username) {
+      logActivity("account", username, "signed in with Google");
       res.cookies.set(sessionCookie(makeSession(username), SESSION_DAYS * 86_400));
     } else {
       // First time with Google: let them pick a username before the account exists.

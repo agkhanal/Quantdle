@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { rateLimited, sessionUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 import { getProfile, removeAvatar, saveAvatar } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
   if (!sniff(bytes)) return NextResponse.json({ error: "Use a JPEG, PNG or WebP image." }, { status: 415 });
 
   await saveAvatar(username, Buffer.from(bytes).toString("base64"));
+  logActivity("profile", username, "uploaded a profile picture");
   return NextResponse.json({ profile: await getProfile(username) });
 }
 
@@ -36,5 +38,6 @@ export async function DELETE(req: Request) {
   const username = sessionUser(req);
   if (!username) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   await removeAvatar(username);
+  logActivity("profile", username, "removed their profile picture");
   return NextResponse.json({ profile: await getProfile(username) });
 }

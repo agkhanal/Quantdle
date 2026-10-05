@@ -11,6 +11,7 @@ import {
   type School,
   type SchoolEntry,
 } from "./types";
+import { logActivity } from "./activity";
 import { isAdmin } from "./auth";
 import { schoolById } from "./schools";
 import {
@@ -180,6 +181,11 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
     wins: s.wins + 1,
     ...(isDaily ? { streak, bestStreak: best, lastDaily: today } : {}),
   };
+  logActivity(
+    "win",
+    username,
+    `won ${puzzle.difficulty} "${puzzle.title}" in ${guesses} ${guesses === 1 ? "guess" : "guesses"}${isDaily ? " (daily)" : ""}: +${points} pts, streak ${shape(username, updated, null).streak}`,
+  );
   const r = await zRankOf(boardKey("u", "all"), username);
   return {
     result: "win",
@@ -202,6 +208,7 @@ export async function recordLoss(username: string, puzzle: Puzzle): Promise<Awar
   ]);
 
   const updated: Stored = { ...s, losses: s.losses + 1, streak: isDaily ? 0 : s.streak };
+  logActivity("loss", username, `lost ${puzzle.difficulty} "${puzzle.title}"${isDaily ? " (daily)" : ""}: out of guesses`);
   const r = await zRankOf(boardKey("u", "all"), username);
   return {
     result: "loss",
@@ -220,11 +227,12 @@ export const progressTtl = WEEK;
 // ───────────── admin adjustments ─────────────
 
 /** Adds (or, if negative, removes) points from a player, on every board, and records who/why. Returns null for an unknown player. */
-export async function adminAdjustPoints(name: string, points: number, reason: string): Promise<Profile | null> {
+export async function adminAdjustPoints(name: string, points: number, reason: string, by = "(secret key)"): Promise<Profile | null> {
   const username = await findUser(name);
   if (!username) return null;
   const s = await load(username);
   await Promise.all([hIncrBy(profKey(username), "points", points), addPoints(username, s.school, points)]);
+  logActivity("admin", by, `adjusted ${username}'s points by ${points > 0 ? "+" : ""}${points}${reason ? ` (${reason})` : ""}`);
   await set(`admin:grant:${Date.now()}:${username.toLowerCase()}`, JSON.stringify({ username, points, reason, at: new Date().toISOString() }));
   return getProfile(username);
 }
@@ -236,6 +244,7 @@ export async function claimEgg(username: string): Promise<Profile | null> {
   if (!(await setIfAbsent(`egg:${username.toLowerCase()}:logo`, "1"))) return null;
   const s = await load(username);
   await Promise.all([hIncrBy(profKey(username), "points", EGG_POINTS), addPoints(username, s.school, EGG_POINTS)]);
+  logActivity("egg", username, `found the easter egg: +${EGG_POINTS} pts`);
   return getProfile(username);
 }
 

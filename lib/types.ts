@@ -160,3 +160,14 @@ export interface ChatMessage {
   at: number;
   del?: number;
 }
+
+export type ActivityType = "account" | "guess" | "hint" | "win" | "loss" | "profile" | "chat" | "admin" | "egg";
+
+/** One entry in the admin activity log. */
+export interface ActivityEvent {
+  id: number;
+  at: number;
+  type: ActivityType;
+  user: string;
+  text: string;
+}

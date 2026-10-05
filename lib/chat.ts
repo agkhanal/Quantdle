@@ -62,15 +62,15 @@ export async function postMessage(username: string, avatar: string | null, text:
   return msg;
 }
 
-export async function deleteMessage(id: number): Promise<boolean> {
+export async function deleteMessage(id: number): Promise<ChatMessage | null> {
   const [raw] = await zByScore(LOG, String(id), String(id), 1);
-  if (!raw) return false;
+  if (!raw) return null;
   const target = parse(raw);
-  if (!target || target.del) return false;
+  if (!target || target.del) return null;
   await zRemMember(LOG, raw);
   const event: ChatMessage = { id: await nextId(), u: "", a: null, m: false, t: "", at: Date.now(), del: id };
   await zAddMember(LOG, event.id, JSON.stringify(event));
-  return true;
+  return target;
 }
 
 export async function muteUser(username: string, minutes: number) {

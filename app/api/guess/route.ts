@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { aiEnabled, judgeGuess } from "@/lib/ai";
+import { logActivity } from "@/lib/activity";
 import { sessionUser } from "@/lib/auth";
 import { evaluate, relativeError } from "@/lib/math";
 import { isSolved, markLost, markSolved, progressTtl, recordLoss, recordWin } from "@/lib/profile";
@@ -36,7 +37,8 @@ export async function POST(req: Request) {
   const user = sessionUser(req);
 
   if (relErr <= tol) {
-    const award = user ? await recordSolve(user, puzzle, body.step) : undefined;
+    if (user) logActivity("guess", user, `"${puzzle.title}" step ${body.step + 1}/${puzzle.steps.length}: correct`);
+    const award = user ? await recordSolve(user, puzzle, body.step) : undefined; // (logs the win, after the guess above)
     return json({
       verdict: "green",
       feedback: pick(["Nailed it.", "Clean.", "Exactly right.", "Spot on.", "That's the one."]),
@@ -81,6 +83,7 @@ export async function POST(req: Request) {
     }
   }
 
+  if (user) logActivity("guess", user, `"${puzzle.title}" step ${body.step + 1}/${puzzle.steps.length}: ${verdict === "yellow" ? "close" : "wrong"} (${verdict})`);
   return json({ verdict, feedback, direction, value, judgedBy, award: loss });
 }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { rateLimited, sessionUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 import { incr, setIfAbsent } from "@/lib/store";
 import { progressTtl } from "@/lib/profile";
 import { unseal } from "@/lib/token";
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
   const user = sessionUser(req);
   if (user && (await setIfAbsent(`hint:${user.toLowerCase()}:${puzzle.id}`, "1"))) {
     await incr(`tries:${user.toLowerCase()}:${puzzle.id}`, progressTtl);
+    logActivity("hint", user, `took a hint on "${puzzle.title}" (costs a guess)`);
   }
   return NextResponse.json({ hint: step.hint });
 }

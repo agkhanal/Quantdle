@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   }
   const reason = typeof body.reason === "string" ? body.reason.slice(0, 200) : "";
 
-  const profile = await adminAdjustPoints(body.username.slice(0, 40), points, reason);
+  const profile = await adminAdjustPoints(body.username.slice(0, 40), points, reason, sessionUser(req) ?? undefined);
   if (!profile) return NextResponse.json({ error: "No such player." }, { status: 404 });
   return NextResponse.json({ profile });
 }

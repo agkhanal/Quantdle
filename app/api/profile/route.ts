@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { rateLimited, sessionUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 import { findUser, getProfile, parseLinkedIn, updateProfile } from "@/lib/profile";
 import { schoolById } from "@/lib/schools";
 
@@ -39,5 +40,13 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ profile: await updateProfile(username, edit) });
+  const before = await getProfile(username);
+  const profile = await updateProfile(username, edit);
+  if (edit.school !== undefined && (before.school?.id ?? null) !== (profile.school?.id ?? null)) {
+    logActivity("profile", username, `changed school: ${before.school?.name ?? "none"} → ${profile.school?.name ?? "none"}`);
+  }
+  if (edit.linkedin !== undefined && before.linkedin !== profile.linkedin) {
+    logActivity("profile", username, profile.linkedin ? (before.linkedin ? "changed their LinkedIn link" : "added a LinkedIn link") : "removed their LinkedIn link");
+  }
+  return NextResponse.json({ profile });
 }
