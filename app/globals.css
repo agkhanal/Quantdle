@@ -2099,3 +2099,279 @@ button.lb-person:hover .lb-name {
   display: inline-flex;
   margin: 0;
 }
+
+/* Verity's later stages */
+
+.verity-morph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: verity-morph 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.verity.stage-2 .verity-bubble b {
+  font-weight: 400;
+  font-style: italic;
+}
+
+.verity.stage-3 .verity-morph {
+  animation:
+    verity-morph 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both,
+    verity-rage 0.08s linear 0.35s infinite;
+}
+
+.verity.stage-3 .verity-bubble b {
+  color: #c0121b;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  animation: verity-rage 0.08s linear infinite;
+}
+
+.verity.stage-4 .verity-face {
+  animation: verity-twitch 1.4s steps(1) infinite;
+  cursor: default;
+}
+
+.verity.stage-4 .verity-face:hover {
+  scale: 1;
+}
+
+/* The jumpscare: cracks, red, monster through the glass, shake, reload. */
+
+html.verity-quake .app {
+  position: relative;
+  animation: verity-quake 0.12s linear infinite;
+}
+
+.verity-scare {
+  position: fixed;
+  inset: -40px;
+  z-index: 1000;
+  overflow: hidden;
+  pointer-events: all;
+}
+
+.verity-scare.burst {
+  animation: verity-shake 0.1s linear infinite;
+}
+
+.verity-scare-red {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 42%, #ff2a1a 0%, #b00000 38%, #3a0000 80%, #120000 100%);
+}
+
+.verity-scare.burst .verity-scare-red {
+  opacity: 1;
+  animation: verity-flicker 0.18s steps(2) infinite;
+}
+
+.verity-scare.burst::after {
+  /* fade to black right before the reload */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  animation: verity-blackout 1.6s ease-in both;
+}
+
+.verity-monster {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: 120vh;
+  width: auto;
+  max-width: none;
+  translate: -50% -14%;
+  transform-origin: 50% 12%;
+  opacity: 0;
+  filter: drop-shadow(0 0 40px rgba(0, 0, 0, 0.8));
+}
+
+.verity-scare.burst .verity-monster {
+  opacity: 1;
+  animation: verity-lunge 1.6s cubic-bezier(0.1, 0.9, 0.2, 1) both;
+}
+
+.verity-cracks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.verity-cracks path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 0.35;
+  stroke-linejoin: bevel;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 0.4px #000) drop-shadow(0 0 1px rgba(0, 0, 0, 0.6));
+  animation: verity-crack 0.3s ease-out both;
+}
+
+.verity-scare.burst .verity-cracks {
+  animation: verity-cracks-out 0.45s ease-out both;
+}
+
+.verity-shard {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--size);
+  height: var(--size);
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  clip-path: polygon(50% 0, 100% 80%, 10% 100%);
+  animation: verity-shard 0.7s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+}
+
+@keyframes verity-morph {
+  0% {
+    transform: scale(1.25, 0.6) rotate(-8deg);
+    filter: brightness(2) saturate(0);
+  }
+  40% {
+    transform: scale(0.85, 1.2) rotate(6deg);
+  }
+  100% {
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes verity-rage {
+  0% {
+    translate: 1px -1px;
+  }
+  25% {
+    translate: -2px 1px;
+  }
+  50% {
+    translate: 1px 2px;
+  }
+  75% {
+    translate: -1px -2px;
+  }
+}
+
+@keyframes verity-twitch {
+  0%,
+  100% {
+    transform: none;
+  }
+  62% {
+    transform: rotate(7deg) scale(1.06);
+  }
+  66% {
+    transform: rotate(-4deg) translateX(-3px);
+  }
+  70% {
+    transform: none;
+  }
+  88% {
+    transform: rotate(-9deg) scale(1.1);
+  }
+  91% {
+    transform: none;
+  }
+}
+
+@keyframes verity-quake {
+  0% {
+    left: 0;
+    top: 0;
+  }
+  25% {
+    left: -4px;
+    top: 3px;
+  }
+  50% {
+    left: 3px;
+    top: -2px;
+  }
+  75% {
+    left: -2px;
+    top: -3px;
+  }
+}
+
+@keyframes verity-shake {
+  0% {
+    transform: translate(0, 0) rotate(0);
+  }
+  25% {
+    transform: translate(-14px, 9px) rotate(-0.6deg);
+  }
+  50% {
+    transform: translate(11px, -12px) rotate(0.5deg);
+  }
+  75% {
+    transform: translate(-9px, -6px) rotate(0.3deg);
+  }
+}
+
+@keyframes verity-flicker {
+  50% {
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes verity-blackout {
+  0%,
+  80% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes verity-lunge {
+  0% {
+    transform: scale(0.2);
+    filter: brightness(0.2) drop-shadow(0 0 40px #000);
+  }
+  10% {
+    transform: scale(2.3);
+    filter: brightness(1.4) drop-shadow(0 0 40px #000);
+  }
+  20% {
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(3.2);
+    filter: brightness(1) drop-shadow(0 0 40px #000);
+  }
+}
+
+@keyframes verity-crack {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes verity-cracks-out {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes verity-shard {
+  0% {
+    transform: translate(-50%, -50%) rotate(0) scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1.4);
+    opacity: 0.9;
+  }
+}
