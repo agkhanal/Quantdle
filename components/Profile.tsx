@@ -28,10 +28,6 @@ function Stats({ p }: { p: Profile }) {
           <span>Points</span>
         </div>
         <div>
-          <b>{p.elo}</b>
-          <span>Elo · {p.tier}</span>
-        </div>
-        <div>
           <b>{p.streak}🔥</b>
           <span>Day streak</span>
         </div>
@@ -39,9 +35,13 @@ function Stats({ p }: { p: Profile }) {
           <b>{p.wins}</b>
           <span>Games won</span>
         </div>
+        <div>
+          <b>{p.rank ? `#${p.rank}` : "–"}</b>
+          <span>All-time rank</span>
+        </div>
       </div>
       <p className="muted small profile-sub">
-        {p.rank ? `#${p.rank} all-time` : "Unranked"} · best streak {p.bestStreak} · {played > 0 ? `${Math.round((p.wins / played) * 100)}% win rate` : "no games yet"}
+        Best streak {p.bestStreak} · {played > 0 ? `${Math.round((p.wins / played) * 100)}% win rate` : "no games yet"}
       </p>
     </>
   );
@@ -181,8 +181,8 @@ export function ProfilePanel({ user, onChange }: { user: Profile; onChange: (u: 
           <li>Solve a puzzle in six guesses to win points: Easy 10, Medium 20, Hard 35, Expert 50.</li>
           <li>Fewer guesses earn more. Using all six earns half.</li>
           <li>The daily puzzle is worth double, plus +2 per day of streak (up to +20).</li>
-          <li>Practice points stop after 100 a day. Wins and Elo still count.</li>
-          <li>Elo goes up when you beat a puzzle&apos;s difficulty and down when a puzzle beats you. Days reset at 00:00 UTC; weeks start Monday.</li>
+          <li>Practice points stop after 100 a day. Wins still count.</li>
+          <li>Days reset at 00:00 UTC; weeks start Monday.</li>
         </ul>
       </details>
 

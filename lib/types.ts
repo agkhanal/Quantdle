@@ -79,8 +79,6 @@ export interface Profile {
   /** Consecutive daily puzzles won, ending yesterday or today. */
   streak: number;
   bestStreak: number;
-  elo: number;
-  tier: string;
   /** All-time points rank, 1 = best; null until the first point is earned. */
   rank: number | null;
   school: School | null;
@@ -95,7 +93,6 @@ export interface Award {
   result: "win" | "loss";
   points: number;
   breakdown: { label: string; value: number }[];
-  elo: { before: number; after: number };
   streak: number;
   profile: Profile;
 }

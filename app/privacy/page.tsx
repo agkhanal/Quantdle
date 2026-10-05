@@ -25,7 +25,7 @@ export default function Privacy() {
         </li>
         <li>
           <b>Game activity.</b> For signed-in players: which puzzles you solved or missed, your progress and guess counts
-          on recent puzzles, and your points, wins, losses, daily streak and Elo rating. Your username, points and the
+          on recent puzzles, and your points, wins, losses, and daily streak. Your username, points and the
           other stats on your profile are public.
         </li>
         <li>

@@ -654,9 +654,8 @@ export default function Game() {
 
 // ───────────── pieces ─────────────
 
-/** What a finished puzzle was worth: points itemised, Elo and streak. */
+/** What a finished puzzle was worth: points itemised, plus streak and total. */
 function AwardCard({ award }: { award: Award }) {
-  const delta = award.elo.after - award.elo.before;
   return (
     <div className="award">
       {award.result === "win" ? (
@@ -677,9 +676,6 @@ function AwardCard({ award }: { award: Award }) {
         <div className="award-total">No points this time</div>
       )}
       <div className="award-meta">
-        <span>
-          Elo {award.elo.after} <b className={delta >= 0 ? "pos" : "neg"}>({delta >= 0 ? "+" : ""}{delta})</b>
-        </span>
         {award.streak > 0 && <span>🔥 {award.streak}-day streak</span>}
         <span>{award.profile.points.toLocaleString()} total</span>
       </div>

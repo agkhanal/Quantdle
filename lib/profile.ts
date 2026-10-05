@@ -14,19 +14,15 @@ import {
 import { schoolById } from "./schools";
 import {
   PRACTICE_DAILY_CAP,
-  START_ELO,
   dayNumber,
-  efficiency,
-  eloAfter,
   parseDailyId,
   periodEnd,
-  tierFor,
   weekIndex,
   winPoints,
 } from "./scoring";
 
 /**
- * Player profiles, points, Elo and the leaderboards. A profile is a Redis hash keyed by the
+ * Player profiles, points and the leaderboards. A profile is a Redis hash keyed by the
  * lower-cased username; the leaderboards are sorted sets (one per period, for players and schools).
  */
 
@@ -54,8 +50,6 @@ interface Stored {
   streak: number;
   bestStreak: number;
   lastDaily: number;
-  elo: number;
-  games: number;
   school: string | null;
   linkedin: string | null;
   avatarV: number;
@@ -66,10 +60,10 @@ const num = (v: string | undefined, d = 0) => (v !== undefined && Number.isFinit
 /** Loads the stored profile, creating it on first use (carrying over any old leaderboard win count). */
 async function load(username: string): Promise<Stored> {
   const h = await hGetAll(profKey(username));
-  if (!h.elo) {
+  if (h.points === undefined) {
     const legacy = await zRankOf(LEGACY_LEADERBOARD, username);
     const wins = legacy?.score ?? 0;
-    await hSet(profKey(username), { elo: START_ELO, wins, points: 0 });
+    await hSet(profKey(username), { wins, points: 0 });
     return blank(wins);
   }
   return {
@@ -79,8 +73,6 @@ async function load(username: string): Promise<Stored> {
     streak: num(h.streak),
     bestStreak: num(h.bestStreak),
     lastDaily: num(h.lastDaily),
-    elo: num(h.elo, START_ELO),
-    games: num(h.games),
     school: h.school || null,
     linkedin: h.linkedin || null,
     avatarV: num(h.avatarV),
@@ -94,8 +86,6 @@ const blank = (wins = 0): Stored => ({
   streak: 0,
   bestStreak: 0,
   lastDaily: 0,
-  elo: START_ELO,
-  games: 0,
   school: null,
   linkedin: null,
   avatarV: 0,
@@ -110,8 +100,6 @@ function shape(username: string, s: Stored, rank: number | null): Profile {
     losses: s.losses,
     streak: alive ? s.streak : 0,
     bestStreak: Math.max(s.bestStreak, alive ? s.streak : 0),
-    elo: s.elo,
-    tier: tierFor(s.elo),
     rank,
     school: s.school ? schoolById(s.school) : null,
     linkedin: s.linkedin,
@@ -160,7 +148,6 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
   let streak = s.streak;
   if (isDaily) streak = s.lastDaily === today - 1 ? s.streak + 1 : s.lastDaily === today ? s.streak : 1;
 
-  const eff = efficiency(guesses, puzzle.steps.length);
   const scored = winPoints({ difficulty: puzzle.difficulty, steps: puzzle.steps.length, guesses, daily: isDaily, streak });
   let { points } = scored;
   const breakdown = [...scored.breakdown];
@@ -174,17 +161,12 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
     }
   }
 
-  const elo = eloAfter(s.elo, s.games, puzzle.difficulty, { win: true, efficiency: eff });
   const best = Math.max(s.bestStreak, streak);
 
   await Promise.all([
-    hSet(profKey(username), {
-      elo,
-      ...(isDaily ? { streak, bestStreak: best, lastDaily: today } : {}),
-    }),
+    ...(isDaily ? [hSet(profKey(username), { streak, bestStreak: best, lastDaily: today })] : []),
     hIncrBy(profKey(username), "points", points),
     hIncrBy(profKey(username), "wins", 1),
-    hIncrBy(profKey(username), "games", 1),
     hIncrBy(profKey(username), `d${Math.min(guesses, MAX_GUESSES)}`, 1),
     addPoints(username, s.school, points, now),
   ]);
@@ -193,8 +175,6 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
     ...s,
     points: s.points + points,
     wins: s.wins + 1,
-    games: s.games + 1,
-    elo,
     ...(isDaily ? { streak, bestStreak: best, lastDaily: today } : {}),
   };
   const r = await zRankOf(boardKey("u", "all"), username);
@@ -202,7 +182,6 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
     result: "win",
     points,
     breakdown,
-    elo: { before: s.elo, after: elo },
     streak: shape(username, updated, null).streak,
     profile: shape(username, updated, r ? r.rank + 1 : null),
   };
@@ -213,21 +192,18 @@ export async function recordLoss(username: string, puzzle: Puzzle): Promise<Awar
   const today = dayNumber();
   const s = await load(username);
   const isDaily = parseDailyId(puzzle.id) === today;
-  const elo = eloAfter(s.elo, s.games, puzzle.difficulty, { win: false, efficiency: 0 });
 
   await Promise.all([
-    hSet(profKey(username), { elo, ...(isDaily ? { streak: 0 } : {}) }),
+    ...(isDaily ? [hSet(profKey(username), { streak: 0 })] : []),
     hIncrBy(profKey(username), "losses", 1),
-    hIncrBy(profKey(username), "games", 1),
   ]);
 
-  const updated: Stored = { ...s, losses: s.losses + 1, games: s.games + 1, elo, streak: isDaily ? 0 : s.streak };
+  const updated: Stored = { ...s, losses: s.losses + 1, streak: isDaily ? 0 : s.streak };
   const r = await zRankOf(boardKey("u", "all"), username);
   return {
     result: "loss",
     points: 0,
     breakdown: [],
-    elo: { before: s.elo, after: elo },
     streak: shape(username, updated, null).streak,
     profile: shape(username, updated, r ? r.rank + 1 : null),
   };

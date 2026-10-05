@@ -7,12 +7,11 @@ import { MAX_GUESSES, type Difficulty } from "./types";
  *
  * Points: harder puzzles are worth more, and fewer guesses is worth more. The daily puzzle
  * is worth double and earns a streak bonus; practice is capped per day so it can't be farmed.
- * Elo: each puzzle is an "opponent" rated by its difficulty.
  */
 
 export const BASE_POINTS: Record<Difficulty, number> = { easy: 10, medium: 20, hard: 35, expert: 50 };
 export const DAILY_MULTIPLIER = 2;
-/** Practice points stop counting after this many per UTC day (wins and Elo still count). */
+/** Practice points stop counting after this many per UTC day (wins still count). */
 export const PRACTICE_DAILY_CAP = 100;
 export const STREAK_BONUS_PER_DAY = 2;
 export const STREAK_BONUS_MAX_DAYS = 10;
@@ -53,38 +52,6 @@ export function winPoints({ difficulty, steps, guesses, daily, streak }: PointsI
     }
   }
   return { points: total, breakdown, efficiency: eff };
-}
-
-// ───────────── Elo ─────────────
-
-export const START_ELO = 1200;
-export const MIN_ELO = 100;
-export const PUZZLE_RATING: Record<Difficulty, number> = { easy: 1000, medium: 1200, hard: 1400, expert: 1600 };
-
-/** New players move fast so their rating settles quickly. */
-export const kFactor = (games: number) => (games < 10 ? 48 : games < 40 ? 32 : 24);
-
-export function eloAfter(rating: number, games: number, difficulty: Difficulty, result: { win: boolean; efficiency: number }) {
-  const expected = 1 / (1 + 10 ** ((PUZZLE_RATING[difficulty] - rating) / 400));
-  // A win scores 0.7 to 1.0 depending on how cleanly it was solved; a loss scores 0.
-  const score = result.win ? 0.7 + 0.3 * ((result.efficiency - 0.5) / 0.5) : 0;
-  return Math.max(MIN_ELO, Math.round(rating + kFactor(games) * (score - expected)));
-}
-
-const TIERS: [number, string][] = [
-  [0, "Intern"],
-  [1000, "Analyst"],
-  [1200, "Associate"],
-  [1400, "Trader"],
-  [1600, "Senior Trader"],
-  [1800, "Portfolio Manager"],
-  [2000, "Managing Director"],
-];
-
-export function tierFor(elo: number): string {
-  let name = TIERS[0][1];
-  for (const [min, label] of TIERS) if (elo >= min) name = label;
-  return name;
 }
 
 // ───────────── calendar (UTC) ─────────────

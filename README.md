@@ -41,7 +41,7 @@ No AI needed. If you'd rather have Claude write Practice puzzles, set `QUANTDLE_
 
 ## Accounts, points and leaderboards
 
-Players sign in with a username and password (no email) or with Google. Signed-in players get a profile with points, games won, a daily streak, an Elo rating, an optional photo, school and LinkedIn link.
+Players sign in with a username and password (no email) or with Google. Signed-in players get a profile with points, games won and a daily streak, an optional photo, school and LinkedIn link.
 
 **Points** (for puzzles solved in order within 6 guesses; a hint costs a guess; each puzzle scores once):
 
@@ -51,8 +51,7 @@ Players sign in with a username and password (no email) or with Google. Signed-i
 
 - **Efficiency:** the base is multiplied from 1.0 (every guess was a step answer) down to 0.5 (all six guesses used).
 - **Daily puzzle:** worth double, plus +2 per day of streak (up to +20).
-- **Practice:** capped at 100 points per UTC day (wins and Elo still count).
-- **Elo:** starts at 1200. Each puzzle is an opponent rated 1000 / 1200 / 1400 / 1600 by difficulty. A clean win scores more than a slow one, and running out of guesses is a loss.
+- **Practice:** capped at 100 points per UTC day (wins still count).
 - **Streak:** consecutive daily puzzles won. A missed day or a lost daily resets it.
 
 All of this lives in `lib/scoring.ts` (pure functions; `npx tsx scripts/verify-scoring.ts` prints the points table and checks the rules). Days reset at 00:00 UTC and weeks start Monday.
@@ -91,7 +90,7 @@ npm run dev                  # http://localhost:3000
 app/
   page.tsx                   UI entry
   api/puzzle/route.ts        GET a daily or practice puzzle (returns public view + sealed token)
-  api/guess/route.ts         POST a guess -> verdict, direction, feedback; scores wins and losses (points, Elo, streak)
+  api/guess/route.ts         POST a guess -> verdict, direction, feedback; scores wins and losses (points, streak)
   api/reveal/route.ts        POST at game end -> full worked solution
   api/auth/route.ts          Sign up, sign in, sign out, who am I
   api/auth/google/           Sign in with Google (redirect + callback)
@@ -109,7 +108,7 @@ lib/generators.ts            Procedural puzzle templates + Monte Carlo checks
 lib/bank.ts                  Hand-checked puzzles for the Daily
 lib/market.ts                Market contract generator, fair value, counterparties, P&L
 lib/auth.ts                  Password hashing and session cookies
-lib/scoring.ts               Points, Elo, tiers, UTC day/week helpers
+lib/scoring.ts               Points and UTC day/week helpers
 lib/profile.ts               Profiles, awards, leaderboards
 lib/store.ts                 Upstash Redis client with an in-memory fallback
 lib/ai.ts                    Optional Claude judge and puzzle writer

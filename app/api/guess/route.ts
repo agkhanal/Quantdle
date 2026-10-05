@@ -84,7 +84,7 @@ export async function POST(req: Request) {
   return json({ verdict, feedback, direction, value, judgedBy, award: loss });
 }
 
-// ───────────── points, Elo and streak accounting (signed-in players) ─────────────
+// ───────────── points and streak accounting (signed-in players) ─────────────
 // Guesses are never blocked; a puzzle just doesn't score unless its steps were solved in
 // order within MAX_GUESSES guesses (a hint counts as one). Each puzzle scores once.
 
