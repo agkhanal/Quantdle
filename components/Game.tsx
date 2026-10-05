@@ -19,6 +19,7 @@ import Modal from "./Modal";
 import Confetti from "./Confetti";
 import MarketGame from "./MarketGame";
 import { AccountPanel, LeaderboardPanel } from "./Account";
+import Verity from "./Verity";
 
 type Mode = "daily" | "practice";
 /** Each tab has two tracks: step-by-step probability puzzles, or the market-making game. */
@@ -529,7 +530,7 @@ export default function Game() {
       )}
 
       {status === "won" && track === "puzzle" && <Confetti />}
-
+    <Verity />
       {modal === "help" && (
         <Modal title="How to play" onClose={() => setModal(null)}>
           <HowTo />
