@@ -24,6 +24,7 @@ import { Avatar } from "./Avatar";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
 import { RichText } from "./RichText";
+import { UserSearch } from "./UserSearch";
 import Verity, { isVerity, summonVerity } from "./Verity";
 
 type Mode = "daily" | "practice";
@@ -84,13 +85,14 @@ export default function Game() {
   const [submitting, setSubmitting] = useState(false);
   const [shake, setShake] = useState(false);
   const [reveal, setReveal] = useState<RevealResponse | null>(null);
-  const [modal, setModal] = useState<"help" | "stats" | "result" | "account" | "leaderboard" | "player" | null>(null);
+  const [modal, setModal] = useState<"help" | "stats" | "result" | "account" | "leaderboard" | "search" | "player" | null>(null);
   const [user, setUser] = useState<Profile | null>(null);
   const [googleOn, setGoogleOn] = useState(false);
   const [authError, setAuthError] = useState("");
   const [pendingName, setPendingName] = useState<string | null>(null);
   const [award, setAward] = useState<Award | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [viewFrom, setViewFrom] = useState<"leaderboard" | "search">("leaderboard");
   const [toast, setToast] = useState("");
   const [eggPops, setEggPops] = useState(0);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -240,6 +242,14 @@ export default function Game() {
     if (track === "puzzle") load("practice", d);
   }
 
+  /** Opens someone's public profile (your own goes to your account); closing it returns to where you came from. */
+  function openPlayer(username: string, from: "leaderboard" | "search") {
+    if (username === user?.username) return setModal("account");
+    setViewing(username);
+    setViewFrom(from);
+    setModal("player");
+  }
+
   function showToast(text: string) {
     setToast(text);
     setTimeout(() => setToast((t) => (t === text ? "" : t)), 3200);
@@ -378,6 +388,12 @@ export default function Game() {
           <button className="icon-btn" aria-label="Leaderboard" onClick={() => setModal("leaderboard")}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.5A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1A5 5 0 0 1 8.5 12H8a4 4 0 0 1-4-4V5h3V3zm0 4H6v1a2 2 0 0 0 1 1.7V7zm10 0v2.7A2 2 0 0 0 18 8V7h-1z" />
+            </svg>
+          </button>
+          <button className="icon-btn" aria-label="Find a player" onClick={() => setModal("search")}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="M15.5 15.5 21 21" />
             </svg>
           </button>
         </div>
@@ -678,8 +694,14 @@ export default function Game() {
         </Modal>
       )}
 
+      {modal === "search" && (
+        <Modal title="Find a player" onClose={() => setModal(null)}>
+          <UserSearch onOpenPlayer={(u) => openPlayer(u, "search")} />
+        </Modal>
+      )}
+
       {modal === "player" && viewing && (
-        <Modal title="Player" onClose={() => setModal("leaderboard")}>
+        <Modal title="Player" onClose={() => setModal(viewFrom)}>
           <PublicProfile username={viewing} />
         </Modal>
       )}
@@ -690,7 +712,7 @@ export default function Game() {
             me={user?.username ?? null}
             mySchoolId={user?.school?.id ?? null}
             onSignIn={() => setModal("account")}
-            onOpenPlayer={(u) => (u === user?.username ? setModal("account") : (setViewing(u), setModal("player")))}
+            onOpenPlayer={(u) => openPlayer(u, "leaderboard")}
           />
         </Modal>
       )}

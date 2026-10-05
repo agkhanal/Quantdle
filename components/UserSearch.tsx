@@ -44,6 +44,7 @@ export function UserSearch({ onOpenPlayer }: { onOpenPlayer: (username: string) 
         aria-label="Find a player by username"
         value={query}
         maxLength={30}
+        autoFocus
         autoComplete="off"
         autoCapitalize="none"
         spellCheck={false}

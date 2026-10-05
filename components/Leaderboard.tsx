@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { PERIODS, type LeaderboardResponse, type Period } from "@/lib/types";
 import { Avatar, SchoolLogo } from "./Avatar";
-import { UserSearch } from "./UserSearch";
 
 const PERIOD_LABEL: Record<Period, string> = { daily: "Daily", weekly: "Weekly", all: "Lifetime" };
 
@@ -48,7 +47,6 @@ export function LeaderboardPanel({
 
   return (
     <div className="leaderboard">
-      <UserSearch onOpenPlayer={onOpenPlayer} />
       <div className="modes small-tabs" role="tablist" aria-label="Leaderboard type">
         {(["players", "schools"] as const).map((t) => (
           <button key={t} role="tab" aria-selected={type === t} className={type === t ? "on" : ""} onClick={() => setType(t)}>
