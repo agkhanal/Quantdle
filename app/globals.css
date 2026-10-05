@@ -3114,3 +3114,34 @@ body {
 .admin-points .field input {
   height: 38px;
 }
+
+/* ───────── dialogs closing (the reverse of opening) ───────── */
+
+.modal-backdrop.closing {
+  pointer-events: none;
+  animation: fade-out 0.2s ease both;
+}
+
+.modal-backdrop.closing .modal {
+  animation: sink 0.2s ease both;
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sink {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
