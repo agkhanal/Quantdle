@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { ActivityEvent, ActivityType } from "@/lib/types";
+import type { ActivityEvent, ActivityType, Profile } from "@/lib/types";
 
 const KEEP = 500;
 const STORE_KEY = "quantdle-admin-open";
@@ -33,8 +33,65 @@ function stamp(at: number, now: number) {
   return now - at > 12 * 3600_000 ? `${d.getMonth() + 1}/${d.getDate()} ${time}` : time;
 }
 
-/** Admin-only activity log in a left-hand drawer. Opening it pushes the page to the right. */
-export function AdminPanel({ onOpenPlayer }: { onOpenPlayer: (username: string) => void }) {
+/** Add (or remove, with a negative number) points for any player. Applied on every leaderboard and logged. */
+function AdjustPoints({ me, onChange }: { me: Profile; onChange: (u: Profile) => void }) {
+  const [username, setUsername] = useState(me.username);
+  const [points, setPoints] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+
+  async function apply() {
+    setBusy(true);
+    setError("");
+    setNote("");
+    try {
+      const res = await fetch("/api/admin/points", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), points: Number(points), reason: reason.trim() }),
+      });
+      const body = await res.json();
+      if (!res.ok) return setError(body.error ?? "That didn't work.");
+      setNote(`${body.profile.username} now has ${body.profile.points.toLocaleString()} points.`);
+      setPoints("");
+      if (body.profile.username === me.username) onChange(body.profile);
+    } catch {
+      setError("Network hiccup. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <details className="admin-points">
+      <summary>Admin: adjust points</summary>
+      <div className="profile-form">
+        <label className="field">
+          <span>Username</span>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="off" maxLength={20} />
+        </label>
+        <label className="field">
+          <span>Points (negative to remove)</span>
+          <input value={points} onChange={(e) => setPoints(e.target.value)} inputMode="numeric" placeholder="10000" autoComplete="off" />
+        </label>
+        <label className="field">
+          <span>Reason (saved in the log)</span>
+          <input value={reason} onChange={(e) => setReason(e.target.value)} autoComplete="off" maxLength={200} />
+        </label>
+        {error && <p className="quote-note bad">{error}</p>}
+        {note && <p className="muted small">{note}</p>}
+        <button className="btn primary wide" disabled={busy || !username.trim() || !/^-?\d+$/.test(points.trim()) || Number(points) === 0} onClick={apply}>
+          {busy ? "…" : "Apply"}
+        </button>
+      </div>
+    </details>
+  );
+}
+
+/** Admin-only activity log (and points tool) in a left-hand drawer. Opening it pushes the page to the right. */
+export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMeChange: (u: Profile) => void; onOpenPlayer: (username: string) => void }) {
   const [open, setOpen] = useState(false);
   const [live, setLive] = useState(true);
   const [events, setEvents] = useState<ActivityEvent[]>([]); // newest first
@@ -180,6 +237,8 @@ export function AdminPanel({ onOpenPlayer }: { onOpenPlayer: (username: string) 
             </div>
           ))}
         </div>
+        <AdjustPoints me={me} onChange={onMeChange} />
+
         <footer className="admin-foot muted small">
           {events.length > 0 ? `${shown.length} of ${events.length} shown · ` : ""}the newest few thousand actions are kept
         </footer>

@@ -629,7 +629,7 @@ export default function Game() {
         <a href="/terms">Terms</a>
       </footer>
 
-      {user?.admin && <AdminPanel onOpenPlayer={(u) => openPlayer(u, "admin")} />}
+      {user?.admin && <AdminPanel me={user} onMeChange={setUser} onOpenPlayer={(u) => openPlayer(u, "admin")} />}
 
       <Chat user={user} onSignIn={() => setModal("account")} onOpenPlayer={(u) => openPlayer(u, "chat")} />
 

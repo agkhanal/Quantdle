@@ -2483,9 +2483,6 @@ html.verity-quake .app {
   margin: 0;
 }
 
-.admin-tools .profile-form {
-  margin-top: 10px;
-}
 
 /* ───────── player search ───────── */
 
@@ -3091,4 +3088,29 @@ body {
   .admin-live.on {
     animation: none;
   }
+}
+
+.admin-points {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  font-size: 0.9rem;
+}
+
+.admin-points summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.admin-points[open] summary {
+  color: var(--text);
+}
+
+.admin-points .profile-form {
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.admin-points .field input {
+  height: 38px;
 }
