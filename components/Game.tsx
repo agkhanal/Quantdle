@@ -23,7 +23,7 @@ import { AUTH_ERRORS, AccountPanel } from "./Account";
 import { Avatar } from "./Avatar";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
-import Verity from "./Verity";
+import Verity, { isVerity, summonVerity } from "./Verity";
 
 type Mode = "daily" | "practice";
 /** Each tab has two tracks: step-by-step probability puzzles, or the market-making game. */
@@ -244,6 +244,10 @@ export default function Game() {
 
   async function submit() {
     if (!data || status !== "playing" || submitting) return;
+    if (isVerity(input)) {
+      setInput(""); // easter egg: doesn't count as a guess
+      return summonVerity();
+    }
     if (preview === undefined || preview === null) return nudgeShake();
 
     setSubmitting(true);
@@ -506,11 +510,14 @@ export default function Game() {
                       disabled={submitting}
                       aria-label="Your answer"
                     />
-                    <span className={`preview ${preview === null ? "bad" : ""}`}>
-                      {preview === undefined ? "" : preview === null ? "can't read" : `= ${fmt(preview)}`}
+                    <span className={`preview ${preview === null && !isVerity(input) ? "bad" : ""}`}>
+                      {preview === undefined || isVerity(input) ? "" : preview === null ? "can't read" : `= ${fmt(preview)}`}
                     </span>
                   </div>
-                  <button className="btn primary" disabled={submitting || preview === undefined || preview === null}>
+                  <button
+                    className="btn primary"
+                    disabled={submitting || ((preview === undefined || preview === null) && !isVerity(input))}
+                  >
                     {submitting ? <span className="dots">Judging</span> : "Submit"}
                   </button>
                 </form>

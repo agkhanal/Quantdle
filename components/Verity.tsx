@@ -50,7 +50,15 @@ const CRACK_AT = 1500;
 const BURST_AT = 2000;
 const RELOAD_AT = 3600;
 
-const WORD = "verity";
+const SUMMON = "verity:summon";
+
+/** True if a guess is the magic word. */
+export const isVerity = (guess: string) => guess.trim().toLowerCase() === "verity";
+
+/** Call Verity (one stage further along than last time). */
+export function summonVerity() {
+  window.dispatchEvent(new Event(SUMMON));
+}
 
 type Phase = "hidden" | "in" | "out";
 type Scare = "off" | "crack" | "burst";
@@ -148,48 +156,25 @@ export default function Verity() {
 
   // Listen for the magic word: keystrokes anywhere, plus text inputs (phones often send
   // "Unidentified" key events, so check what actually landed in the field too).
+    // Game.tsx calls summonVerity() when someone guesses "verity".
   const summonRef = useRef(summon);
   useEffect(() => {
     summonRef.current = summon;
   });
   useEffect(() => {
-    let typed = "";
-    let last = 0;
-    const fire = () => {
-      if (Date.now() - last < 600) return; // keydown + input for the same word
-      last = Date.now();
-      summonRef.current();
-    };
-    const isPassword = (el: EventTarget | null) => el instanceof HTMLInputElement && el.type === "password";
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1 || isPassword(e.target)) return;
-      typed = (typed + e.key.toLowerCase()).slice(-WORD.length);
-      if (typed === WORD) {
-        typed = "";
-        fire();
-      }
-    };
-    const onInput = (e: Event) => {
-      const el = e.target;
-      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) || isPassword(el)) return;
-      if ((e as InputEvent).inputType?.startsWith("delete")) return;
-      if (el.value.toLowerCase().endsWith(WORD)) fire();
-    };
-
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("input", onInput, true);
+    const onSummon = () => summonRef.current();
+    window.addEventListener(SUMMON, onSummon);
     const owned = audios.current;
     const pending = timers.current;
     return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("input", onInput, true);
+      window.removeEventListener(SUMMON, onSummon);
       pending.forEach(clearTimeout);
       clearTimeout(hideTimer.current);
       Object.values(owned).forEach((a) => a?.pause());
       document.documentElement.classList.remove("verity-quake");
     };
   }, []);
+
 
   // Follow the audio clock while it plays.
   useEffect(() => {
