@@ -3218,9 +3218,31 @@ main.leaving {
 .end-actions,
 .site-footer,
 .solved-tag,
-.solved-a {
+.solved-a,
+/* dialogs: titles, leaderboard, stats, the whole profile screen, the bug form */
+.modal-head,
+.modal h3,
+.lb-rank,
+.lb-sub,
+.avatar,
+.school-logo,
+.stat-nums,
+.dist,
+.profile,
+.bug-form,
+/* chat: header and the message composer */
+.chat-head,
+.chat-form {
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* ...but whatever someone types has to stay editable (Safari lets "none" leak into text boxes). */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* ───────── bug reports ───────── */
