@@ -3233,9 +3233,12 @@ main.leaving {
 .dist,
 .profile,
 .bug-form,
-/* chat: header and the message composer */
+/* chat: header, the message composer, and each message's badge, time and admin buttons */
 .chat-head,
-.chat-form {
+.chat-form,
+.chat-badge,
+.chat-meta .muted,
+.chat-mod {
   -webkit-user-select: none;
   user-select: none;
 }
