@@ -52,6 +52,10 @@ export async function checkLogin(username: string, password: string): Promise<st
     return null;
   }
   const rec = JSON.parse(raw) as UserRecord;
+  if (!rec.hash) {
+    await scrypt(password, "timing-equalizer", 64); // Google-only account: no password set
+    return null;
+  }
   const hash = await scrypt(password, rec.salt, 64);
   return crypto.timingSafeEqual(hash, Buffer.from(rec.hash, "hex")) ? rec.username : null;
 }

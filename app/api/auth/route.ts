@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { googleEnabled } from "@/lib/google";
 import {
   SESSION_DAYS,
   checkLogin,
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
 /** Who am I? */
 export async function GET(req: Request) {
   const username = sessionUser(req);
-  return NextResponse.json({ user: username ? await profile(username) : null });
+  return NextResponse.json({ user: username ? await profile(username) : null, google: googleEnabled() });
 }
 
 /** { action: "signup" | "login" | "logout", username?, password? } */

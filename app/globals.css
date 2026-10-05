@@ -1253,6 +1253,19 @@ code {
   gap: 12px;
 }
 
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.or-line {
+  margin: 0;
+  text-align: center;
+}
+
 .account-hello {
   margin: 0;
 }

@@ -18,7 +18,7 @@ import Logo from "./Logo";
 import Modal from "./Modal";
 import Confetti from "./Confetti";
 import MarketGame from "./MarketGame";
-import { AccountPanel, LeaderboardPanel } from "./Account";
+import { AUTH_ERRORS, AccountPanel, LeaderboardPanel } from "./Account";
 
 type Mode = "daily" | "practice";
 /** Each tab has two tracks: step-by-step probability puzzles, or the market-making game. */
@@ -80,6 +80,8 @@ export default function Game() {
   const [reveal, setReveal] = useState<RevealResponse | null>(null);
   const [modal, setModal] = useState<"help" | "stats" | "result" | "account" | "leaderboard" | null>(null);
   const [user, setUser] = useState<Profile | null>(null);
+  const [googleOn, setGoogleOn] = useState(false);
+  const [authError, setAuthError] = useState("");
   const [credited, setCredited] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [quip, setQuip] = useState(0);
@@ -142,8 +144,17 @@ export default function Game() {
     setToday(dailyNumber());
     fetch("/api/auth")
       .then((r) => r.json())
-      .then((b) => setUser(b.user))
+      .then((b) => {
+        setUser(b.user);
+        setGoogleOn(Boolean(b.google));
+      })
       .catch(() => {});
+    const authErr = new URLSearchParams(window.location.search).get("auth_error");
+    if (authErr) {
+      setAuthError(AUTH_ERRORS[authErr] ?? "Google sign-in failed. Try again.");
+      setModal("account");
+      window.history.replaceState(null, "", window.location.pathname);
+    }
     load("daily", "medium");
     if (!localStorage.getItem("quantdle-seen-help")) {
       setModal("help");
@@ -593,7 +604,7 @@ export default function Game() {
 
       {modal === "account" && (
         <Modal title={user ? "Your account" : "Sign in"} onClose={() => setModal(null)}>
-          <AccountPanel user={user} onChange={setUser} />
+          <AccountPanel user={user} onChange={setUser} google={googleOn} initialError={authError} />
         </Modal>
       )}
 
