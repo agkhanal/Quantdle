@@ -11,6 +11,7 @@ import {
   type School,
   type SchoolEntry,
 } from "./types";
+import { isAdmin } from "./auth";
 import { schoolById } from "./schools";
 import {
   EGG_POINTS,
@@ -105,6 +106,7 @@ function shape(username: string, s: Stored, rank: number | null): Profile {
     school: s.school ? schoolById(s.school) : null,
     linkedin: s.linkedin,
     avatar: s.avatarV ? `/api/avatar/${encodeURIComponent(username)}?v=${s.avatarV}` : null,
+    admin: isAdmin(username),
   };
 }
 

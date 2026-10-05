@@ -1,13 +1,15 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { rateLimited } from "@/lib/auth";
+import { isAdmin, rateLimited, sessionUser } from "@/lib/auth";
 import { adminAdjustPoints } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
 const MAX_ADJUST = 100_000;
 
+/** Either the signed-in admin account, or (if one is configured) the bearer secret. */
 function authorized(req: Request): boolean {
+  if (isAdmin(sessionUser(req))) return true;
   const secret = process.env.QUANTDLE_ADMIN_SECRET;
   if (!secret || secret.length < 16) return false; // switched off unless a real secret is configured
   const given = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
@@ -17,8 +19,8 @@ function authorized(req: Request): boolean {
 }
 
 /**
- * POST { username, points, reason? } with `Authorization: Bearer $QUANTDLE_ADMIN_SECRET`.
- * Adds points (negative to remove) to a player and their school on all boards. Off unless the secret is set.
+ * POST { username, points, reason? } as a signed-in admin account, or with `Authorization: Bearer $QUANTDLE_ADMIN_SECRET`
+ * (that route is off unless the secret is set). Adds points (negative to remove) to a player and their school on all boards.
  */
 export async function POST(req: Request) {
   if (await rateLimited(req, "admin", 20, 600)) return NextResponse.json({ error: "Too many attempts." }, { status: 429 });

@@ -86,6 +86,8 @@ export interface Profile {
   linkedin: string | null;
   /** URL of the profile picture, or null for the default initials avatar. */
   avatar: string | null;
+  /** True for admin accounts, which get the points tools in their profile. */
+  admin: boolean;
 }
 
 /** What finishing a puzzle did to a signed-in player. */
