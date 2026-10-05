@@ -3219,6 +3219,9 @@ main.leaving {
 .site-footer,
 .solved-tag,
 .solved-a,
+/* admin panel: empty-state messages and the whole points form */
+.admin-empty,
+.admin-points,
 /* dialogs: titles, leaderboard, stats, the whole profile screen, the bug form */
 .modal-head,
 .modal h3,
@@ -3245,10 +3248,10 @@ textarea,
   user-select: text;
 }
 
-/* An empty box's placeholder isn't content, so Select All shouldn't paint a highlight over it
-   (typed text still highlights normally). */
-input:placeholder-shown::selection,
-textarea:placeholder-shown::selection {
+/* Select All shouldn't paint a highlight over the contents of text boxes you aren't typing in
+   (placeholders, or what's already in them). Inside a focused box, selecting text still shows. */
+input:not(:focus)::selection,
+textarea:not(:focus)::selection {
   background: transparent;
 }
 
