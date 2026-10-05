@@ -544,6 +544,12 @@ export default function Game() {
       </main>
       )}
 
+      <footer className="site-footer">
+        <a href="/privacy">Privacy</a>
+        <span aria-hidden="true">·</span>
+        <a href="/terms">Terms</a>
+      </footer>
+
       {status === "won" && track === "puzzle" && <Confetti />}
 
       {modal === "help" && (
