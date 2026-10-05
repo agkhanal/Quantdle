@@ -99,7 +99,7 @@ export function AccountPanel({
         <button className="btn primary wide" disabled={busy || !username}>
           {busy ? "…" : "Continue"}
         </button>
-        <p className="muted small">3–20 characters: letters, numbers, _ or -. Your Google email is never shown or stored.</p>
+        <p className="muted small">3–20 characters: letters, numbers, _ or -. We only keep your Google account ID. Your name and email are not stored.</p>
       </form>
     );
   }
@@ -123,6 +123,9 @@ export function AccountPanel({
             </svg>
             Continue with Google
           </a>
+          <p className="muted small or-line">
+            Google only shares your name and profile ID, never your email or password. We keep just the ID, to recognize you next time.
+          </p>
           <p className="muted small or-line">or use a username</p>
         </>
       )}
