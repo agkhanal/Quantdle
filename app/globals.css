@@ -1756,11 +1756,22 @@ code {
 
 .icon-btn .avatar {
   display: block;
+  /* fill the button at every size (it shrinks to 32px on small screens) */
+  width: 100% !important;
+  height: 100% !important;
 }
 
+/* Keep the initial centred (the rule above would otherwise drop its flex centring). */
+.icon-btn .avatar-initial {
+  display: inline-flex;
+}
+
+/* The picture fills the whole round button, with no coloured ring around it. */
 .icon-btn.signed-in {
   padding: 0;
   overflow: hidden;
+  border: 0;
+  background: transparent;
 }
 
 .school-logo {
