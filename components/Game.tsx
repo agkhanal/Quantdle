@@ -90,6 +90,8 @@ export default function Game() {
   const [pendingName, setPendingName] = useState<string | null>(null);
   const [award, setAward] = useState<Award | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [toast, setToast] = useState("");
+  const [eggPops, setEggPops] = useState(0);
   const [stats, setStats] = useState<Stats | null>(null);
   const [quip, setQuip] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -237,6 +239,31 @@ export default function Game() {
     if (track === "puzzle") load("practice", d);
   }
 
+  function showToast(text: string) {
+    setToast(text);
+    setTimeout(() => setToast((t) => (t === text ? "" : t)), 3200);
+  }
+
+  /** Easter egg: the L in the logo. */
+  async function logoClick(i: number) {
+    if (i !== 6) return; // QUANTDLE: Q U A N T D L E
+    setEggPops((n) => n + 1);
+    if (!user) return showToast("🥚 You found an easter egg! Sign in, then click it again to claim it.");
+    try {
+      const res = await fetch("/api/egg", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) return showToast(body.error ?? "Nothing happened.");
+      if (body.claimed) {
+        setUser(body.profile);
+        showToast(`🥚 You found an easter egg! +${body.points} points`);
+      } else {
+        showToast("🥚 You've already found this one.");
+      }
+    } catch {
+      showToast("Network hiccup. Try again.");
+    }
+  }
+
   function nudgeShake() {
     setShake(true);
     setTimeout(() => setShake(false), 500);
@@ -353,7 +380,7 @@ export default function Game() {
             </svg>
           </button>
         </div>
-        <Logo />
+        <Logo onTileClick={logoClick} eggTile={6} pops={eggPops} />
         <div className="topbar-side">
           <button className="icon-btn" aria-label="Statistics" onClick={() => setModal("stats")}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -577,6 +604,12 @@ export default function Game() {
         <span aria-hidden="true">·</span>
         <a href="/terms">Terms</a>
       </footer>
+
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
 
       {status === "won" && track === "puzzle" && <Confetti />}
     <Verity />

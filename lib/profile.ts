@@ -1,4 +1,4 @@
-import { addToSet, del, get, hDel, hGetAll, hIncrBy, hSet, inSet, incrBy, set, zIncr, zRankOf, zTop } from "./store";
+import { addToSet, del, setIfAbsent, get, hDel, hGetAll, hIncrBy, hSet, inSet, incrBy, set, zIncr, zRankOf, zTop } from "./store";
 import {
   MAX_GUESSES,
   type Award,
@@ -13,6 +13,7 @@ import {
 } from "./types";
 import { schoolById } from "./schools";
 import {
+  EGG_POINTS,
   PRACTICE_DAILY_CAP,
   dayNumber,
   parseDailyId,
@@ -213,6 +214,16 @@ export const markSolved = (username: string, puzzleId: string) => addToSet(solve
 export const isSolved = (username: string, puzzleId: string) => inSet(solvedKey(username), puzzleId);
 export const markLost = (username: string, puzzleId: string) => addToSet(lostKey(username), puzzleId);
 export const progressTtl = WEEK;
+
+// ───────────── easter egg ─────────────
+
+/** Gives the one-time egg bonus. Returns the new profile, or null if this player already found it. */
+export async function claimEgg(username: string): Promise<Profile | null> {
+  if (!(await setIfAbsent(`egg:${username.toLowerCase()}:logo`, "1"))) return null;
+  const s = await load(username);
+  await Promise.all([hIncrBy(profKey(username), "points", EGG_POINTS), addPoints(username, s.school, EGG_POINTS)]);
+  return getProfile(username);
+}
 
 // ───────────── editing a profile ─────────────
 
