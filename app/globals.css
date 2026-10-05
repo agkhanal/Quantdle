@@ -3212,7 +3212,13 @@ main.leaving {
 .logo-tile,
 .modes,
 .tracks,
-.chain {
+.chain,
+.row-step,
+.row-dir,
+.end-actions,
+.site-footer,
+.solved-tag,
+.solved-a {
   -webkit-user-select: none;
   user-select: none;
 }
