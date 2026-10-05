@@ -25,7 +25,9 @@ export function Chat({
   onSignIn: () => void;
   onOpenPlayer: (username: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); // wanted open (drives polling)
+  const [shown, setShown] = useState(false); // panel is mounted (stays a moment after closing, for the exit animation)
+  const [closing, setClosing] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -42,6 +44,7 @@ export function Chat({
   const stick = useRef(true); // is the list scrolled to the bottom?
   const idle = useRef(0);
   const wake = useRef<() => void>(() => {});
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Merge new log entries: add messages, apply delete events, keep order. Returns how many new messages arrived. */
   const apply = useCallback((incoming: ChatMessage[], mine?: string | null) => {
@@ -132,6 +135,22 @@ export function Chat({
     setUnseen(0);
   }
 
+  function toggle() {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    if (open) {
+      setOpen(false);
+      setClosing(true);
+      closeTimer.current = setTimeout(() => {
+        setShown(false);
+        setClosing(false);
+      }, 200); // matches the chat-out animation
+    } else {
+      setOpen(true);
+      setShown(true);
+      setClosing(false);
+    }
+  }
+
   async function send() {
     const text = draft.trim();
     if (!text || sending) return;
@@ -166,7 +185,7 @@ export function Chat({
 
   return (
     <>
-      <button className={`chat-fab ${open ? "open" : ""}`} aria-label={open ? "Close chat" : "Open global chat"} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button className={`chat-fab ${open ? "open" : ""}`} aria-label={open ? "Close chat" : "Open global chat"} aria-expanded={open} onClick={toggle}>
         {open ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
             <path d="M6 6l12 12M18 6 6 18" />
@@ -178,8 +197,8 @@ export function Chat({
         )}
       </button>
 
-      {open && (
-        <section className="chat-panel" role="dialog" aria-label="Global chat">
+      {shown && (
+        <section className={`chat-panel${closing ? " closing" : ""}`} role="dialog" aria-label="Global chat">
           <header className="chat-head">
             <div>
               <b>Global chat</b>

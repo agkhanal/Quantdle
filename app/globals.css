@@ -2639,6 +2639,18 @@ html.verity-quake .app {
   }
 }
 
+.chat-panel.closing {
+  pointer-events: none;
+  animation: chat-out 0.2s cubic-bezier(0.4, 0, 0.8, 0.4) both;
+}
+
+@keyframes chat-out {
+  to {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+
 .chat-head {
   padding: 12px 14px;
   border-bottom: 1px solid var(--border);
@@ -2816,7 +2828,8 @@ html.verity-quake .app {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chat-panel {
+  .chat-panel,
+  .chat-panel.closing {
     animation: none;
   }
 }
