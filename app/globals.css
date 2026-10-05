@@ -2725,13 +2725,29 @@ html.verity-quake .app {
   color: var(--accent);
 }
 
-.chat-badge {
-  padding: 0 5px;
+.admin-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
   border-radius: 6px;
   background: color-mix(in srgb, var(--accent) 22%, transparent);
   color: var(--accent);
-  font-weight: 700;
+  font-family: var(--sans);
   font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  vertical-align: middle;
+}
+
+.chat-meta .admin-tag {
+  margin-left: 0; /* the row already has a gap */
+}
+
+.profile-id h3 .admin-tag {
+  font-size: 0.72rem;
+  vertical-align: 0.15em;
 }
 
 .chat-mod {
@@ -3236,7 +3252,7 @@ main.leaving {
 /* chat: header, the message composer, and each message's badge, time and admin buttons */
 .chat-head,
 .chat-form,
-.chat-badge,
+.admin-tag,
 .chat-meta .muted,
 .chat-mod {
   -webkit-user-select: none;

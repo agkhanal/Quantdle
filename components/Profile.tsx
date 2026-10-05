@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Profile, School } from "@/lib/types";
+import { AdminTag } from "./AdminTag";
 import { Avatar, SchoolLogo } from "./Avatar";
 import { SchoolPicker } from "./SchoolPicker";
 
@@ -52,7 +53,10 @@ function Identity({ p, children }: { p: Profile; children?: React.ReactNode }) {
     <div className="profile-head">
       <Avatar name={p.username} src={p.avatar} size={72} />
       <div className="profile-id">
-        <h3>{p.username}</h3>
+        <h3>
+          {p.username}
+          <AdminTag username={p.username} />
+        </h3>
         {p.school && (
           <div className="profile-school">
             <SchoolLogo school={p.school} size={20} />

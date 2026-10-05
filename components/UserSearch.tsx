@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Profile } from "@/lib/types";
+import { AdminTag } from "./AdminTag";
 import { Avatar, SchoolLogo } from "./Avatar";
 
 /** "Find a player": type a username, tap a result to open their profile. Open to everyone. */
@@ -65,7 +66,10 @@ export function UserSearch({ onOpenPlayer }: { onOpenPlayer: (username: string) 
             <li key={p.username}>
               <button onClick={() => onOpenPlayer(p.username)}>
                 <Avatar name={p.username} src={p.avatar} size={30} />
-                <span className="lb-name">{p.username}</span>
+                <span className="lb-name">
+                  {p.username}
+                  <AdminTag username={p.username} />
+                </span>
                 {p.school && <SchoolLogo school={p.school} size={20} />}
                 <span className="lb-score">{p.points.toLocaleString()}</span>
               </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PERIODS, type LeaderboardResponse, type Period } from "@/lib/types";
+import { AdminTag } from "./AdminTag";
 import { Avatar, SchoolLogo } from "./Avatar";
 
 const PERIOD_LABEL: Record<Period, string> = { daily: "Daily", weekly: "Weekly", all: "Lifetime" };
@@ -84,7 +85,10 @@ export function LeaderboardPanel({
               <span className="lb-rank">{medal(p.rank)}</span>
               <button className="lb-person" onClick={() => onOpenPlayer(p.username)}>
                 <Avatar name={p.username} src={p.avatar} size={30} />
-                <span className="lb-name">{p.username}</span>
+                <span className="lb-name">
+                  {p.username}
+                  <AdminTag username={p.username} />
+                </span>
                 {p.school && <SchoolLogo school={p.school} size={20} />}
               </button>
               <span className="lb-score">{p.points.toLocaleString()}</span>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, Profile } from "@/lib/types";
+import { AdminTag } from "./AdminTag";
 import { Avatar } from "./Avatar";
 
 const MAX = 280;
@@ -218,7 +219,7 @@ export function Chat({
                     <button className="chat-name" onClick={() => onOpenPlayer(m.u)}>
                       {m.u}
                     </button>
-                    {m.m && <span className="chat-badge">admin</span>}
+                    <AdminTag username={m.u} />
                     <span className="muted">{ago(m.at, now)}</span>
                     {user?.admin && (
                       <span className="chat-mod">

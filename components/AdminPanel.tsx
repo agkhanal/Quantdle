@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ActivityEvent, ActivityType, Profile } from "@/lib/types";
 import { AdminBugs } from "./AdminBugs";
+import { AdminTag } from "./AdminTag";
 
 const KEEP = 500;
 const STORE_KEY = "quantdle-admin-open";
@@ -245,9 +246,12 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
               <span className="admin-type">{LABEL[e.type]}</span>
               <div className="admin-what">
                 {e.user && !e.user.startsWith("(") ? (
-                  <button className="admin-user" onClick={() => onOpenPlayer(e.user)}>
-                    {e.user}
-                  </button>
+                  <>
+                    <button className="admin-user" onClick={() => onOpenPlayer(e.user)}>
+                      {e.user}
+                    </button>
+                    <AdminTag username={e.user} />
+                  </>
                 ) : (
                   <b>{e.user || "system"}</b>
                 )}{" "}

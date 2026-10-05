@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BugReport, BugStatus } from "@/lib/types";
+import { AdminTag } from "./AdminTag";
 
 const FILTERS: { key: BugStatus | "all"; label: string }[] = [
   { key: "open", label: "Open" },
@@ -78,6 +79,7 @@ export function AdminBugs({ onOpenPlayer }: { onOpenPlayer: (username: string) =
             <span className="bug-row-title">{r.title || r.body.slice(0, 90)}</span>
             <span className="bug-row-by muted">
               from {r.user}
+              <AdminTag username={r.user} />
               {r.status !== "open" && ` · ${r.status}`}
               {r.points ? ` · +${r.points}` : ""}
             </span>
@@ -154,7 +156,8 @@ function BugDetail({
         From{" "}
         <button className="admin-user" onClick={() => onOpenPlayer(report.user)}>
           {report.user}
-        </button>{" "}
+        </button>
+        <AdminTag username={report.user} />{" "}
         · {when(report.at)}
         {report.handledBy && ` · handled by ${report.handledBy}`}
       </p>
