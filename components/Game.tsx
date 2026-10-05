@@ -21,6 +21,7 @@ import Confetti from "./Confetti";
 import MarketGame from "./MarketGame";
 import { AUTH_ERRORS, AccountPanel } from "./Account";
 import { Avatar } from "./Avatar";
+import { Chat } from "./Chat";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
 import { RichText } from "./RichText";
@@ -92,7 +93,7 @@ export default function Game() {
   const [pendingName, setPendingName] = useState<string | null>(null);
   const [award, setAward] = useState<Award | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
-  const [viewFrom, setViewFrom] = useState<"leaderboard" | "search">("leaderboard");
+  const [viewFrom, setViewFrom] = useState<"leaderboard" | "search" | "chat">("leaderboard");
   const [toast, setToast] = useState("");
   const [eggPops, setEggPops] = useState(0);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -243,7 +244,7 @@ export default function Game() {
   }
 
   /** Opens someone's public profile (your own goes to your account); closing it returns to where you came from. */
-  function openPlayer(username: string, from: "leaderboard" | "search") {
+  function openPlayer(username: string, from: "leaderboard" | "search" | "chat") {
     if (username === user?.username) return setModal("account");
     setViewing(username);
     setViewFrom(from);
@@ -627,6 +628,8 @@ export default function Game() {
         <a href="/terms">Terms</a>
       </footer>
 
+      <Chat user={user} onSignIn={() => setModal("account")} onOpenPlayer={(u) => openPlayer(u, "chat")} />
+
       {toast && (
         <div className="toast" role="status">
           {toast}
@@ -701,7 +704,7 @@ export default function Game() {
       )}
 
       {modal === "player" && viewing && (
-        <Modal title="Player" onClose={() => setModal(viewFrom)}>
+        <Modal title="Player" onClose={() => setModal(viewFrom === "chat" ? null : viewFrom)}>
           <PublicProfile username={viewing} />
         </Modal>
       )}

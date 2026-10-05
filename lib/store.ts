@@ -243,3 +243,64 @@ export async function keysWithPrefix(prefix: string): Promise<string[]> {
   }
   return [...mem.kv.keys()].filter((k) => k.startsWith(prefix));
 }
+
+
+// ───────────── ordered log (chat) ─────────────
+
+/** Add a member with an explicit score (used as an ordered log: score = sequence number). */
+export async function zAddMember(key: string, score: number, member: string): Promise<void> {
+  if (storeKind === "redis") {
+    await redis(["ZADD", key, score, member]);
+    return;
+  }
+  const z = mem.zsets.get(key) ?? new Map<string, number>();
+  mem.zsets.set(key, z);
+  z.set(member, score);
+}
+
+export async function zRemMember(key: string, member: string): Promise<void> {
+  if (storeKind === "redis") {
+    await redis(["ZREM", key, member]);
+    return;
+  }
+  mem.zsets.get(key)?.delete(member);
+}
+
+const inRange = (score: number, min: string, max: string) => {
+  const lo = min.startsWith("(") ? score > Number(min.slice(1)) : score >= Number(min);
+  const hi = max === "+inf" ? true : max.startsWith("(") ? score < Number(max.slice(1)) : score <= Number(max);
+  return lo && hi;
+};
+
+/** Members with min <= score <= max, oldest first. `min`/`max` use Redis syntax: "5", "(5" (exclusive), "+inf". */
+export async function zByScore(key: string, min: string, max: string, limit: number): Promise<string[]> {
+  if (storeKind === "redis") {
+    return (await redis<string[] | null>(["ZRANGEBYSCORE", key, min, max, "LIMIT", 0, limit])) ?? [];
+  }
+  return [...(mem.zsets.get(key) ?? new Map<string, number>()).entries()]
+    .filter(([, sc]) => inRange(sc, min, max))
+    .sort((a, b) => a[1] - b[1])
+    .slice(0, limit)
+    .map(([m]) => m);
+}
+
+/** The newest `n` members, oldest first. */
+export async function zNewest(key: string, n: number): Promise<string[]> {
+  if (storeKind === "redis") return (await redis<string[] | null>(["ZRANGE", key, -n, -1])) ?? [];
+  return [...(mem.zsets.get(key) ?? new Map<string, number>()).entries()]
+    .sort((a, b) => a[1] - b[1])
+    .slice(-n)
+    .map(([m]) => m);
+}
+
+/** Drop everything but the newest `keep` members. */
+export async function zTrim(key: string, keep: number): Promise<void> {
+  if (storeKind === "redis") {
+    await redis(["ZREMRANGEBYRANK", key, 0, -(keep + 1)]);
+    return;
+  }
+  const z = mem.zsets.get(key);
+  if (!z) return;
+  const sorted = [...z.entries()].sort((a, b) => a[1] - b[1]);
+  for (const [m] of sorted.slice(0, Math.max(0, sorted.length - keep))) z.delete(m);
+}

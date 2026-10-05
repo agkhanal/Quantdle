@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Terms of Service · Quantdle" };
 
 export default function Terms() {
   return (
-    <LegalPage title="Terms of Service" updated="October 6, 2026">
+    <LegalPage title="Terms of Service" updated="October 8, 2026">
       <p>By using Quantdle you agree to these terms. If you don&apos;t agree, please don&apos;t use the site.</p>
 
       <h2>The service</h2>
@@ -31,6 +31,14 @@ export default function Terms() {
         <li>automate guesses, scrape puzzles or answers, or otherwise bypass the game&apos;s limits;</li>
         <li>try to access other people&apos;s accounts, or disrupt or attack the service;</li>
         <li>exploit bugs, or use multiple accounts, to inflate points, ratings or a school&apos;s score. Please report bugs instead.</li>
+      </ul>
+
+      <h2>Chat</h2>
+      <ul>
+        <li>The global chat is public and open to signed-in players. Be kind: no harassment, hate, spam, advertising, or sharing other people&apos;s personal information.</li>
+        <li>Don&apos;t post spoilers for the daily puzzle&apos;s answers.</li>
+        <li>Moderators may delete messages and mute or remove accounts at any time, without notice.</li>
+        <li>Messages are kept only briefly and may be lost; don&apos;t rely on the chat to keep anything.</li>
       </ul>
 
       <h2>Content and ownership</h2>

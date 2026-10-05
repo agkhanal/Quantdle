@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Privacy Policy · Quantdle" };
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 7, 2026">
+    <LegalPage title="Privacy Policy" updated="October 8, 2026">
       <p>
         Quantdle is a daily quant puzzle game. This page explains what information the site handles and why. You can
         play without an account, and nothing below applies to guest play beyond the short notes on cookies and logs.
@@ -38,6 +38,11 @@ export default function Privacy() {
           <b>Optional AI feedback.</b> If the site has the AI judge turned on and you use it, your guesses and any
           &ldquo;Show your work&rdquo; text for that puzzle step are sent to Anthropic to generate a hint. Don&apos;t
           type personal information into that box.
+        </li>
+        <li>
+          <b>Chat.</b> Messages you send in the global chat are public to everyone who opens it, shown with your username,
+          picture and the time. Only the most recent few hundred messages are kept; older ones are deleted automatically.
+          Moderators can delete messages and mute accounts. Please don&apos;t share personal information in the chat.
         </li>
         <li>
           <b>IP address.</b> Your IP address is used briefly to limit sign-in attempts and prevent abuse. Our hosting

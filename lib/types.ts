@@ -145,3 +145,18 @@ export function toPublic(p: Puzzle): PublicPuzzle {
     steps: p.steps.map((s) => ({ question: s.question })),
   };
 }
+
+/** One entry in the global chat log. A delete event has `del` set to the id it removes. */
+export interface ChatMessage {
+  id: number;
+  /** Username */
+  u: string;
+  /** Avatar URL when it was sent */
+  a: string | null;
+  /** Sent by an admin account */
+  m: boolean;
+  /** Text */
+  t: string;
+  at: number;
+  del?: number;
+}
