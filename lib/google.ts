@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { get, set, setIfAbsent } from "./store";
+import { indexUser } from "./userSearch";
 
 /**
  * "Sign in with Google" (OAuth 2.0 authorization code flow + PKCE).
@@ -94,6 +95,7 @@ export async function claimGoogleUsername(sub: string, username: string): Promis
   // Password-less record: no salt/hash, so password login can never succeed for it.
   const record = { username, salt: "", hash: "", created: Date.now(), google: true };
   if (!(await setIfAbsent(`user:${username.toLowerCase()}`, JSON.stringify(record)))) return null;
+  await indexUser(username);
   await set(`google:${sub}`, username);
   return username;
 }

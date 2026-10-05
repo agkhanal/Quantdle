@@ -32,9 +32,10 @@ interface Mem {
   sets: Map<string, Set<string>>;
   zsets: Map<string, Map<string, number>>;
   hashes: Map<string, Map<string, string>>;
+  lex: Map<string, Set<string>>;
 }
 const g = globalThis as unknown as { __quantdleMem?: Mem };
-const mem: Mem = (g.__quantdleMem ??= { kv: new Map(), sets: new Map(), zsets: new Map(), hashes: new Map() });
+const mem: Mem = (g.__quantdleMem ??= { kv: new Map(), sets: new Map(), zsets: new Map(), hashes: new Map(), lex: new Map() });
 
 function memGet(key: string) {
   const e = mem.kv.get(key);
@@ -198,4 +199,47 @@ export async function hIncrBy(key: string, field: string, by: number): Promise<n
   const v = Number(h.get(field) ?? 0) + by;
   h.set(field, String(v));
   return v;
+}
+
+
+// ───────────── sorted name index (for searching usernames) ─────────────
+
+/** Add a member to an alphabetical index. */
+export async function lexAdd(key: string, member: string): Promise<void> {
+  if (storeKind === "redis") {
+    await redis(["ZADD", key, 0, member]);
+    return;
+  }
+  const s = mem.lex.get(key) ?? new Set<string>();
+  mem.lex.set(key, s);
+  s.add(member);
+}
+
+/** Members starting with `prefix`, alphabetically. */
+export async function lexPrefix(key: string, prefix: string, limit: number): Promise<string[]> {
+  if (storeKind === "redis") {
+    return (await redis<string[] | null>(["ZRANGEBYLEX", key, `[${prefix}`, `[${prefix}\u00ff`, "LIMIT", 0, limit])) ?? [];
+  }
+  return [...(mem.lex.get(key) ?? [])].filter((m) => m.startsWith(prefix)).sort().slice(0, limit);
+}
+
+/** Up to `limit` members, alphabetically (used for "contains" matching on a small index). */
+export async function lexAll(key: string, limit: number): Promise<string[]> {
+  if (storeKind === "redis") return (await redis<string[] | null>(["ZRANGE", key, 0, limit - 1])) ?? [];
+  return [...(mem.lex.get(key) ?? [])].sort().slice(0, limit);
+}
+
+/** Every key that starts with `prefix` (SCAN-based; for one-off migrations). */
+export async function keysWithPrefix(prefix: string): Promise<string[]> {
+  if (storeKind === "redis") {
+    const out: string[] = [];
+    let cursor = "0";
+    do {
+      const [next, keys] = await redis<[string, string[]]>(["SCAN", cursor, "MATCH", `${prefix}*`, "COUNT", 500]);
+      out.push(...keys);
+      cursor = String(next);
+    } while (cursor !== "0");
+    return out;
+  }
+  return [...mem.kv.keys()].filter((k) => k.startsWith(prefix));
 }

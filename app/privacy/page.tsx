@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Privacy Policy · Quantdle" };
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 6, 2026">
+    <LegalPage title="Privacy Policy" updated="October 7, 2026">
       <p>
         Quantdle is a daily quant puzzle game. This page explains what information the site handles and why. You can
         play without an account, and nothing below applies to guest play beyond the short notes on cookies and logs.
@@ -26,7 +26,7 @@ export default function Privacy() {
         <li>
           <b>Game activity.</b> For signed-in players: which puzzles you solved or missed, your progress and guess counts
           on recent puzzles, and your points, wins, losses, and daily streak. Your username, points and the
-          other stats on your profile are public.
+          other stats on your profile are public, and anyone can find your profile by searching for your username.
         </li>
         <li>
           <b>Optional profile details.</b> You can add a profile picture (shrunk to a small square in your browser

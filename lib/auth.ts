@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { promisify } from "node:util";
 import { get, incr, setIfAbsent } from "./store";
+import { indexUser } from "./userSearch";
 
 /**
  * Username + password accounts. Passwords are hashed with scrypt; the session is a
@@ -46,7 +47,9 @@ export async function createUser(username: string, password: string): Promise<bo
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = (await scrypt(password, salt, 64)).toString("hex");
   const record: UserRecord = { username, salt, hash, created: Date.now() };
-  return setIfAbsent(userKey(username), JSON.stringify(record));
+  const created = await setIfAbsent(userKey(username), JSON.stringify(record));
+  if (created) await indexUser(username);
+  return created;
 }
 
 /** Returns the display username if the password is right. */
