@@ -473,4 +473,176 @@ const laplace: Template = {
   },
 };
 
-export const STATISTICS: Template[] = [diceVariance, tableMoments, normalZ, bayes, correlation, pooledTesting, germanTank, bivariateNormal, laplace];
+const maxNormals: Template = {
+  id: "max-normals",
+  difficulty: "expert",
+  topic: "Statistics",
+  make(rng) {
+    const mu = pick(rng, [0, 10, 50, 100]);
+    const sigma = pick(rng, [1, 2, 5, 10, 20]);
+    const rho = pick(rng, [0.2, 0.5, 0.6, 0.75, -0.5]);
+    const pair = (r: Rng, c: number) => {
+      const a = normal(r);
+      return [mu + sigma * a, mu + sigma * (c * a + Math.sqrt(1 - c * c) * normal(r))];
+    };
+    const gap = (2 * sigma) / Math.sqrt(Math.PI);
+    const scene = pick(rng, [
+      "Two traders' daily P&L (in $k) are",
+      "Two independent sealed bids for a painting (in $k) are",
+      "Daily sales at two competing stores (in $k) are",
+    ]);
+    return {
+      title: pick(rng, ["Better of Two", "Expected Maximum", "Pick the Winner"]),
+      category: "Statistics",
+      story: `${scene} each normal with mean ${mu} and standard deviation ${sigma}. What is the expected value of the larger one, first when they're independent and then when they're correlated?`,
+      steps: [
+        step(
+          "If independent, what is \\(\\mathbb{E}|X - Y|\\)? (4 decimals)",
+          gap,
+          num(gap),
+          "\\(X - Y\\) is normal with mean 0 and SD \\(\\sigma\\sqrt{2}\\). For \\(Z\\) standard normal, \\(\\mathbb{E}|Z| = \\sqrt{2/\\pi}\\).",
+          `\\(${sigma}\\sqrt{2} \\cdot \\sqrt{2/\\pi} = \\frac{${2 * sigma}}{\\sqrt{\\pi}} \\approx ${num(gap)}\\).`,
+          { sim: (r) => {
+            const [x, y] = pair(r, 0);
+            return Math.abs(x - y);
+          } },
+        ),
+        step(
+          "If independent, what is \\(\\mathbb{E}[\\max(X, Y)]\\)? (4 decimals)",
+          mu + gap / 2,
+          num(mu + gap / 2),
+          "\\(\\max(X, Y) = \\frac{X + Y}{2} + \\frac{|X - Y|}{2}\\).",
+          `\\(${mu} + \\frac{${num(gap)}}{2} = ${num(mu + gap / 2)}\\).`,
+          { sim: (r) => Math.max(...pair(r, 0)) },
+        ),
+        step(
+          `Now suppose they have correlation \\(${rho}\\). What is \\(\\mathbb{E}[\\max(X, Y)]\\)? (4 decimals)`,
+          mu + sigma * Math.sqrt((1 - rho) / Math.PI),
+          num(mu + sigma * Math.sqrt((1 - rho) / Math.PI)),
+          "Only the spread of \\(X - Y\\) changes: its variance becomes \\(2\\sigma^2(1 - \\rho)\\).",
+          `\\(${mu} + ${sigma}\\sqrt{\\frac{1 - (${rho})}{\\pi}} \\approx ${num(mu + sigma * Math.sqrt((1 - rho) / Math.PI))}\\).`,
+          { sim: (r) => Math.max(...pair(r, rho)) },
+        ),
+      ],
+      solution: `Split \\(\\max(X, Y) = \\frac{X + Y}{2} + \\frac{|X - Y|}{2}\\). The first part averages \\(\\mu\\); the second is half the mean absolute value of a normal with SD \\(\\sigma\\sqrt{2(1 - \\rho)}\\). So \\(\\mathbb{E}[\\max] = \\mu + \\sigma\\sqrt{\\frac{1 - \\rho}{\\pi}}\\): ${num(mu + gap / 2)} independent, ${num(mu + sigma * Math.sqrt((1 - rho) / Math.PI))} with \\(\\rho = ${rho}\\). Correlation shrinks the value of picking the better one.`,
+    };
+  },
+};
+
+const inverseVariance: Template = {
+  id: "inverse-variance",
+  difficulty: "expert",
+  topic: "Statistics",
+  make(rng) {
+    const [s1, s2] = pick(rng, [
+      [1, 2],
+      [1, 3],
+      [2, 3],
+      [2, 4],
+      [3, 4],
+      [2, 5],
+      [3, 6],
+    ] as const);
+    const [v1, v2] = [s1 * s1, s2 * s2];
+    const theta = pick(rng, [50, 100, 250]);
+    const scene = pick(rng, [
+      ["Two scales weigh the same parcel", "grams"],
+      ["Two analysts forecast the same earnings figure", "cents"],
+      ["Two sensors measure the same temperature", "hundredths of a degree"],
+    ] as const);
+    const read = (r: Rng) => [theta + s1 * normal(r), theta + s2 * normal(r)];
+    const w = v2 / (v1 + v2);
+    return {
+      title: pick(rng, ["Combine the Readings", "Weighted Average", "Trust the Better One"]),
+      category: "Statistics",
+      story: `${scene[0]}. Both are unbiased with independent normal errors: the first has standard deviation ${s1} ${scene[1]}, the second ${s2}. How should you combine them, and how accurate is the result?`,
+      steps: [
+        step(
+          "What is the variance of the plain average of the two readings?",
+          (v1 + v2) / 4,
+          frac(v1 + v2, 4),
+          "\\(\\operatorname{Var}(\\tfrac{A + B}{2}) = \\tfrac{1}{4}(\\operatorname{Var} A + \\operatorname{Var} B)\\).",
+          `\\(\\frac{${v1} + ${v2}}{4} = ${texFrac(v1 + v2, 4)}\\).`,
+          { sim: (r) => {
+            const [a, b] = read(r);
+            return ((a + b) / 2 - theta) ** 2;
+          } },
+        ),
+        step(
+          "Using \\(wA + (1 - w)B\\), which weight \\(w\\) on the first reading minimizes the variance?",
+          w,
+          frac(v2, v1 + v2),
+          "Minimize \\(w^2\\sigma_1^2 + (1 - w)^2\\sigma_2^2\\). Each reading should be weighted by the inverse of its variance.",
+          `\\(w = \\frac{\\sigma_2^2}{\\sigma_1^2 + \\sigma_2^2} = ${texFrac(v2, v1 + v2)}\\).`,
+        ),
+        step(
+          "What is the variance of that best combination?",
+          (v1 * v2) / (v1 + v2),
+          frac(v1 * v2, v1 + v2),
+          "Plug in, or use: precisions (1/variance) add.",
+          `\\(\\left(\\frac{1}{${v1}} + \\frac{1}{${v2}}\\right)^{-1} = ${texFrac(v1 * v2, v1 + v2)}\\).`,
+          { sim: (r) => {
+            const [a, b] = read(r);
+            return (w * a + (1 - w) * b - theta) ** 2;
+          } },
+        ),
+      ],
+      solution: `Weight by precision: \\(w = ${texFrac(v2, v1 + v2)}\\), giving variance \\(${texFracApprox(v1 * v2, v1 + v2)}\\), better than either reading alone (${v1} and ${v2}). The plain average has variance \\(${texFracApprox(v1 + v2, 4)}\\)${(v1 + v2) / 4 > v1 ? ", worse than just using the first reading: averaging in a noisy source can hurt" : ""}.`,
+    };
+  },
+};
+
+const regressionSlopes: Template = {
+  id: "regression-dilution",
+  difficulty: "expert",
+  topic: "Statistics",
+  make(rng) {
+    const sx = pick(rng, [1, 2, 3, 4]);
+    const se = pick(rng, [1, 2, 3]);
+    const [vx, ve] = [sx * sx, se * se];
+    const y = pick(rng, [2, 3, 5, 6, 10]);
+    const slope = vx / (vx + ve);
+    const pair = (r: Rng) => {
+      const x = sx * normal(r);
+      return [x, x + se * normal(r)];
+    };
+    const scene = pick(rng, [
+      ["a stock's true alpha (in bp per day)", "its measured alpha from a short backtest"],
+      ["a student's true ability", "their score on one noisy test"],
+      ["a factory's true defect rate deviation", "one week's measured deviation"],
+    ] as const);
+    return {
+      title: pick(rng, ["Regression Dilution", "Shrink the Signal", "Noisy Predictor"]),
+      category: "Statistics",
+      story: `Let \\(X\\), ${scene[0]}, be normal with mean 0 and SD ${sx}. You only see \\(Y = X + \\varepsilon\\), ${scene[1]}, where the noise \\(\\varepsilon\\) is independent normal with mean 0 and SD ${se}. How should you read a measurement?`,
+      steps: [
+        step("What is \\(\\operatorname{Cov}(X, Y)\\)?", vx, `${vx}`, "Expand \\(\\operatorname{Cov}(X, X + \\varepsilon)\\).", `\\(\\operatorname{Var}(X) + 0 = ${vx}\\).`, {
+          sim: (r) => {
+            const [a, b] = pair(r);
+            return a * b;
+          },
+        }),
+        step("What is \\(\\operatorname{Var}(Y)\\)?", vx + ve, `${vx + ve}`, "Independent variances add.", `\\(${vx} + ${ve} = ${vx + ve}\\).`, {
+          sim: (r) => pair(r)[1] ** 2,
+        }),
+        step(
+          "What is the slope when you regress \\(X\\) on \\(Y\\) (the best linear prediction of the truth from the measurement)?",
+          slope,
+          frac(vx, vx + ve),
+          "OLS slope = Cov / Var of the predictor.",
+          `\\(\\frac{${vx}}{${vx + ve}} = ${texFrac(vx, vx + ve)}\\).`,
+        ),
+        step(
+          `You measure \\(Y = ${y}\\). What is your best estimate of \\(X\\)?`,
+          slope * y,
+          frac(vx * y, vx + ve),
+          "For jointly normal variables the regression line is the conditional mean.",
+          `\\(${texFrac(vx, vx + ve)} \\cdot ${y} = ${texFrac(vx * y, vx + ve)}\\).`,
+        ),
+      ],
+      solution: `\\(\\mathbb{E}[X \\mid Y] = \\frac{\\sigma_X^2}{\\sigma_X^2 + \\sigma_\\varepsilon^2} Y = ${texFrac(vx, vx + ve)} \\, Y\\), so a reading of ${y} means about ${num(slope * y)}. Regressing the other way (\\(Y\\) on \\(X\\)) has slope 1, while \\(X\\) on \\(Y\\) is shrunk: noise in a predictor biases its slope toward zero (regression dilution), which is why backtested alphas should be shrunk.`,
+    };
+  },
+};
+
+export const STATISTICS: Template[] = [diceVariance, tableMoments, normalZ, bayes, correlation, pooledTesting, germanTank, bivariateNormal, laplace, maxNormals, inverseVariance, regressionSlopes];
