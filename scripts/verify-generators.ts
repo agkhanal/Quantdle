@@ -5,9 +5,10 @@
  *   npx tsx scripts/verify-generators.ts            # 60 seeds per template
  *   npx tsx scripts/verify-generators.ts 300        # more seeds
  */
-import { TEMPLATES, buildFromTemplate, monteCarloCheck } from "../lib/generators";
+import { TEMPLATES, buildFromTemplate, levelsFor, monteCarloCheck } from "../lib/generators";
 import { mulberry32 } from "../lib/market";
 import { evaluate } from "../lib/math";
+import { TOPICS } from "../lib/types";
 
 const seeds = Number(process.argv[2] ?? 60);
 let failures = 0;
@@ -21,6 +22,7 @@ for (const t of TEMPLATES) {
     stories.add(g.story);
 
     if (g.steps.length < 3) fail(id, "fewer than 3 steps");
+    if (g.category !== t.topic) fail(id, `labelled "${g.category}" but filed under the "${t.topic}" topic`);
     g.steps.forEach((s, i) => {
       if (!Number.isFinite(s.answer)) fail(id, `step ${i + 1} answer is not finite`);
       // The displayed answer should evaluate to the real answer (within display rounding).
@@ -39,6 +41,14 @@ for (const t of TEMPLATES) {
   }
   variety.set(t.id, stories);
   console.log(`${t.difficulty.padEnd(6)} ${t.id.padEnd(17)} ${String(stories.size).padStart(4)} distinct stories   worst |z| = ${worstZ.toFixed(2)}`);
+}
+
+// Every practice topic needs puzzles, and the topic picker shows which levels have them.
+console.log("\nTopics:");
+for (const topic of TOPICS) {
+  const levels = levelsFor(topic);
+  if (!levels.length) fail(topic, "no templates for this topic");
+  console.log(`  ${topic.padEnd(15)} ${levels.join(", ") || "(none)"}`);
 }
 
 function fail(id: string, msg: string) {
