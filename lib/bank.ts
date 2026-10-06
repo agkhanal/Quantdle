@@ -8,42 +8,6 @@ import { DIFFICULTIES, TOPICS, type Difficulty, type Puzzle } from "./types";
  */
 export const BANK: Puzzle[] = [
   {
-    id: "bank-two-uniforms",
-    title: "Two Points on a Line",
-    category: "Probability",
-    difficulty: "hard",
-    story:
-      "\\(X\\) and \\(Y\\) are independent \\(\\text{Uniform}(0,1)\\) random variables. What is the probability they land within \\(\\tfrac{1}{2}\\) of each other?",
-    steps: [
-      {
-        question: "What is \\(\\mathbb{E}[\\max(X, Y)]\\)?",
-        answer: 2 / 3,
-        answerDisplay: "2/3",
-        tolerance: 0.01,
-        hint: "\\(P(\\max \\leq t) = t^2\\), so the density of the max is \\(2t\\).",
-        explanation: "\\(\\int_0^1 t \\cdot 2t \\, dt = \\tfrac{2}{3}\\).",
-      },
-      {
-        question: "What is \\(\\mathbb{E}[\\min(X, Y)]\\)?",
-        answer: 1 / 3,
-        answerDisplay: "1/3",
-        tolerance: 0.01,
-        hint: "\\(\\min + \\max = X + Y\\).",
-        explanation: "\\(\\mathbb{E}[\\min] = \\mathbb{E}[X+Y] - \\mathbb{E}[\\max] = 1 - \\tfrac{2}{3} = \\tfrac{1}{3}\\).",
-      },
-      {
-        question: "What is \\(P(|X - Y| < \\tfrac{1}{2})\\)?",
-        answer: 0.75,
-        answerDisplay: "3/4",
-        tolerance: 0.01,
-        hint: "Draw the unit square. The region \\(|x - y| \\geq \\tfrac{1}{2}\\) is two corner triangles.",
-        explanation: "Each corner triangle has legs \\(\\tfrac{1}{2}\\), area \\(\\tfrac{1}{8}\\). Two of them: \\(\\tfrac{1}{4}\\). So \\(P = 1 - \\tfrac{1}{4} = \\tfrac{3}{4}\\).",
-      },
-    ],
-    solution:
-      "Geometric probability: \\((X, Y)\\) is uniform on the unit square. The points with \\(|x - y| \\geq \\tfrac{1}{2}\\) form two right triangles with legs \\(\\tfrac{1}{2}\\), total area \\(\\tfrac{1}{4}\\). So \\(P(|X - Y| < \\tfrac{1}{2}) = \\tfrac{3}{4}\\). Along the way, the max and min split \\([0,1]\\) into three equal expected pieces: \\(\\tfrac{1}{3}, \\tfrac{2}{3}\\).",
-  },
-  {
     id: "bank-even-product",
     title: "Even Odds",
     category: "Probability",
@@ -810,6 +774,42 @@ export const BANK: Puzzle[] = [
     ],
     solution:
       "At the money, \\(C \\approx \\frac{S\\sigma\\sqrt{T}}{\\sqrt{2\\pi}} \\approx 0.4 S\\sigma\\sqrt{T} = 4\\), within a cent or so of the exact 3.988. It's linear in vol and in \\(\\sqrt{T}\\), which is why traders quote options in vol and can price them in their heads. A straddle costs about \\(0.8 S\\sigma\\sqrt{T}\\), roughly the expected absolute move.",
+  },
+  {
+    id: "bank-meeting",
+    title: "Meet Me at Noon",
+    category: "Probability",
+    difficulty: "hard",
+    story:
+      "Alex and Bea each arrive at a café at an independent, uniformly random time between 12:00 and 1:00. Whoever arrives first waits 15 minutes and then leaves. What is the probability they meet?",
+    steps: [
+      {
+        question: "What is the probability Alex arrives at least 15 minutes before Bea?",
+        answer: 9 / 32,
+        answerDisplay: "9/32 ≈ 0.2813",
+        tolerance: 0.01,
+        hint: "Draw the 60 × 60 square of arrival times. The region \\(b - a \\ge 15\\) is a right triangle.",
+        explanation: "A triangle with legs 45: \\(\\frac{45^2 / 2}{60^2} = \\frac{9}{32}\\).",
+      },
+      {
+        question: "What is the probability they meet?",
+        answer: 7 / 16,
+        answerDisplay: "7/16 = 0.4375",
+        tolerance: 0.01,
+        hint: "They miss if either one arrives 15+ minutes before the other.",
+        explanation: "\\(1 - 2 \\cdot \\frac{9}{32} = \\frac{7}{16}\\).",
+      },
+      {
+        question: "If each would wait \\(w\\) minutes instead, what \\(w\\) gives a 50% chance of meeting? (2 decimals)",
+        answer: 60 * (1 - Math.SQRT1_2),
+        answerDisplay: "17.57",
+        tolerance: 0.005,
+        hint: "\\(P(\\text{meet}) = 1 - \\left(1 - \\frac{w}{60}\\right)^2\\).",
+        explanation: "\\(\\left(1 - \\frac{w}{60}\\right)^2 = \\frac{1}{2}\\), so \\(w = 60\\left(1 - \\frac{1}{\\sqrt{2}}\\right) \\approx 17.57\\) minutes.",
+      },
+    ],
+    solution:
+      "In the square of arrival times they meet when \\(|a - b| < 15\\): a band around the diagonal. The two corner triangles where they miss each have area \\(\\frac{9}{32}\\) of the square, so \\(P = \\frac{7}{16}\\). For even odds each needs to wait about 17.6 minutes.",
   },
 ];
 
