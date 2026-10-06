@@ -566,4 +566,83 @@ const winnersCurse: Template = {
   },
 };
 
-export const MARKETS: Template[] = [fairOdds, putCallParity, bookmaker, volatilityDrag, portfolio, dieOptions, gamblersRuin, doubling, winnersCurse, binomialTree, kelly];
+const glostenMilgrom: Template = {
+  id: "glosten-milgrom",
+  difficulty: "expert",
+  topic: "Markets",
+  make(rng) {
+    const [L, H] = pick(rng, [
+      [80, 120],
+      [90, 110],
+      [0, 100],
+      [40, 60],
+    ] as const);
+    const pi = pick(rng, [0.3, 0.4, 0.5, 0.6]);
+    const a = pick(rng, [0.1, 0.2, 0.25, 0.4, 0.5]);
+    const half = (1 - a) / 2;
+    const pBuy = pi * (a + half) + (1 - pi) * half;
+    const pHbuy = (pi * (a + half)) / pBuy;
+    const pHsell = (pi * half) / (pi * half + (1 - pi) * (a + half));
+    const ask = L + (H - L) * pHbuy;
+    const bid = L + (H - L) * pHsell;
+    const trade = (r: Rng) => {
+      const high = r() < pi;
+      const informed = r() < a;
+      const buy = informed ? high : r() < 0.5;
+      return { v: high ? H : L, buy };
+    };
+    const pct = (x: number) => `${Math.round(x * 100)}%`;
+    return {
+      title: pick(rng, ["Glosten–Milgrom", "Who's on the Other Side?", "The Informed Spread"]),
+      category: "Markets",
+      story: `A stock is worth either $${H} (probability ${pct(pi)}) or $${L}. You make markets in it. Each trader who arrives is informed with probability ${pct(a)}: informed traders buy if it's worth $${H} and sell if it's worth $${L}. Everyone else buys or sells with equal chance. Where should you quote so you break even against each kind of order?`,
+      steps: [
+        step(
+          "What is the probability the next trader buys? (4 decimals)",
+          pBuy,
+          num(pBuy),
+          `Condition on the value: \\(P(\\text{buy} \\mid ${H}) = ${a} + ${num(half)}\\), \\(P(\\text{buy} \\mid ${L}) = ${num(half)}\\).`,
+          `\\(${pi} \\cdot ${num(a + half)} + ${num(1 - pi)} \\cdot ${num(half)} = ${num(pBuy)}\\).`,
+          { sim: (r) => ind(trade(r).buy) },
+        ),
+        step(
+          `Given the trader buys, what is the probability the stock is worth $${H}? (4 decimals)`,
+          pHbuy,
+          num(pHbuy),
+          "Bayes: a buy is more likely to come from an informed trader in the high state.",
+          `\\(\\frac{${pi} \\cdot ${num(a + half)}}{${num(pBuy)}} \\approx ${num(pHbuy)}\\).`,
+          { sim: (r) => {
+            const t = trade(r);
+            return t.buy ? ind(t.v === H) : NaN;
+          } },
+        ),
+        step(
+          "What ask price breaks even against buyers? (4 decimals)",
+          ask,
+          num(ask),
+          "Set the ask to the expected value given that someone buys.",
+          `\\(${L} + ${H - L} \\cdot ${num(pHbuy)} \\approx ${num(ask)}\\).`,
+          { sim: (r) => {
+            const t = trade(r);
+            return t.buy ? t.v : NaN;
+          } },
+        ),
+        step(
+          "What is the bid-ask spread? (4 decimals)",
+          ask - bid,
+          num(ask - bid),
+          "Do the same for sellers to get the bid: \\(\\mathbb{E}[V \\mid \\text{sell}]\\).",
+          `Bid \\(= ${num(bid)}\\), so the spread is \\(${num(ask)} - ${num(bid)} \\approx ${num(ask - bid)}\\).`,
+          // Reweighted so the mean is E[V | buy] - E[V | sell].
+          { sim: (r) => {
+            const t = trade(r);
+            return t.buy ? t.v / pBuy : -t.v / (1 - pBuy);
+          }, trials: 100_000 },
+        ),
+      ],
+      solution: `Quotes must be regret-free: ask \\(= \\mathbb{E}[V \\mid \\text{buy}] \\approx ${num(ask)}\\), bid \\(= \\mathbb{E}[V \\mid \\text{sell}] \\approx ${num(bid)}\\). The spread of ${num(ask - bid)} exists purely because of adverse selection: you lose to informed traders and recover it from the uninformed, and it widens as the informed share (${pct(a)}) grows.`,
+    };
+  },
+};
+
+export const MARKETS: Template[] = [fairOdds, putCallParity, bookmaker, volatilityDrag, portfolio, dieOptions, gamblersRuin, doubling, winnersCurse, binomialTree, kelly, glostenMilgrom];
