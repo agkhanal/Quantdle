@@ -418,6 +418,166 @@ export const BANK: Puzzle[] = [
     solution:
       "Every random chooser treats seat 1 and seat 100 symmetrically, and once either is taken the outcome is decided: taking seat 1 restores everyone else to their own seat, taking seat 100 dooms the last passenger. So the last seat is seat 1 or seat 100 with equal chance: \\(\\frac{1}{2}\\). In general passenger \\(k \\ge 2\\) of \\(n\\) gets their seat with probability \\(\\frac{n - k + 1}{n - k + 2}\\).",
   },
+  {
+    id: "bank-round-table",
+    title: "Next to You",
+    category: "Combinatorics",
+    difficulty: "easy",
+    story:
+      "Six friends, including Ana and Ben, sit down at random around a round table with six seats. Seatings that differ only by a rotation count as the same. What is the probability Ana and Ben sit next to each other?",
+    steps: [
+      {
+        question: "How many different seatings are there (rotations count as the same)?",
+        answer: 120,
+        answerDisplay: "120",
+        tolerance: 0,
+        hint: "Fix one person's seat to remove the rotations, then arrange the rest.",
+        explanation: "\\((6 - 1)! = 5! = 120\\).",
+      },
+      {
+        question: "In how many of them are Ana and Ben side by side?",
+        answer: 48,
+        answerDisplay: "48",
+        tolerance: 0,
+        hint: "Glue Ana and Ben into one block, seat 5 units around the table, then decide the order inside the block.",
+        explanation: "\\(4! \\times 2 = 48\\).",
+      },
+      {
+        question: "What is the probability Ana and Ben sit together?",
+        answer: 2 / 5,
+        answerDisplay: "2/5",
+        tolerance: 0.01,
+        hint: "Divide. Then check it a faster way: wherever Ana sits, where can Ben be?",
+        explanation: "\\(\\frac{48}{120} = \\frac{2}{5}\\): Ben takes one of 5 other seats, 2 of which are beside Ana.",
+      },
+    ],
+    solution:
+      "Counting: \\(\\frac{4! \\cdot 2}{5!} = \\frac{2}{5}\\). The slicker way is to fix Ana's seat: Ben is equally likely to be in any of the other 5 seats, and 2 of them are next to her.",
+  },
+  {
+    id: "bank-sock-drawer",
+    title: "Sock Drawer",
+    category: "Combinatorics",
+    difficulty: "medium",
+    story:
+      "A drawer holds 5 different pairs of socks (10 socks). In the dark you grab 4 at random. What is the probability you don't get a single matching pair? And how many would you need to grab to be sure of one?",
+    steps: [
+      {
+        question: "How many ways are there to grab 4 of the 10 socks?",
+        answer: 210,
+        answerDisplay: "210",
+        tolerance: 0,
+        hint: "Order doesn't matter.",
+        explanation: "\\(\\binom{10}{4} = 210\\).",
+      },
+      {
+        question: "How many of those contain no matching pair?",
+        answer: 80,
+        answerDisplay: "80",
+        tolerance: 0,
+        hint: "Choose which 4 pairs the socks come from, then one sock from each.",
+        explanation: "\\(\\binom{5}{4} \\cdot 2^4 = 5 \\cdot 16 = 80\\).",
+      },
+      {
+        question: "What is the probability of no matching pair?",
+        answer: 8 / 21,
+        answerDisplay: "8/21 ≈ 0.381",
+        tolerance: 0.01,
+        hint: "Divide.",
+        explanation: "\\(\\frac{80}{210} = \\frac{8}{21}\\).",
+      },
+      {
+        question: "What is the fewest socks you must grab to be certain of a matching pair?",
+        answer: 6,
+        answerDisplay: "6",
+        tolerance: 0,
+        hint: "How many socks can you hold with every one from a different pair?",
+        explanation: "At most 5 socks can all come from different pairs, so the 6th must complete one (pigeonhole).",
+      },
+    ],
+    solution:
+      "A pair-free grab picks 4 of the 5 pairs and one sock from each: \\(5 \\cdot 2^4 = 80\\) of the \\(\\binom{10}{4} = 210\\) grabs, so \\(P = \\frac{8}{21} \\approx 0.381\\). With 5 pairs, 6 socks guarantee a match by the pigeonhole principle.",
+  },
+  {
+    id: "bank-making-change",
+    title: "Making Change",
+    category: "Combinatorics",
+    difficulty: "hard",
+    story:
+      "In how many ways can you make $1 (100 cents) from pennies (1¢), nickels (5¢), dimes (10¢) and quarters (25¢)? Only how many of each coin you use matters.",
+    steps: [
+      {
+        question: "Warm-up: how many ways are there to make 25¢ from pennies, nickels and dimes?",
+        answer: 12,
+        answerDisplay: "12",
+        tolerance: 0,
+        hint: "Choose the number of dimes, then the number of nickels; pennies fill the rest.",
+        explanation: "0 dimes: 6 choices of nickels; 1 dime: 4; 2 dimes: 2. Total 12.",
+      },
+      {
+        question: "How many ways are there to make 50¢ from all four coins?",
+        answer: 49,
+        answerDisplay: "49",
+        tolerance: 0,
+        hint: "Split by the number of quarters, reusing the same counting for the rest.",
+        explanation: "No quarters: \\(11 + 9 + 7 + 5 + 3 + 1 = 36\\). One quarter: 12 (step 1). Two quarters: 1. Total 49.",
+      },
+      {
+        question: "How many ways are there to make $1?",
+        answer: 242,
+        answerDisplay: "242",
+        tolerance: 0,
+        hint: "Split by quarters (0 to 4). For each remaining amount \\(r\\), count dime and nickel choices: for \\(d\\) dimes there are \\(\\lfloor (r - 10d)/5 \\rfloor + 1\\) nickel choices.",
+        explanation: "Without quarters, amounts 100, 75, 50, 25, 0 have 121, 72, 36, 12 and 1 ways. Summing over 0 to 4 quarters: \\(121 + 72 + 36 + 12 + 1 = 242\\).",
+      },
+    ],
+    solution:
+      "Count by the number of quarters. With pennies, nickels and dimes only, the remaining 100¢, 75¢, 50¢, 25¢ and 0¢ can be made in 121, 72, 36, 12 and 1 ways. Total: 242. (This is the coefficient of \\(x^{100}\\) in \\(\\frac{1}{(1 - x)(1 - x^5)(1 - x^{10})(1 - x^{25})}\\), and the classic dynamic-programming interview question.)",
+  },
+  {
+    id: "bank-cayley-cities",
+    title: "Connect the Cities",
+    category: "Combinatorics",
+    difficulty: "expert",
+    story:
+      "Five cities can be linked by roads between any two of them. A planner picks 4 of the possible roads uniformly at random. What is the probability that the roads connect all five cities?",
+    steps: [
+      {
+        question: "How many possible roads are there?",
+        answer: 10,
+        answerDisplay: "10",
+        tolerance: 0,
+        hint: "One for each pair of cities.",
+        explanation: "\\(\\binom{5}{2} = 10\\).",
+      },
+      {
+        question: "How many ways are there to pick 4 roads?",
+        answer: 210,
+        answerDisplay: "210",
+        tolerance: 0,
+        hint: "Choose 4 of the 10.",
+        explanation: "\\(\\binom{10}{4} = 210\\).",
+      },
+      {
+        question: "How many of those sets of 4 roads connect all five cities?",
+        answer: 125,
+        answerDisplay: "125",
+        tolerance: 0,
+        hint: "4 roads joining 5 cities with no city left out can't contain a loop, so they form a tree. Cayley's formula counts labelled trees on \\(n\\) vertices.",
+        explanation: "Cayley: \\(n^{n-2} = 5^3 = 125\\).",
+      },
+      {
+        question: "What is the probability the 4 roads connect every city?",
+        answer: 125 / 210,
+        answerDisplay: "25/42 ≈ 0.5952",
+        tolerance: 0.01,
+        hint: "Divide.",
+        explanation: "\\(\\frac{125}{210} = \\frac{25}{42} \\approx 0.595\\).",
+      },
+    ],
+    solution:
+      "Connecting 5 cities needs at least 4 roads, and 4 that do it form a spanning tree. By Cayley's formula there are \\(5^{3} = 125\\) labelled trees on 5 vertices, out of \\(\\binom{10}{4} = 210\\) road sets, so \\(P = \\frac{25}{42} \\approx 0.595\\).",
+  },
 ];
 
 export function bankByDifficulty(d: Difficulty): Puzzle[] {
