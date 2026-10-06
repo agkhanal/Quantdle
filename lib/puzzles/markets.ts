@@ -455,4 +455,115 @@ const dieOptions: Template = {
   },
 };
 
-export const MARKETS: Template[] = [fairOdds, putCallParity, bookmaker, volatilityDrag, portfolio, dieOptions, gamblersRuin, binomialTree, kelly];
+const doubling: Template = {
+  id: "doubling",
+  difficulty: "hard",
+  topic: "Markets",
+  make(rng) {
+    const n = int(rng, 4, 8);
+    const game = pick(rng, [
+      { p: 1 / 2, pDisp: "1/2", what: "a fair coin flip" },
+      { p: 18 / 38, pDisp: "18/38", what: "red on an American roulette wheel (18 of 38 pockets)" },
+      { p: 18 / 37, pDisp: "18/37", what: "red on a European roulette wheel (18 of 37 pockets)" },
+    ]);
+    const q = 1 - game.p;
+    const bust = q ** n;
+    const loss = 2 ** n - 1;
+    const raw = (1 - bust) * 1 - bust * loss;
+    const ev = Math.abs(raw) < 1e-12 ? 0 : raw; // exactly 0 for a fair coin (the answer check is relative)
+    const session = (r: Rng) => {
+      for (let i = 0; i < n; i++) if (r() < game.p) return 1;
+      return -loss;
+    };
+    return {
+      title: pick(rng, ["Double Down", "The Martingale", "Can't Lose?"]),
+      category: "Markets",
+      story: `You bet on ${game.what}, which pays even money. You start with $1 and double your bet after every loss, stopping at the first win. Your bankroll of $${loss} covers ${n} bets ($1 + $2 + ... + $${2 ** (n - 1)}). If you lose all ${n}, you're broke. Is this a sure thing?`,
+      steps: [
+        step(
+          "If you win on some bet before running out, what is your total profit?",
+          1,
+          "1",
+          "Add up the earlier losses and the final win.",
+          `Losses \\(1 + 2 + \\cdots + 2^{k-1} = 2^k - 1\\), then a win of \\(2^k\\): profit $1.`,
+        ),
+        step(
+          `What is the probability you lose all ${n} bets? (4 significant figures)`,
+          bust,
+          num(bust),
+          "Consecutive independent losses.",
+          `\\((1 - ${game.pDisp})^{${n}} \\approx ${num(bust)}\\).`,
+          { sim: (r) => ind(session(r) < 0), trials: 100_000 },
+        ),
+        step(
+          "What is the expected profit of one session? (4 decimals)",
+          ev,
+          num(ev),
+          `Win $1 with probability \\(1 - ${num(bust)}\\), lose $${loss} otherwise.`,
+          `\\((1 - ${num(bust)}) \\cdot 1 - ${num(bust)} \\cdot ${loss} ${ev === 0 ? "=" : "\\approx"} ${num(ev)}\\).`,
+          { sim: session, trials: 200_000 },
+        ),
+      ],
+      solution: `The martingale wins $1 almost always but loses $${loss} with probability \\(${num(bust)}\\). ${game.p === 0.5 ? "With a fair coin these exactly cancel: expected profit 0. No betting system can turn fair bets into an edge (the optional stopping theorem)." : `With a house edge the expectation is negative, \\(\\approx ${num(ev)}\\) per session: the system just trades many small wins for a rare large loss, and can't beat the edge.`}`,
+    };
+  },
+};
+
+const winnersCurse: Template = {
+  id: "winners-curse",
+  difficulty: "hard",
+  topic: "Markets",
+  make(rng) {
+    const M = pick(rng, [100, 200, 1000]);
+    const k = pick(rng, [1.5, 1.8, 2.5, 3]);
+    const b = Math.round((M * pick(rng, [0.4, 0.5, 0.6, 0.8])) / 10) * 10;
+    const accept = b / M;
+    const profit = accept * (k * (b / 2) - b);
+    const best = k < 2 ? 0 : M;
+    const value = (r: Rng) => r() * M;
+    return {
+      title: pick(rng, ["Winner's Curse", "Acquire the Firm", "Adverse Selection"]),
+      category: "Markets",
+      story: `You're bidding to buy a company. Its current owner knows its true value \\(V\\); to you it's uniform between $0 and $${M}M. In your hands it would be worth \\(${k}V\\). You make one take-it-or-leave-it offer \\(b\\), and the owner sells only if \\(b \\ge V\\). Suppose you offer $${b}M.`,
+      steps: [
+        step("What is the probability the owner accepts?", accept, num(accept), "They accept when the value is below your offer.", `\\(P(V \\le ${b}) = \\frac{${b}}{${M}} = ${num(accept)}\\).`, {
+          sim: (r) => ind(value(r) <= b),
+        }),
+        step(
+          "Given they accept, what is the expected value of the company to its owner (in $M)?",
+          b / 2,
+          num(b / 2),
+          "Condition the uniform on \\(V \\le b\\).",
+          `\\(V \\mid V \\le ${b}\\) is uniform on \\([0, ${b}]\\): mean ${num(b / 2)}.`,
+          { sim: (r) => {
+            const v = value(r);
+            return v <= b ? v : NaN;
+          } },
+        ),
+        step(
+          "What is your expected profit from making this offer (in $M, counting zero when refused)?",
+          profit,
+          num(profit),
+          "P(accept) × (your value of what you get − what you pay).",
+          `\\(${num(accept)} \\cdot (${k} \\cdot ${num(b / 2)} - ${b}) = ${num(profit)}\\).`,
+          { sim: (r) => {
+            const v = value(r);
+            return v <= b ? k * v - b : 0;
+          } },
+        ),
+        step(
+          `Which offer between $0M and $${M}M maximizes your expected profit?`,
+          best,
+          `${best}`,
+          `Profit is \\(\\frac{b}{${M}}\\left(\\frac{${k}}{2} - 1\\right)b\\). What's its sign?`,
+          k < 2
+            ? `\\(\\frac{${k}}{2} - 1 < 0\\): every positive offer loses money on average, so offer 0.`
+            : `\\(\\frac{${k}}{2} - 1 > 0\\): profit rises with \\(b\\), so offer the maximum, ${M}.`,
+        ),
+      ],
+      solution: `An accepted offer tells you \\(V \\le b\\), so you only win the deals worth \\(\\frac{b}{2}\\) on average, worth \\(${k} \\cdot \\frac{b}{2}\\) to you. ${k < 2 ? `Since \\(${k} < 2\\) you always overpay: the best offer is nothing, even though the firm is worth ${k} times more to you than to the owner.` : `Since \\(${k} > 2\\) the synergy beats the adverse selection, and bidding the maximum is best.`} That's the winner's curse.`,
+    };
+  },
+};
+
+export const MARKETS: Template[] = [fairOdds, putCallParity, bookmaker, volatilityDrag, portfolio, dieOptions, gamblersRuin, doubling, winnersCurse, binomialTree, kelly];
