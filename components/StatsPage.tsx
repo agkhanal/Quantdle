@@ -2,21 +2,28 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { loadHistory, summarize, type GameResult, type TopicSummary } from "@/lib/history";
+import { loadHistory, summarize, type GameMode, type GameResult, type TopicSummary } from "@/lib/history";
 import { DonutChart, Legend, topicColor, type Slice } from "./DonutChart";
 
 /** Fewer games than this in a topic and we don't call it a strength or a weakness yet. */
 const MIN_FOR_VERDICT = 3;
 
+const FILTERS: { id: GameMode | "all"; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "daily", label: "Daily" },
+  { id: "practice", label: "Practice" },
+];
+
 /** The stats page: which topics you solve and which you miss, across puzzles and markets. */
 export default function StatsPage() {
   const [history, setHistory] = useState<GameResult[] | null>(null);
+  const [filter, setFilter] = useState<GameMode | "all">("all");
 
   useEffect(() => setHistory(loadHistory()), []);
 
   if (!history) return <main className="stats-page" />;
 
-  const topics = summarize(history);
+  const topics = summarize(history, filter === "all" ? undefined : filter);
   const played = topics.reduce((n, t) => n + t.played, 0);
   const won = topics.reduce((n, t) => n + t.won, 0);
   const ranked = topics.filter((t) => t.played >= MIN_FOR_VERDICT).sort((a, b) => b.winRate - a.winRate || a.missRate - b.missRate);
@@ -39,9 +46,19 @@ export default function StatsPage() {
       <h1>Your stats</h1>
       <p className="muted small">Every puzzle and market you finish on this device, broken down by topic.</p>
 
+      {history.length > 0 && (
+        <nav className="modes stats-filter" role="tablist" aria-label="Which games">
+          {FILTERS.map((f) => (
+            <button key={f.id} role="tab" aria-selected={filter === f.id} className={filter === f.id ? "on" : ""} onClick={() => setFilter(f.id)}>
+              {f.label}
+            </button>
+          ))}
+        </nav>
+      )}
+
       {played === 0 ? (
         <section className="card center stats-empty">
-          <p>No finished games yet.</p>
+          <p>{history.length ? `No finished ${filter} games yet.` : "No finished games yet."}</p>
           <p className="muted small">Play a puzzle or a market and your topic breakdown shows up here.</p>
           <Link href="/" className="btn primary">
             Play now →

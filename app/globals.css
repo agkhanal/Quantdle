@@ -4091,6 +4091,10 @@ b .track-icon {
   margin: 0 0 14px;
 }
 
+.stats-filter {
+  margin: 4px 0 0;
+}
+
 .stats-empty {
   display: grid;
   gap: 6px;
