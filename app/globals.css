@@ -881,6 +881,64 @@ code {
   min-width: 26px;
 }
 
+/* ───────── tutorial ───────── */
+
+.tut-gate p {
+  margin: 0 0 16px;
+}
+
+.tut-gate-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.tut-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.tut-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.25s ease;
+}
+
+.tut-dot.done {
+  background: var(--green);
+}
+
+.tut-dot.on {
+  background: var(--accent);
+  transform: scale(1.4);
+}
+
+.tut-slide {
+  min-height: 160px;
+}
+
+.tut-copy p {
+  margin: 0 0 10px;
+}
+
+.tut-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.tut-nav {
+  display: flex;
+  gap: 10px;
+}
+
 /* ───────── confetti ───────── */
 
 .confetti {

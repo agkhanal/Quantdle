@@ -27,6 +27,7 @@ import { Chat } from "./Chat";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
 import { RichText } from "./RichText";
+import Tutorial from "./Tutorial";
 import { UserSearch } from "./UserSearch";
 import Verity, { isVerity, summonVerity } from "./Verity";
 
@@ -97,6 +98,7 @@ export default function Game() {
   const [viewing, setViewing] = useState<string | null>(null);
   const [viewFrom, setViewFrom] = useState<"leaderboard" | "search" | "chat" | "admin">("leaderboard");
   const [toast, setToast] = useState("");
+  const [tutorial, setTutorial] = useState<"gate" | "replay" | null>(null);
   const [eggPops, setEggPops] = useState(0);
   const [bugUpdates, setBugUpdates] = useState(0);
   const [leaving, setLeaving] = useState(false); // old content fading out before a mode/track/difficulty switch
@@ -183,11 +185,19 @@ export default function Game() {
       window.history.replaceState(null, "", window.location.pathname);
     }
     load("daily", "medium");
-    if (!localStorage.getItem("quantdle-seen-help")) {
-      setModal("help");
-      localStorage.setItem("quantdle-seen-help", "1");
-    }
+    if (!localStorage.getItem("quantdle-seen-tutorial")) setTutorial("gate");
   }, [load]);
+
+  /** Marks the tutorial seen (gate skip, or finishing the slides) and closes it. */
+  function closeTutorial() {
+    localStorage.setItem("quantdle-seen-tutorial", "1");
+    setTutorial(null);
+  }
+
+  function replayTutorial() {
+    setModal(null);
+    setTutorial("replay");
+  }
 
   // Rotate the loading quips while the AI is cooking.
   useEffect(() => {
@@ -698,9 +708,11 @@ export default function Game() {
     <Verity />
       {modal === "help" && (
         <Modal title="How to play" onClose={() => setModal(null)}>
-          <HowTo />
+          <HowTo onReplay={replayTutorial} />
         </Modal>
       )}
+
+      {tutorial && <Tutorial startAtGate={tutorial === "gate"} onDone={closeTutorial} />}
 
       {modal === "stats" && (
         <Modal title="Statistics" onClose={() => setModal(null)}>
@@ -873,9 +885,12 @@ function BoardRow({ row, totalSteps }: { row?: Row; totalSteps: number }) {
   );
 }
 
-function HowTo() {
+function HowTo({ onReplay }: { onReplay: () => void }) {
   return (
     <div className="howto">
+      <button className="link" onClick={onReplay} type="button">
+        ↻ Replay the tutorial
+      </button>
       <p>
         Each Quantdle is a quant interview problem broken into <b>steps</b>. Solve each step to unlock the next, then
         crack the <b>final answer ★</b>. You get <b>6 guesses</b> for the whole puzzle.
