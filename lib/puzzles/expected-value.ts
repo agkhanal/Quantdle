@@ -355,4 +355,133 @@ const adjacentPairs: Template = {
   },
 };
 
-export const EXPECTED_VALUE: Template[] = [reroll, geomWait, adjacentPairs, patterns, distinctFaces, coupon, optimalStopping];
+const records: Template = {
+  id: "records",
+  difficulty: "hard",
+  topic: "Expected Value",
+  make(rng) {
+    const n = int(rng, 6, 30);
+    const k = int(rng, 3, Math.min(n, 10));
+    let H = 0;
+    let V = 0;
+    for (let i = 1; i <= n; i++) {
+      H += 1 / i;
+      V += (1 / i) * (1 - 1 / i);
+    }
+    const scene = pick(rng, [
+      { story: `A city has ${n} years of rainfall data, all different and in random order. A year is a "record" if it was wetter than every year before it (the first year counts).`, unit: "year" },
+      { story: `${n} acts perform at a talent show, one at a time, in a random order (no two get the same score). An act sets a "record" if it outscores every act before it (the first counts).`, unit: "act" },
+      { story: `You're shown ${n} job offers one by one, in random order of salary (no ties). An offer is a "record" if it beats every earlier offer (the first counts).`, unit: "offer" },
+    ]);
+    const recs = (r: Rng) => {
+      let best = -1;
+      let c = 0;
+      for (let i = 0; i < n; i++) {
+        const x = r();
+        if (x > best) {
+          best = x;
+          c++;
+        }
+      }
+      return c;
+    };
+    const kth = (r: Rng) => {
+      let best = -1;
+      let rec = false;
+      for (let i = 0; i < k; i++) {
+        const x = r();
+        rec = x > best;
+        if (rec) best = x;
+      }
+      return rec;
+    };
+    return {
+      title: pick(rng, ["Record Breakers", "New High", "Best So Far"]),
+      category: "Expected Value",
+      story: `${scene.story} How many records do you expect?`,
+      steps: [
+        step(`What is the probability the ${ordinal(k)} ${scene.unit} is a record?`, 1 / k, frac(1, k), `Among the first ${k}, each is equally likely to be the largest.`, `By symmetry, \\(\\frac{1}{${k}}\\).`, {
+          sim: (r) => ind(kth(r)),
+        }),
+        step(
+          "What is the expected number of records? (4 decimals)",
+          H,
+          num(H),
+          "Add up an indicator for each position. Records aren't independent, but expectation doesn't care.",
+          `\\(1 + \\frac{1}{2} + \\cdots + \\frac{1}{${n}} = H_{${n}} \\approx ${num(H)}\\).`,
+          { sim: recs },
+        ),
+        step(
+          "What is the variance of the number of records? (4 decimals)",
+          V,
+          num(V),
+          "The record indicators turn out to be independent of each other. Variance of a sum of independent Bernoullis.",
+          `\\(\\sum_{i=1}^{${n}} \\frac{1}{i}\\left(1 - \\frac{1}{i}\\right) \\approx ${num(V)}\\).`,
+          { sim: (r) => (recs(r) - H) ** 2, trials: 60_000 },
+        ),
+      ],
+      solution: `Position \\(i\\) is a record with probability \\(\\frac{1}{i}\\), so \\(\\mathbb{E} = H_{${n}} \\approx ${num(H)}\\), growing only like \\(\\ln n\\). Whether \\(i\\) is a record depends only on the relative order of the first \\(i\\), which is independent of how those \\(i\\) were ordered among themselves, so the indicators are independent and the variance is \\(\\sum \\frac{1}{i}(1 - \\frac{1}{i}) \\approx ${num(V)}\\).`,
+    };
+  },
+};
+
+const ordinal = (k: number) => `${k}${k % 10 === 1 && k !== 11 ? "st" : k % 10 === 2 && k !== 12 ? "nd" : k % 10 === 3 && k !== 13 ? "rd" : "th"}`;
+
+const allSixes: Template = {
+  id: "all-sixes",
+  difficulty: "hard",
+  topic: "Expected Value",
+  make(rng) {
+    const s = pick(rng, [4, 6, 6, 8]);
+    const n = int(rng, 2, 5);
+    const t = int(rng, 2, 4);
+    const q = (s - 1) / s;
+    let E = 0;
+    for (let k = 0; k < 2000; k++) E += 1 - (1 - q ** k) ** n;
+    const rounds = (r: Rng) => {
+      let left = n;
+      let k = 0;
+      while (left > 0) {
+        k++;
+        for (let i = left; i > 0; i--) if (die(r, s) === s) left--;
+      }
+      return k;
+    };
+    const face = s === 6 ? "a six" : s === 8 ? "an 8" : `a ${s}`;
+    const kind = s === 6 ? "fair dice" : `fair ${s}-sided dice`;
+    return {
+      title: pick(rng, ["Keep the Sixes", "Yahtzee Chase", "Lock and Reroll"]),
+      category: "Expected Value",
+      story: `You roll ${n} ${kind}. Any die showing ${face} is set aside, and you reroll the rest, round after round, until every die shows ${face}. On average, how many rounds does it take (counting the first roll)?`,
+      steps: [
+        step(
+          `What is the probability a particular die still hasn't shown ${face} after ${t} rounds? (4 decimals)`,
+          q ** t,
+          num(q ** t),
+          "Each die is just rolled until it succeeds, independently of the others.",
+          `\\(\\left(${texFrac(s - 1, s)}\\right)^{${t}} \\approx ${num(q ** t)}\\).`,
+          { sim: (r) => ind(Array.from({ length: t }).every(() => die(r, s) !== s)) },
+        ),
+        step(
+          `What is the probability you're done within ${t} rounds? (4 decimals)`,
+          (1 - q ** t) ** n,
+          num((1 - q ** t) ** n),
+          "Every die has to have succeeded by then.",
+          `\\(\\left(1 - ${num(q ** t)}\\right)^{${n}} \\approx ${num((1 - q ** t) ** n)}\\).`,
+          { sim: (r) => ind(rounds(r) <= t) },
+        ),
+        step(
+          "What is the expected number of rounds? (4 significant figures)",
+          E,
+          num(E),
+          "The number of rounds is the maximum of the dice's waiting times. Use \\(\\mathbb{E}[T] = \\sum_{k \\ge 0} P(T > k)\\).",
+          `\\(\\sum_{k \\ge 0} \\left[1 - \\left(1 - (${texFrac(s - 1, s)})^k\\right)^{${n}}\\right] \\approx ${num(E)}\\).`,
+          { sim: rounds },
+        ),
+      ],
+      solution: `Each die needs a geometric number of rounds (mean ${s}), and you finish at the maximum of ${n} of them. With \\(P(T \\le k) = (1 - (${texFrac(s - 1, s)})^k)^{${n}}\\), the tail-sum formula gives \\(\\mathbb{E}[T] \\approx ${num(E)}\\): much less than \\(${n} \\times ${s}\\), because the dice work in parallel.`,
+    };
+  },
+};
+
+export const EXPECTED_VALUE: Template[] = [reroll, geomWait, adjacentPairs, patterns, distinctFaces, coupon, optimalStopping, records, allSixes];
