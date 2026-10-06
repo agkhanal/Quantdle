@@ -9,6 +9,7 @@ import {
   DIFFICULTIES,
   MAX_GUESSES,
   TOPICS,
+  isTopic,
   type Award,
   type Difficulty,
   type GuessResponse,
@@ -74,6 +75,7 @@ const LOADING_QUIPS = [
 ];
 
 const DIFF_LABEL: Record<Difficulty, string> = { easy: "Easy", medium: "Medium", hard: "Hard", expert: "Expert" };
+const TOPIC_KEY = "quantdle-practice-topic";
 const EMOJI: Record<Verdict, string> = { green: "🟩", yellow: "🟨", grey: "⬛" };
 
 export default function Game() {
@@ -169,6 +171,8 @@ export default function Game() {
   useEffect(() => {
     setStats(loadStats());
     setToday(dailyNumber());
+    const savedTopic = loadJSON<string>(TOPIC_KEY);
+    if (isTopic(savedTopic)) setTopic(savedTopic);
     fetch("/api/auth")
       .then((r) => r.json())
       .then((b) => {
@@ -313,6 +317,7 @@ export default function Game() {
       const d = nearestLevel(difficulty, t);
       setTopic(t);
       setDifficulty(d);
+      saveJSON(TOPIC_KEY, t);
       load("practice", d, t);
     });
   }
