@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { evaluate, fmt } from "@/lib/math";
+import { identify } from "@/lib/analytics";
 import { MARKET_TOPIC, recordGame } from "@/lib/history";
 import { loadJSON, loadStats, recordResult, saveJSON, type Stats } from "@/lib/stats";
 import { dailyNumber } from "@/lib/day";
@@ -214,6 +215,12 @@ export default function Game() {
     if (linked !== null) window.history.replaceState(null, "", window.location.pathname);
     if (!localStorage.getItem("quantdle-seen-tutorial")) setTutorial("gate");
   }, [load]);
+
+  // Link analytics to the signed-in player (and forget them on sign-out).
+  useEffect(() => {
+    identify(user);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.username, user?.points]);
 
   /** Marks the tutorial seen (gate skip, or finishing the slides) and closes it. */
   function closeTutorial() {
