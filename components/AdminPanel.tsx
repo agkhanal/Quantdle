@@ -45,6 +45,7 @@ function AdjustPoints({ me, onChange }: { me: Profile; onChange: (u: Profile) =>
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
 
   async function apply() {
     setBusy(true);
@@ -69,8 +70,15 @@ function AdjustPoints({ me, onChange }: { me: Profile; onChange: (u: Profile) =>
   }
 
   return (
-    <details className="admin-points">
-      <summary>Admin: adjust points</summary>
+    <div className={`admin-points${open ? " open" : ""}`}>
+      <button className="admin-points-toggle" aria-expanded={open} aria-controls="admin-points-body" onClick={() => setOpen((o) => !o)}>
+        <svg className="admin-points-chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+          <path d="M2 1l6 4-6 4z" fill="currentColor" />
+        </svg>
+        Admin: adjust points
+      </button>
+      <div className="admin-points-body" id="admin-points-body" inert={!open}>
+       <div className="admin-points-clip">
       <div className="profile-form">
         <label className="field">
           <span>Username</span>
@@ -90,7 +98,9 @@ function AdjustPoints({ me, onChange }: { me: Profile; onChange: (u: Profile) =>
           {busy ? "…" : "Apply"}
         </button>
       </div>
-    </details>
+       </div>
+      </div>
+    </div>
   );
 }
 
