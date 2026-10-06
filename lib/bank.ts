@@ -7,79 +7,6 @@ import { DIFFICULTIES, TOPICS, type Difficulty, type Puzzle } from "./types";
  */
 export const BANK: Puzzle[] = [
   {
-    id: "bank-die-reroll",
-    title: "Roll It Back",
-    category: "Expected Value",
-    difficulty: "easy",
-    story:
-      "A game pays you the face value of one roll of a fair die, in dollars. After seeing your first roll you may choose to re-roll once, but then you must keep the second roll. With optimal play, what is the game worth?",
-    steps: [
-      {
-        question: "What is the expected value of a single roll?",
-        answer: 3.5,
-        answerDisplay: "3.5",
-        tolerance: 0.01,
-        hint: "Average the faces 1 through 6.",
-        explanation: "\\(\\frac{1+2+3+4+5+6}{6} = \\frac{21}{6} = 3.5\\).",
-      },
-      {
-        question: "What is the smallest first roll you should keep rather than re-roll?",
-        answer: 4,
-        answerDisplay: "4",
-        tolerance: 0,
-        hint: "Re-rolling is worth exactly the answer to step 1. Keep anything that beats it.",
-        explanation: "A re-roll is worth \\(3.5\\), so keep 4, 5 or 6 and re-roll 1, 2 or 3.",
-      },
-      {
-        question: "What is the expected value of the game with optimal play?",
-        answer: 4.25,
-        answerDisplay: "4.25",
-        tolerance: 0.01,
-        hint: "Half the time you keep a 4, 5 or 6; the other half you get a fresh roll worth \\(3.5\\).",
-        explanation: "\\(\\frac{4+5+6}{6} + \\frac{3}{6} \\cdot 3.5 = 2.5 + 1.75 = 4.25\\).",
-      },
-    ],
-    solution:
-      "A fresh roll is worth \\(3.5\\), so keep the first roll only if it's 4 or more. \\(\\text{EV} = P(\\text{keep}) \\cdot \\mathbb{E}[\\text{roll} \\mid \\text{keep}] + P(\\text{re-roll}) \\cdot 3.5 = \\tfrac{1}{2}(5) + \\tfrac{1}{2}(3.5) = 4.25\\). This is backward induction: value the last decision first.",
-  },
-  {
-    id: "bank-hh-vs-ht",
-    title: "HH vs HT",
-    category: "Expected Value",
-    difficulty: "medium",
-    story:
-      "You flip a fair coin repeatedly. On average, how many flips does it take to see two heads in a row (HH)?",
-    steps: [
-      {
-        question: "Warm-up: what is the expected number of flips to see the first H?",
-        answer: 2,
-        answerDisplay: "2",
-        tolerance: 0.01,
-        hint: "Geometric distribution with success probability \\(\\tfrac{1}{2}\\).",
-        explanation: "Geometric with \\(p = \\tfrac{1}{2}\\) has mean \\(1/p = 2\\).",
-      },
-      {
-        question: "What is the expected number of flips to see the pattern HT?",
-        answer: 4,
-        answerDisplay: "4",
-        tolerance: 0.01,
-        hint: "Wait for an H. After that, any T completes the pattern, and an H doesn't set you back.",
-        explanation: "Wait for H (2 flips on average), then wait for T (2 more): \\(4\\).",
-      },
-      {
-        question: "Now the real question: expected number of flips to see HH?",
-        answer: 6,
-        answerDisplay: "6",
-        tolerance: 0.01,
-        hint: "Let \\(E\\) be the answer. After an H, a T sends you all the way back to the start. Set up \\(E\\) in terms of itself.",
-        explanation:
-          "\\(E = E_H + 1 + \\tfrac{1}{2}E\\), where \\(E_H = 2\\) is the wait for the first H. Solving: \\(E/2 = 3\\), so \\(E = 6\\).",
-      },
-    ],
-    solution:
-      "HT takes 4 flips but HH takes 6, even though both have probability \\(\\tfrac{1}{4}\\) at any given position. The difference: when you're chasing HH and flip T after an H, you lose all progress. Chasing HT, an extra H keeps you right where you were. Solve \\(E = (E_H + 1) + \\tfrac{1}{2}E\\) with \\(E_H = 2\\) to get \\(E = 6\\).",
-  },
-  {
     id: "bank-bayes-test",
     title: "False Alarm",
     category: "Statistics",
@@ -187,41 +114,6 @@ export const BANK: Puzzle[] = [
     ],
     solution:
       "Geometric probability: \\((X, Y)\\) is uniform on the unit square. The points with \\(|x - y| \\geq \\tfrac{1}{2}\\) form two right triangles with legs \\(\\tfrac{1}{2}\\), total area \\(\\tfrac{1}{4}\\). So \\(P(|X - Y| < \\tfrac{1}{2}) = \\tfrac{3}{4}\\). Along the way, the max and min split \\([0,1]\\) into three equal expected pieces: \\(\\tfrac{1}{3}, \\tfrac{2}{3}\\).",
-  },
-  {
-    id: "bank-coupon-dice",
-    title: "Collect All Six",
-    category: "Expected Value",
-    difficulty: "hard",
-    story: "You roll a fair die repeatedly. On average, how many rolls until you've seen every face at least once?",
-    steps: [
-      {
-        question: "Having seen exactly 1 distinct face, what is the expected number of rolls to see a new one?",
-        answer: 1.2,
-        answerDisplay: "6/5 = 1.2",
-        tolerance: 0.01,
-        hint: "5 of the 6 faces are new. That's a geometric wait.",
-        explanation: "Success probability \\(\\tfrac{5}{6}\\), so the expected wait is \\(\\tfrac{6}{5}\\).",
-      },
-      {
-        question: "Having seen 5 distinct faces, what is the expected number of rolls to see the last one?",
-        answer: 6,
-        answerDisplay: "6",
-        tolerance: 0.01,
-        hint: "Only one face is new now.",
-        explanation: "Success probability \\(\\tfrac{1}{6}\\), so wait 6 rolls on average.",
-      },
-      {
-        question: "What is the total expected number of rolls to see all six faces?",
-        answer: 14.7,
-        answerDisplay: "14.7",
-        tolerance: 0.005,
-        hint: "Add the geometric waits: \\(\\tfrac{6}{6} + \\tfrac{6}{5} + \\tfrac{6}{4} + \\tfrac{6}{3} + \\tfrac{6}{2} + \\tfrac{6}{1}\\).",
-        explanation: "\\(6 \\cdot \\left(1 + \\tfrac{1}{2} + \\tfrac{1}{3} + \\tfrac{1}{4} + \\tfrac{1}{5} + \\tfrac{1}{6}\\right) = 6 \\times 2.45 = 14.7\\).",
-      },
-    ],
-    solution:
-      "Coupon collector: break the process into stages. With \\(k\\) faces seen, a new face appears with probability \\(\\tfrac{6-k}{6}\\), so the stage takes \\(\\tfrac{6}{6-k}\\) rolls on average. Summing: \\(6 \\cdot H_6 = 6 \\times \\tfrac{49}{20} = 14.7\\) rolls.",
   },
   {
     id: "bank-binomial-call",
@@ -577,6 +469,164 @@ export const BANK: Puzzle[] = [
     ],
     solution:
       "Connecting 5 cities needs at least 4 roads, and 4 that do it form a spanning tree. By Cayley's formula there are \\(5^{3} = 125\\) labelled trees on 5 vertices, out of \\(\\binom{10}{4} = 210\\) road sets, so \\(P = \\frac{25}{42} \\approx 0.595\\).",
+  },
+  {
+    id: "bank-max-two-dice",
+    title: "Higher Roll",
+    category: "Expected Value",
+    difficulty: "easy",
+    story: "You roll two fair six-sided dice and keep the higher number. What do you expect to keep?",
+    steps: [
+      {
+        question: "What is the probability the higher die is at most 3?",
+        answer: 1 / 4,
+        answerDisplay: "1/4",
+        tolerance: 0.01,
+        hint: "The max is at most 3 exactly when both dice are.",
+        explanation: "\\(\\left(\\frac{3}{6}\\right)^2 = \\frac{9}{36} = \\frac{1}{4}\\).",
+      },
+      {
+        question: "What is the probability the higher die is a 6?",
+        answer: 11 / 36,
+        answerDisplay: "11/36 ≈ 0.3056",
+        tolerance: 0.01,
+        hint: "Complement: neither die is a 6.",
+        explanation: "\\(1 - \\left(\\frac{5}{6}\\right)^2 = \\frac{11}{36}\\).",
+      },
+      {
+        question: "What is the expected value of the higher die?",
+        answer: 161 / 36,
+        answerDisplay: "161/36 ≈ 4.472",
+        tolerance: 0.01,
+        hint: "\\(P(\\max = k) = \\frac{k^2 - (k - 1)^2}{36} = \\frac{2k - 1}{36}\\).",
+        explanation: "\\(\\sum_{k=1}^{6} k \\cdot \\frac{2k - 1}{36} = \\frac{1 + 6 + 15 + 28 + 45 + 66}{36} = \\frac{161}{36}\\).",
+      },
+    ],
+    solution:
+      "\\(P(\\max \\le k) = \\left(\\frac{k}{6}\\right)^2\\), so \\(P(\\max = k) = \\frac{2k - 1}{36}\\) and \\(\\mathbb{E}[\\max] = \\frac{161}{36} \\approx 4.47\\), nearly a full pip above a single die's 3.5. The lower die averages \\(7 - 4.47 \\approx 2.53\\), since the two add up to the sum.",
+  },
+  {
+    id: "bank-snap-stick",
+    title: "Snap the Stick",
+    category: "Expected Value",
+    difficulty: "medium",
+    story: "A 1-metre stick snaps at a uniformly random point. On average, how long are the two pieces, and how lopsided is the break?",
+    steps: [
+      {
+        question: "What is the expected length of the shorter piece?",
+        answer: 1 / 4,
+        answerDisplay: "1/4",
+        tolerance: 0.01,
+        hint: "The shorter piece is uniform on \\([0, \\tfrac{1}{2}]\\).",
+        explanation: "Its mean is \\(\\frac{1}{4}\\) metre.",
+      },
+      {
+        question: "What is the expected length of the longer piece?",
+        answer: 3 / 4,
+        answerDisplay: "3/4",
+        tolerance: 0.01,
+        hint: "The two lengths add up to 1.",
+        explanation: "\\(1 - \\frac{1}{4} = \\frac{3}{4}\\).",
+      },
+      {
+        question: "What is the expected ratio of the shorter piece to the longer one? (4 decimals)",
+        answer: 2 * Math.LN2 - 1,
+        answerDisplay: "2 ln 2 − 1 ≈ 0.3863",
+        tolerance: 0.005,
+        hint: "Not \\(\\frac{1/4}{3/4}\\): average the ratio itself. With \\(S \\sim U(0, \\tfrac{1}{2})\\), compute \\(2\\int_0^{1/2} \\frac{s}{1 - s} \\, ds\\).",
+        explanation: "\\(2\\left[-s - \\ln(1 - s)\\right]_0^{1/2} = 2\\left(\\ln 2 - \\tfrac{1}{2}\\right) = 2\\ln 2 - 1 \\approx 0.3863\\).",
+      },
+    ],
+    solution:
+      "The shorter piece \\(S\\) is uniform on \\([0, \\tfrac{1}{2}]\\), so the pieces average \\(\\frac{1}{4}\\) and \\(\\frac{3}{4}\\). But \\(\\mathbb{E}\\left[\\frac{S}{1 - S}\\right] = 2\\ln 2 - 1 \\approx 0.386\\), not \\(\\frac{1}{3}\\): the expectation of a ratio isn't the ratio of expectations.",
+  },
+  {
+    id: "bank-ants-stick",
+    title: "Ants on a Stick",
+    category: "Expected Value",
+    difficulty: "hard",
+    story:
+      "Ten ants are placed at independent uniformly random points on a 1-metre stick, each facing left or right at random. They all walk at 1 metre per minute. When two ants meet, both instantly turn around. An ant falls off when it reaches an end. On average, how long until the stick is empty?",
+    steps: [
+      {
+        question: "A single ant sits 0.3 m from the left end, facing right. How many minutes until it falls off?",
+        answer: 0.7,
+        answerDisplay: "0.7",
+        tolerance: 0.01,
+        hint: "It walks to the right end.",
+        explanation: "\\(1 - 0.3 = 0.7\\) metres at 1 m/min.",
+      },
+      {
+        question: "Collisions only swap which ant is which: the set of positions moves as if the ants walked through each other. For one 'ghost' ant at a random spot and direction, what is the expected time to fall off?",
+        answer: 1 / 2,
+        answerDisplay: "1/2",
+        tolerance: 0.01,
+        hint: "Its distance to the end it's facing is uniform on \\([0, 1]\\).",
+        explanation: "\\(\\mathbb{E}[U] = \\frac{1}{2}\\) minute.",
+      },
+      {
+        question: "What is the probability the stick still has an ant on it after 0.9 minutes? (4 decimals)",
+        answer: 1 - 0.9 ** 10,
+        answerDisplay: "0.6513",
+        tolerance: 0.005,
+        hint: "The stick is empty by time \\(t\\) exactly when all ten ghosts have fallen off by then.",
+        explanation: "\\(1 - 0.9^{10} \\approx 0.6513\\).",
+      },
+      {
+        question: "What is the expected time until the stick is empty?",
+        answer: 10 / 11,
+        answerDisplay: "10/11 ≈ 0.9091",
+        tolerance: 0.01,
+        hint: "It's the maximum of ten independent uniform times.",
+        explanation: "\\(\\mathbb{E}[\\max(U_1, \\ldots, U_{10})] = \\frac{10}{11}\\) minute.",
+      },
+    ],
+    solution:
+      "Two ants bouncing off each other look exactly like two ants walking through each other with their labels swapped. So the stick empties when the last ghost ant falls off, and each ghost's time is its distance to the end it faces, uniform on \\([0, 1]\\). The expected maximum of ten uniforms is \\(\\frac{10}{11} \\approx 0.909\\) minute.",
+  },
+  {
+    id: "bank-even-rolls",
+    title: "Only Even Rolls",
+    category: "Expected Value",
+    difficulty: "expert",
+    story:
+      "You roll a fair die until you get a 6. Given that every roll you made was even, what is the expected number of rolls?",
+    steps: [
+      {
+        question: "Without any condition, what is the expected number of rolls until a 6?",
+        answer: 6,
+        answerDisplay: "6",
+        tolerance: 0,
+        hint: "A geometric wait with \\(p = \\frac{1}{6}\\).",
+        explanation: "\\(\\frac{1}{p} = 6\\).",
+      },
+      {
+        question: "What is the probability that every roll, up to and including the 6, is even?",
+        answer: 1 / 4,
+        answerDisplay: "1/4",
+        tolerance: 0.01,
+        hint: "Taking \\(n\\) rolls with all of them even means \\(n - 1\\) rolls of 2 or 4, then a 6.",
+        explanation: "\\(\\sum_{n \\ge 1} \\left(\\frac{2}{6}\\right)^{n-1} \\frac{1}{6} = \\frac{1/6}{1 - 1/3} = \\frac{1}{4}\\).",
+      },
+      {
+        question: "Given every roll was even, what is the probability the very first roll was the 6?",
+        answer: 2 / 3,
+        answerDisplay: "2/3",
+        tolerance: 0.01,
+        hint: "Divide \\(P(\\text{first roll is } 6)\\) by step 2.",
+        explanation: "\\(\\frac{1/6}{1/4} = \\frac{2}{3}\\).",
+      },
+      {
+        question: "Given every roll was even, what is the expected number of rolls?",
+        answer: 3 / 2,
+        answerDisplay: "3/2",
+        tolerance: 0.01,
+        hint: "Conditioned, \\(P(N = n) \\propto (1/3)^{n-1}\\): another geometric distribution.",
+        explanation: "\\(P(N = n \\mid \\text{all even}) = \\frac{2}{3} \\left(\\frac{1}{3}\\right)^{n-1}\\), geometric with \\(p = \\frac{2}{3}\\), mean \\(\\frac{3}{2}\\).",
+      },
+    ],
+    solution:
+      "The tempting answer is 3 (\"just ignore the odd rolls, so it's a three-sided die\"), but that answers a different question. Conditioning on no odd rolls throws away every long sequence, since long runs are likely to contain an odd number. What's left is geometric with success probability \\(\\frac{2}{3}\\), so \\(\\mathbb{E}[N \\mid \\text{all even}] = \\frac{3}{2}\\).",
   },
 ];
 
