@@ -245,6 +245,50 @@ code {
   border-color: var(--c);
 }
 
+.diff:disabled:not(.on) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.diff:disabled:not(.on):hover {
+  border-color: var(--border);
+}
+
+/* Practice topics: a quieter row under the difficulties. */
+.topics {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+}
+
+.topic {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+}
+
+.topic:not(.on):hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.topic.on {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+.topic:disabled:not(.on) {
+  cursor: default;
+}
+
 /* ───────── cards ───────── */
 
 .card {
@@ -3337,6 +3381,7 @@ main.leaving {
 .logo-tile,
 .modes,
 .tracks,
+.topics,
 .chain,
 .row-step,
 .row-dir,

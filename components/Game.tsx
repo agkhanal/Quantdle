@@ -4,15 +4,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { evaluate, fmt } from "@/lib/math";
 import { loadJSON, loadStats, recordResult, saveJSON, type Stats } from "@/lib/stats";
 import { dailyNumber } from "@/lib/bank";
+import { levelsFor, nearestLevel } from "@/lib/generators";
 import {
   DIFFICULTIES,
   MAX_GUESSES,
+  TOPICS,
   type Award,
   type Difficulty,
   type GuessResponse,
   type Profile,
   type PuzzleResponse,
   type RevealResponse,
+  type Topic,
   type Verdict,
 } from "@/lib/types";
 import Logo from "./Logo";
@@ -78,6 +81,7 @@ export default function Game() {
   const [tracks, setTracks] = useState<Record<Mode, Track>>({ daily: "puzzle", practice: "puzzle" });
   const [today, setToday] = useState<number | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [topic, setTopic] = useState<Topic | null>(null); // practice puzzle topic; null = a mix of everything
   const [data, setData] = useState<PuzzleResponse | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [errorMsg, setErrorMsg] = useState("");
@@ -111,6 +115,7 @@ export default function Game() {
   const appRef = useRef<HTMLDivElement>(null);
   const loadedKey = useRef("");
   const track = tracks[mode];
+  const topicLevels = useMemo(() => levelsFor(topic), [topic]);
 
   const step = solved.length; // current step index
   const totalSteps = data?.puzzle.steps.length ?? 0;
@@ -122,9 +127,9 @@ export default function Game() {
 
   // ───────────── loading puzzles ─────────────
 
-  const load = useCallback(async (m: Mode, d: Difficulty, exclude?: string) => {
+  const load = useCallback(async (m: Mode, d: Difficulty, t: Topic | null, exclude?: string) => {
     const seq = ++loadSeq.current;
-    loadedKey.current = puzzleKey(m, d);
+    loadedKey.current = puzzleKey(m, d, t);
     setStatus("loading");
     setData(null);
     setRows([]);
@@ -136,7 +141,7 @@ export default function Game() {
     setReasoning("");
     setQuip(Math.floor(Math.random() * LOADING_QUIPS.length));
     try {
-      const qs = new URLSearchParams({ mode: m, difficulty: d, ...(exclude ? { exclude } : {}) });
+      const qs = new URLSearchParams({ mode: m, difficulty: d, ...(t ? { topic: t } : {}), ...(exclude ? { exclude } : {}) });
       const res = await fetch(`/api/puzzle?${qs}`);
       if (!res.ok) throw new Error(`Server said ${res.status}`);
       const body = (await res.json()) as PuzzleResponse;
@@ -185,7 +190,7 @@ export default function Game() {
       setModal("account");
       window.history.replaceState(null, "", window.location.pathname);
     }
-    load("daily", "medium");
+    load("daily", "medium", null);
     if (!localStorage.getItem("quantdle-seen-tutorial")) setTutorial("gate");
   }, [load]);
 
@@ -245,7 +250,7 @@ export default function Game() {
 
   /** Load the puzzle for a tab unless it's already the one on screen. */
   function ensurePuzzle(m: Mode, d: Difficulty) {
-    if (loadedKey.current !== puzzleKey(m, d) || status === "error") load(m, d);
+    if (loadedKey.current !== puzzleKey(m, d, topic) || status === "error") load(m, d, topic);
   }
 
   /** Fade the current content out, then make the change (the new content fades in). */
@@ -280,7 +285,12 @@ export default function Game() {
     swap(() => {
       setMode(m);
       setTracks((ts) => ({ ...ts, [m]: t }));
-      if (t === "puzzle") ensurePuzzle(m, difficulty);
+      if (t === "puzzle") {
+        // Market practice allows every level; snap back to one that has puzzles on the topic.
+        const d = m === "practice" ? nearestLevel(difficulty, topic) : difficulty;
+        setDifficulty(d);
+        ensurePuzzle(m, d);
+      }
     });
   }
 
@@ -292,7 +302,18 @@ export default function Game() {
     if (d === difficulty) return;
     swap(() => {
       setDifficulty(d);
-      if (track === "puzzle") load("practice", d);
+      if (track === "puzzle") load("practice", d, topic);
+    });
+  }
+
+  /** Practice one topic (or null for a mix). Moves to the nearest level that has puzzles on it. */
+  function pickTopic(t: Topic | null) {
+    if (t === topic) return;
+    swap(() => {
+      const d = nearestLevel(difficulty, t);
+      setTopic(t);
+      setDifficulty(d);
+      load("practice", d, t);
     });
   }
 
@@ -503,9 +524,32 @@ export default function Game() {
                 key={d}
                 className={`diff diff-${d} ${difficulty === d ? "on" : ""}`}
                 onClick={() => pickDifficulty(d)}
-                disabled={track === "puzzle" && status === "loading"}
+                disabled={track === "puzzle" && (status === "loading" || !topicLevels.includes(d))}
+                title={track === "puzzle" && !topicLevels.includes(d) ? `No ${DIFF_LABEL[d].toLowerCase()} ${topic} puzzles yet` : undefined}
               >
                 {DIFF_LABEL[d]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`diffs-wrap${mode === "practice" && track === "puzzle" ? " open" : ""}`}
+        aria-hidden={mode !== "practice" || track !== "puzzle"}
+        inert={mode !== "practice" || track !== "puzzle"}
+      >
+        <div className="diffs-clip">
+          <div className="topics" role="group" aria-label="Topic">
+            {[null, ...TOPICS].map((t) => (
+              <button
+                key={t ?? "mixed"}
+                className={`topic ${topic === t ? "on" : ""}`}
+                aria-pressed={topic === t}
+                onClick={() => pickTopic(t)}
+                disabled={status === "loading"}
+              >
+                {t ?? "Mixed"}
               </button>
             ))}
           </div>
@@ -530,7 +574,7 @@ export default function Game() {
         {status === "error" && (
           <div className="card center">
             <p className="muted">Couldn&apos;t load a puzzle: {errorMsg}</p>
-            <button className="btn" onClick={() => load(mode, difficulty)}>
+            <button className="btn" onClick={() => load(mode, difficulty, topic)}>
               Try again
             </button>
           </div>
@@ -643,7 +687,7 @@ export default function Game() {
                     💡 Hint <span className="muted">(costs a guess)</span>
                   </button>
                   {mode === "practice" && (
-                    <button className="link" onClick={() => load("practice", difficulty, data.puzzle.id)} type="button">
+                    <button className="link" onClick={() => load("practice", difficulty, topic, data.puzzle.id)} type="button">
                       Skip →
                     </button>
                   )}
@@ -666,7 +710,7 @@ export default function Game() {
                   See solution
                 </button>
                 {mode === "practice" ? (
-                  <button className="btn primary" onClick={() => load("practice", difficulty, data.puzzle.id)}>
+                  <button className="btn primary" onClick={() => load("practice", difficulty, topic, data.puzzle.id)}>
                     New puzzle →
                   </button>
                 ) : (
@@ -826,7 +870,7 @@ function AwardCard({ award }: { award: Award }) {
   );
 }
 
-const puzzleKey = (m: Mode, d: Difficulty) => (m === "daily" ? "daily" : `practice:${d}`);
+const puzzleKey = (m: Mode, d: Difficulty, t: Topic | null) => (m === "daily" ? "daily" : `practice:${d}:${t ?? "mixed"}`);
 
 function Loading({ quip }: { quip: string; }) {
   return (
