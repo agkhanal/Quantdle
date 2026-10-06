@@ -921,6 +921,10 @@ code {
   min-height: 160px;
 }
 
+.tut-demo-board {
+  margin: 14px 0;
+}
+
 .tut-copy p {
   margin: 0 0 10px;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { Verdict } from "@/lib/types";
 import Modal from "./Modal";
 
 const SLIDE_TITLES = ["Welcome", "How guessing works", "Try it yourself", "Points example", "Market making", "You're set!"];
@@ -49,7 +50,7 @@ export default function Tutorial({ startAtGate, onDone }: TutorialProps) {
 
         <div className="tut-slide">
           {slide === 0 && <WelcomeSlide />}
-          {slide === 1 && <PlaceholderSlide text="A demo of 🟩/🟨/⬛ and hints is coming in the next update." />}
+          {slide === 1 && <GuessSlide />}
           {slide === 2 && <PlaceholderSlide text="A sample puzzle you can actually solve is coming in the next update." />}
           {slide === 3 && <PlaceholderSlide text="A worked points example is coming in the next update." />}
           {slide === 4 && <PlaceholderSlide text="A market-making demo is coming in the next update." />}
@@ -92,6 +93,73 @@ function WelcomeSlide() {
 
 function PlaceholderSlide({ text }: { text: string }) {
   return <p className="muted">{text}</p>;
+}
+
+type DemoItem =
+  | { kind: "guess"; text: string; verdict: Verdict; direction: "higher" | "lower" | null }
+  | { kind: "hint"; text: string };
+
+/** A scripted guess-by-guess sequence for one step: off track, closer, then right. */
+const DEMO_ITEMS: DemoItem[] = [
+  { kind: "guess", text: "1/3", verdict: "grey", direction: "lower" },
+  { kind: "guess", text: "1/9", verdict: "yellow", direction: "higher" },
+  { kind: "hint", text: "💡 Count how many of the 36 outcomes sum to 7." },
+  { kind: "guess", text: "1/6", verdict: "green", direction: null },
+];
+const DEMO_STEP_DELAY_MS = 700;
+
+function GuessSlide() {
+  const [revealed, setRevealed] = useState(0);
+
+  const play = useCallback(() => {
+    setRevealed(0);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setRevealed(DEMO_ITEMS.length);
+      return;
+    }
+    DEMO_ITEMS.forEach((_, i) => {
+      setTimeout(() => setRevealed((r) => Math.max(r, i + 1)), (i + 1) * DEMO_STEP_DELAY_MS);
+    });
+  }, []);
+
+  useEffect(() => play(), [play]);
+
+  return (
+    <div className="tut-copy">
+      <p>
+        Every puzzle is split into <b>steps</b> that build to a final answer. Solve a step to unlock the next — you
+        get <b>6 guesses</b> for the whole puzzle.
+      </p>
+      <div className="board tut-demo-board">
+        {DEMO_ITEMS.map((item, i) => {
+          if (i >= revealed) return <div key={i} className="row empty" />;
+          if (item.kind === "hint")
+            return (
+              <div key={i} className="row hint-row">
+                <span className="row-step">S1</span>
+                <span className="row-text">{item.text}</span>
+              </div>
+            );
+          return (
+            <div key={i} className={`row flip ${item.verdict}`}>
+              <span className="row-step">S1</span>
+              <span className="row-text">{item.text}</span>
+              <span className="row-dir">
+                {item.verdict === "green" ? "✓" : item.direction === "higher" ? "↑" : "↓"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="muted small">
+        ⬛ off track, 🟨 close (or the AI judge likes your approach — the arrow says which way to go), 🟩 correct. A
+        💡 hint costs one guess.
+      </p>
+      <button className="link" onClick={play} type="button">
+        ▶ Replay demo
+      </button>
+    </div>
+  );
 }
 
 function DoneSlide() {
