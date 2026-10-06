@@ -1,6 +1,6 @@
 /** Expected Value puzzle templates, easiest first. */
 
-import { pick, int, die, flip, frac, texFrac, texFracApprox, num, choose, step, ind, type Rng, type Template } from "./kit";
+import { pick, int, die, flip, frac, texFrac, texFracApprox, num, choose, step, ind, shuffle, type Rng, type Template } from "./kit";
 
 const reroll: Template = {
   id: "reroll",
@@ -484,4 +484,189 @@ const allSixes: Template = {
   },
 };
 
-export const EXPECTED_VALUE: Template[] = [reroll, geomWait, adjacentPairs, patterns, distinctFaces, coupon, optimalStopping, records, allSixes];
+const coverCycle: Template = {
+  id: "cover-cycle",
+  difficulty: "expert",
+  topic: "Expected Value",
+  make(rng) {
+    const n = int(rng, 5, 12);
+    const k = int(rng, 2, n - 2);
+    const scene = pick(rng, [
+      { place: `${n} lily pads arranged in a ring`, mover: "A frog", move: "hops to one of its two neighbouring pads" },
+      { place: `${n} rooms arranged in a circle, each with doors to its two neighbours`, mover: "A robot vacuum", move: "rolls through a random door into a neighbouring room" },
+      { place: `${n} stalls around a circular market`, mover: "A shopper", move: "wanders to one of the two neighbouring stalls" },
+    ]);
+    const exitTime = (r: Rng) => {
+      // Visited arc is 1..k and you stand at its end 1; unvisited at 0 and k + 1.
+      let x = 1;
+      let t = 0;
+      while (x > 0 && x < k + 1) {
+        x += r() < 0.5 ? 1 : -1;
+        t++;
+      }
+      return t;
+    };
+    const cover = (r: Rng) => {
+      const seen = new Set([0]);
+      let x = 0;
+      let t = 0;
+      let last = 0;
+      while (seen.size < n) {
+        x = (x + (r() < 0.5 ? 1 : n - 1)) % n;
+        t++;
+        if (!seen.has(x)) {
+          seen.add(x);
+          last = x;
+        }
+      }
+      return { t, last };
+    };
+    return {
+      title: pick(rng, ["Round the Ring", "Cover Time", "Last One Standing"]),
+      category: "Expected Value",
+      story: `There are ${scene.place}. ${scene.mover} starts at one of them and each step ${scene.move}, chosen at random. On average, how many steps until it has visited all ${n}? And which one is it likely to reach last?`,
+      steps: [
+        step(
+          `The visited spots always form an unbroken arc, and a new one is found at one of its ends. Once exactly ${k} have been visited and the walker has just arrived at an end of the arc, how many more steps on average until a new one?`,
+          k,
+          `${k}`,
+          `This is a walk on a line between two unvisited spots ${k + 1} apart, starting 1 from an edge. A fair walk from \\(i\\) between \\(0\\) and \\(m\\) exits after \\(i(m - i)\\) steps on average.`,
+          `\\(1 \\cdot (${k + 1} - 1) = ${k}\\).`,
+          { sim: exitTime },
+        ),
+        step(
+          `What is the expected number of steps to visit all ${n}?`,
+          (n * (n - 1)) / 2,
+          `${(n * (n - 1)) / 2}`,
+          `Add step 1's answer over each stage, from 1 visited up to ${n - 1} visited.`,
+          `\\(1 + 2 + \\cdots + ${n - 1} = \\frac{${n} \\cdot ${n - 1}}{2} = ${(n * (n - 1)) / 2}\\).`,
+          { sim: (r) => cover(r).t },
+        ),
+        step(
+          "What is the probability the last one visited is the immediate neighbour of the start (say, clockwise)?",
+          1 / (n - 1),
+          frac(1, n - 1),
+          "For a spot to be last, the walker must reach both of its neighbours first. Think about which neighbour is reached first, then a gambler's-ruin race around the rest of the ring.",
+          `Every spot other than the start is equally likely to be last: \\(\\frac{1}{${n - 1}}\\), even the one right next door.`,
+          { sim: (r) => ind(cover(r).last === 1) },
+        ),
+      ],
+      solution: `The visited set is an arc; with \\(j\\) visited, finding a new spot is a gambler's-ruin exit from an interval of length \\(j + 1\\) starting next to an edge, taking \\(j\\) steps on average. So the cover time is \\(\\sum_{j=1}^{${n - 1}} j = ${(n * (n - 1)) / 2}\\). Surprisingly, every other spot is last with the same probability \\(\\frac{1}{${n - 1}}\\).`,
+    };
+  },
+};
+
+const hypercubeWalk: Template = {
+  id: "hypercube-walk",
+  difficulty: "expert",
+  topic: "Expected Value",
+  make(rng) {
+    const d = int(rng, 3, 6);
+    // T[i] = expected seconds to go from i switches on to i + 1 on.
+    const T: number[] = [];
+    for (let i = 0; i < d; i++) T.push(i === 0 ? 1 : (d + i * T[i - 1]) / (d - i));
+    const E = T.reduce((a, b) => a + b, 0);
+    const walk = (r: Rng, stop: (on: number, t: number) => boolean, start = 0) => {
+      let on = start;
+      let t = 0;
+      do {
+        on += r() * d < on ? -1 : 1; // a random switch: it's on with probability on/d
+        t++;
+      } while (!stop(on, t));
+      return t;
+    };
+    const what = pick(rng, [
+      [`${d} light switches`, "a switch", "all on"],
+      [`${d} coins on a table, all tails up`, "a coin", "all heads"],
+    ] as const);
+    const coins = what[0].includes("coins");
+    return {
+      title: pick(rng, ["Flip Them All", "Random Toggles", "Corner to Corner"]),
+      category: "Expected Value",
+      story: `There are ${what[0]}${coins ? "" : ", all off"}. Every second, someone picks ${what[1]} uniformly at random and ${coins ? "turns it over" : "toggles it"}. On average, how long until they're ${what[2]}? (This is a random walk on the corners of a ${d}-dimensional cube, from one corner to the opposite one.)`,
+      steps: [
+        step(
+          `With exactly 1 ${coins ? "head" : "switch on"}, what is the expected time until there are 2?`,
+          T[1],
+          frac(d + 1, d - 1),
+          `Let \\(T_i\\) be the time to go from \\(i\\) to \\(i + 1\\). From \\(i\\), you step down with probability \\(\\frac{i}{d}\\) and then need \\(T_{i-1} + T_i\\) more.`,
+          `\\(T_1 = 1 + \\frac{1}{${d}}(T_0 + T_1)\\) with \\(T_0 = 1\\), so \\(T_1 = ${texFrac(d + 1, d - 1)}\\).`,
+          { sim: (r) => walk(r, (on) => on === 2, 1) },
+        ),
+        step(
+          `What is the expected time until all ${d} are ${coins ? "heads" : "on"}? (4 significant figures)`,
+          E,
+          num(E),
+          `Use \\(T_i = \\frac{${d} + i \\, T_{i-1}}{${d} - i}\\) for each stage and add them up.`,
+          `\\(${T.map((x) => num(x)).join(" + ")} \\approx ${num(E)}\\).`,
+          { sim: (r) => walk(r, (on) => on === d) },
+        ),
+        step(
+          `Starting from all ${coins ? "tails" : "off"}, what is the expected time until it's all ${coins ? "tails" : "off"} again for the first time?`,
+          2 ** d,
+          `${2 ** d}`,
+          "The walk spends equal time at every corner in the long run. Expected return time is 1 over the long-run fraction of time spent there.",
+          `Each of the \\(2^{${d}}\\) corners is equally likely in the long run, so the return time is \\(2^{${d}} = ${2 ** d}\\).`,
+          { sim: (r) => walk(r, (on) => on === 0), trials: 40_000 },
+        ),
+      ],
+      solution: `Only the number switched on matters, a birth-death chain. Stage times satisfy \\(T_i = \\frac{${d} + i T_{i-1}}{${d} - i}\\), giving \\(\\approx ${num(E)}\\) seconds to reach the far corner. The stationary distribution is uniform over the \\(2^{${d}}\\) corners, so by Kac's lemma the walk returns to its start after \\(2^{${d}}\\) steps on average.`,
+    };
+  },
+};
+
+const firstAce: Template = {
+  id: "first-ace",
+  difficulty: "expert",
+  topic: "Expected Value",
+  make(rng) {
+    const s = pick(rng, [
+      { N: 52, a: 4, deck: "a well-shuffled 52-card deck", special: "ace", specials: "aces" },
+      { N: 52, a: 12, deck: "a well-shuffled 52-card deck", special: "face card (J, Q, K)", specials: "face cards" },
+      { N: 52, a: 13, deck: "a well-shuffled 52-card deck", special: "heart", specials: "hearts" },
+      { N: 30, a: 5, deck: "a shuffled box of 30 bulbs", special: "dud bulb", specials: "duds" },
+      { N: 40, a: 3, deck: "a shuffled stack of 40 scratch cards", special: "winning card", specials: "winners" },
+    ]);
+    const { N, a } = s;
+    // Items 0..a-1 are the specials; item a is one particular ordinary item.
+    const deal = (r: Rng) => {
+      const xs = shuffle(r, Array.from({ length: N }, (_, i) => i));
+      const first = xs.findIndex((x) => x < a);
+      return { first: first + 1, last: xs.findLastIndex((x) => x < a) + 1, beforeAll: xs.indexOf(a) < first };
+    };
+    return {
+      title: pick(rng, ["First Ace", "Turn Them Over", "How Deep"]),
+      category: "Expected Value",
+      story: `You turn over ${s.deck} one item at a time. There are ${a} ${s.specials} among the ${N}. On average, at which position does the first ${s.special} appear? And the last?`,
+      steps: [
+        step(
+          `What is the probability that one particular non-${s.special} comes before all ${a} ${s.specials}?`,
+          1 / (a + 1),
+          frac(1, a + 1),
+          `Look only at that item and the ${a} ${s.specials}: their relative order is uniformly random.`,
+          `It must be first among ${a + 1} items: \\(\\frac{1}{${a + 1}}\\).`,
+          { sim: (r) => ind(deal(r).beforeAll) },
+        ),
+        step(
+          `What is the expected position of the first ${s.special}?`,
+          (N + 1) / (a + 1),
+          frac(N + 1, a + 1),
+          `Position = 1 + the number of non-${s.specials} before it. Use step 1 and linearity.`,
+          `\\(1 + \\frac{${N - a}}{${a + 1}} = ${texFrac(N + 1, a + 1)}\\).`,
+          { sim: (r) => deal(r).first },
+        ),
+        step(
+          `What is the expected position of the last ${s.special}?`,
+          (a * (N + 1)) / (a + 1),
+          frac(a * (N + 1), a + 1),
+          "By symmetry, the gap after the last special is the same size on average as the gap before the first.",
+          `\\(${N} - \\frac{${N - a}}{${a + 1}} = ${texFrac(a * (N + 1), a + 1)}\\).`,
+          { sim: (r) => deal(r).last },
+        ),
+      ],
+      solution: `The ${a} ${s.specials} split the other ${N - a} items into ${a + 1} gaps that are equal in expectation, \\(\\frac{${N - a}}{${a + 1}}\\) each. So the first ${s.special} is expected at \\(${texFracApprox(N + 1, a + 1)}\\) and the last at \\(${texFracApprox(a * (N + 1), a + 1)}\\).`,
+    };
+  },
+};
+
+export const EXPECTED_VALUE: Template[] = [reroll, geomWait, adjacentPairs, patterns, distinctFaces, coupon, optimalStopping, records, allSixes, coverCycle, hypercubeWalk, firstAce];
