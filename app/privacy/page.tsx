@@ -56,6 +56,14 @@ export default function Privacy() {
           you and the site administrators can see a report. Reports are kept so fixes and rewards can be tracked.
         </li>
         <li>
+          <b>Analytics and session replays.</b> We use PostHog to understand how the site is used. It records the pages you
+          visit, your browser, device type and approximate location (derived from your IP address), and game events such
+          as starting a puzzle, whether each guess was right, hints, skips and results. It also records{" "}
+          <b>session replays</b>: a reconstruction of what happened on the page, including clicks, scrolling and what you
+          type into the game&apos;s boxes, so we can see where players get stuck. Password fields are always masked and
+          never recorded. If you&apos;re signed in, this is linked to your username. Only site administrators can view it.
+        </li>
+        <li>
           <b>IP address.</b> Your IP address is used briefly to limit sign-in attempts and prevent abuse. Our hosting
           provider may also keep standard server logs.
         </li>
@@ -65,7 +73,8 @@ export default function Privacy() {
       <ul>
         <li>
           <b>Cookies.</b> A signed, HTTP-only session cookie keeps you signed in for up to 30 days. Short-lived cookies
-          (about 10–15 minutes) are used during Google sign-in. We do not use advertising or tracking cookies.
+          (about 10–15 minutes) are used during Google sign-in. PostHog sets a cookie and local storage entry with a random
+          ID so visits from the same browser can be grouped together for analytics. We do not use advertising cookies.
         </li>
         <li>
           <b>Local storage.</b> Your stats, streaks and preferences are kept in your browser and never sent to us.
@@ -85,12 +94,13 @@ export default function Privacy() {
         <li>Google handles Google sign-in, under its own privacy policy. Our server also fetches school logos from
           Google&apos;s favicon service; your browser never contacts it for this.</li>
         <li>Anthropic processes AI-judge requests, when that feature is enabled.</li>
+        <li>PostHog (hosted in the US) stores analytics events and session replays, under its own privacy policy.</li>
       </ul>
 
       <h2>Your choices</h2>
       <p>
         You can sign out at any time, remove your photo, school or LinkedIn link from your profile whenever you like,
-        clear the site&apos;s cookies and local storage in your browser, or revoke Quantdle&apos;s access from your Google
+        clear the site&apos;s cookies and local storage in your browser, block analytics with a content blocker, or revoke Quantdle&apos;s access from your Google
         Account&apos;s security settings. To have your account and leaderboard
         entry deleted, open an issue on the project&apos;s{" "}
         <a href="https://github.com/agkhanal/Quantdle/issues">GitHub page</a> and include your username. We may ask you

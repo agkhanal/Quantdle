@@ -70,6 +70,28 @@ Passwords are hashed with scrypt; sessions are signed cookies. Profile pictures 
 
 Everything is stored in Upstash Redis. Without it, an in-memory store is used, which is fine locally but resets on restart and doesn't work reliably on Vercel.
 
+## Analytics
+
+With `NEXT_PUBLIC_POSTHOG_KEY` set, the site reports to [PostHog](https://posthog.com): pageviews, live visitors, session replays and game events. Signed-in players are identified by username (with their points and admin flag), so you can look someone up and watch their games. Everything is viewed in the PostHog dashboard, not in the app.
+
+Events go through `/ingest` on the site's own domain (rewritten to PostHog in `next.config.ts`) so ad blockers don't drop them. Replays show what players type into the game, but password fields are always masked.
+
+| Event | Properties |
+| --- | --- |
+| `puzzle_started` | `mode`, `topic`, `difficulty`, `puzzle_id`, `daily_number` |
+| `puzzle_guess` | `mode`, `step`, `verdict`, `judged_by`, `attempt`, `showed_work` (never the answer itself) |
+| `puzzle_hint` | `mode`, `step` |
+| `puzzle_skipped` | `topic`, `difficulty`, `puzzle_id`, `attempts` |
+| `puzzle_completed` | `mode`, `won`, `topic`, `difficulty`, `puzzle_id`, `guesses`, `hints`, `steps_solved` |
+| `market_started` | `mode`, `difficulty`, `contract`, `daily_number`, `resumed_at_round` |
+| `market_round` | `mode`, `difficulty`, `round`, `verdict` |
+| `market_skipped` | `difficulty`, `contract`, `round` |
+| `market_completed` | `mode`, `difficulty`, `contract`, `won`, `pnl`, `rounds` |
+| `tab_switched` | `mode`, `track` |
+| `result_shared` | `game`, `mode` |
+
+Session replay itself is switched on in the PostHog project settings (Session replay → Record user sessions). The helpers live in `lib/analytics.ts` and the setup in `app/providers.tsx`.
+
 ## How the judging works
 
 1. **Numbers first.** Every step has a single numeric answer. The server parses your expression and checks it against the answer and tolerance. A match is green with no AI call.
@@ -92,6 +114,7 @@ npm run dev                  # http://localhost:3000
 | `QUANTDLE_ADMIN_SECRET` | Optional. Turns on `POST /api/admin/points` (`{ "username", "points", "reason" }` with `Authorization: Bearer <secret>`) so an owner can add or remove points; every adjustment is logged in the database. Off when unset. |
 | `ANTHROPIC_API_KEY` | Optional. Turns on the AI judge. |
 | `QUANTDLE_AI_PUZZLES` | Optional. `1` makes Claude write Practice puzzles instead of the generator. |
+| `NEXT_PUBLIC_POSTHOG_KEY` | Optional. Turns on PostHog analytics (see [Analytics](#analytics)). Off when unset. |
 
 ## Project layout
 
