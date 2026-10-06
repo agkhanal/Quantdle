@@ -399,4 +399,110 @@ const montyHall: Template = {
   },
 };
 
-export const PROBABILITY: Template[] = [diceSum, atLeastOne, cardsBoth, duel, birthday, montyHall, orderStats, uniformSum];
+const brokenStick: Template = {
+  id: "broken-stick",
+  difficulty: "hard",
+  topic: "Probability",
+  make(rng) {
+    const n = pick(rng, [3, 3, 4, 5, 6]);
+    const thing = pick(rng, ["stick", "strand of dry spaghetti", "metre rule"]);
+    const shape = n === 3 ? "a triangle" : n === 4 ? "a quadrilateral" : n === 5 ? "a pentagon" : "a hexagon";
+    const oneLong = 1 / 2 ** (n - 1);
+    const pieces = (r: Rng) => {
+      const cuts = Array.from({ length: n - 1 }, () => r()).sort((a, b) => a - b);
+      return [...cuts, 1].map((c, i) => c - (i ? cuts[i - 1] : 0));
+    };
+    return {
+      title: pick(rng, ["Snap Into Shape", "Broken Stick", "Pieces Fit"]),
+      category: "Probability",
+      story: `A ${thing} of length 1 is snapped at ${n - 1} points chosen independently and uniformly at random, giving ${n} pieces. What is the probability the pieces can be put together to form ${shape}?`,
+      steps: [
+        step(
+          "Pieces form a polygon exactly when no piece is at least half the stick. What is the probability the leftmost piece is longer than \\(\\tfrac{1}{2}\\)?",
+          oneLong,
+          frac(1, 2 ** (n - 1)),
+          "The leftmost piece is long exactly when every break point lands in the right half.",
+          `All ${n - 1} points beyond \\(\\tfrac{1}{2}\\): \\(\\left(\\tfrac{1}{2}\\right)^{${n - 1}} = ${texFrac(1, 2 ** (n - 1))}\\).`,
+          { sim: (r) => ind(pieces(r)[0] > 0.5) },
+        ),
+        step(
+          "What is the probability that some piece is longer than \\(\\tfrac{1}{2}\\)?",
+          n * oneLong,
+          frac(n, 2 ** (n - 1)),
+          "By symmetry every piece has the same chance, and two pieces can't both be over half.",
+          `The events are disjoint, so \\(${n} \\cdot ${texFrac(1, 2 ** (n - 1))} = ${texFrac(n, 2 ** (n - 1))}\\).`,
+          { sim: (r) => ind(pieces(r).some((x) => x > 0.5)) },
+        ),
+        step(
+          `What is the probability the pieces form ${shape}?`,
+          1 - n * oneLong,
+          frac(2 ** (n - 1) - n, 2 ** (n - 1)),
+          "Complement of step 2.",
+          `\\(1 - ${texFrac(n, 2 ** (n - 1))} = ${texFrac(2 ** (n - 1) - n, 2 ** (n - 1))}\\).`,
+          { sim: (r) => ind(pieces(r).every((x) => x < 0.5)) },
+        ),
+      ],
+      solution: `A polygon needs every side shorter than the sum of the others, i.e. every piece under \\(\\tfrac{1}{2}\\). The ${n} spacings are exchangeable, each exceeds \\(\\tfrac{1}{2}\\) with probability \\(2^{-${n - 1}}\\), and at most one can, so \\(P = 1 - \\frac{${n}}{2^{${n - 1}}} = ${texFracApprox(2 ** (n - 1) - n, 2 ** (n - 1))}\\).`,
+    };
+  },
+};
+
+const buffon: Template = {
+  id: "buffon",
+  difficulty: "hard",
+  topic: "Probability",
+  make(rng) {
+    const [l, d] = pick(rng, [
+      [1, 2],
+      [1, 3],
+      [2, 3],
+      [2, 5],
+      [3, 4],
+      [3, 5],
+      [4, 5],
+    ] as const);
+    const scene = pick(rng, [
+      { thing: "needle", where: "a floor of parallel floorboards", gap: "boards" },
+      { thing: "matchstick", where: "a sheet of ruled paper", gap: "lines" },
+      { thing: "chopstick", where: "a striped tablecloth", gap: "stripe edges" },
+    ] as const);
+    const unit = l === 1 ? "unit" : "units";
+    const p = (2 * l) / (Math.PI * d);
+    // Position of the centre relative to the nearest line, and the angle to the lines.
+    const crosses = (r: Rng, theta: number) => r() * (d / 2) <= (l / 2) * Math.sin(theta);
+    return {
+      title: pick(rng, ["Buffon's Needle", "Crossing Lines", "Drop and Count"]),
+      category: "Probability",
+      story: `A ${scene.thing} of length ${l} ${unit} is dropped at random onto ${scene.where}, with ${scene.gap} ${d} units apart. What is the probability it crosses a line?`,
+      steps: [
+        step(
+          "Suppose it happened to land perpendicular to the lines. What is the probability it crosses one?",
+          l / d,
+          frac(l, d),
+          "Its centre is uniform between two lines; when does the needle reach a line?",
+          `It crosses when its centre is within \\(${texFrac(l, 2)}\\) of a line: \\(\\frac{${l}}{${d}}\\) of the gap.`,
+          { sim: (r) => ind(crosses(r, Math.PI / 2)) },
+        ),
+        step(
+          "At a random angle \\(\\theta\\), the needle's reach across the lines is \\(${l}\\sin\\theta\\). What is the average of \\(\\sin\\theta\\) over a uniform angle in \\([0, \\pi]\\)? (4 decimals)",
+          2 / Math.PI,
+          num(2 / Math.PI),
+          "\\(\\frac{1}{\\pi} \\int_0^\\pi \\sin\\theta \\, d\\theta\\).",
+          "\\(\\frac{2}{\\pi} \\approx 0.6366\\).",
+          { sim: (r) => Math.sin(Math.PI * r()) },
+        ),
+        step(
+          "What is the probability it crosses a line? (4 decimals)",
+          p,
+          num(p),
+          "Average step 1's logic over the angle: the effective length is shortened by step 2's factor.",
+          `\\(\\frac{${l}}{${d}} \\cdot \\frac{2}{\\pi} = \\frac{${2 * l}}{${d}\\pi} \\approx ${num(p)}\\).`,
+          { sim: (r) => ind(crosses(r, Math.PI * r())), trials: 60_000 },
+        ),
+      ],
+      solution: `With centre distance \\(x \\sim U(0, ${texFrac(d, 2)})\\) and angle \\(\\theta \\sim U(0, \\pi)\\), it crosses when \\(x \\le ${texFrac(l, 2)}\\sin\\theta\\). Integrating: \\(P = \\frac{2l}{\\pi d} = \\frac{${2 * l}}{${d}\\pi} \\approx ${num(p)}\\). Turned around, dropping many needles is a (slow) way to estimate \\(\\pi\\).`,
+    };
+  },
+};
+
+export const PROBABILITY: Template[] = [diceSum, atLeastOne, cardsBoth, duel, birthday, montyHall, orderStats, brokenStick, buffon, uniformSum];
