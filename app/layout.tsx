@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "katex/dist/katex.min.css";
 import "./globals.css";
+import { PHProvider } from "./providers";
 
 export const metadata: Metadata = {
   title: "Quantdle",
@@ -31,7 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%233f9a62'/><text x='16' y='23' font-family='monospace' font-weight='700' font-size='20' text-anchor='middle' fill='white'>Q</text></svg>"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <PHProvider>{children}</PHProvider>
+      </body>
     </html>
   );
 }
