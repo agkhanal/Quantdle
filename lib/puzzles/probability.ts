@@ -288,4 +288,115 @@ const uniformSum: Template = {
   },
 };
 
-export const PROBABILITY: Template[] = [diceSum, atLeastOne, cardsBoth, duel, orderStats, uniformSum];
+const birthday: Template = {
+  id: "birthday",
+  difficulty: "medium",
+  topic: "Probability",
+  make(rng) {
+    const setting = pick(rng, [
+      { d: 365, ns: [15, 20, 23, 25, 30, 35], who: "people are in a room", what: "share a birthday", unit: "birthdays (ignore Feb 29, all 365 days equally likely)" },
+      { d: 100, ns: [8, 10, 12, 15], who: "people each pick a whole number from 1 to 100 at random", what: "pick the same number", unit: "picks" },
+      { d: 52, ns: [5, 6, 7, 8, 10], who: "cards are drawn from a shuffled deck, with each card put back and the deck reshuffled before the next draw", what: "are the same card", unit: "draws" },
+    ] as const);
+    const { d } = setting;
+    const n = pick(rng, setting.ns);
+    const distinct = (k: number) => {
+      let p = 1;
+      for (let i = 0; i < k; i++) p *= (d - i) / d;
+      return p;
+    };
+    const allDiff = distinct(n);
+    let half = 1;
+    while (distinct(half) > 0.5) half++;
+    const sample = (r: Rng) => {
+      const seen = new Set<number>();
+      for (let i = 0; i < n; i++) seen.add(Math.floor(r() * d));
+      return seen.size === n;
+    };
+    return {
+      title: pick(rng, ["Shared Birthday", "Collision Course", "Same Again"]),
+      category: "Probability",
+      story: `${n} ${setting.who}. What is the probability that at least two of them ${setting.what}? And how big would the group need to be before that's more likely than not?`,
+      steps: [
+        step(
+          `What is the probability all ${n} ${setting.unit.split(" (")[0]} are different? (4 decimals)`,
+          allDiff,
+          num(allDiff),
+          `Go one at a time: the second must avoid 1 value, the third must avoid 2, and so on.`,
+          `\\(\\prod_{i=0}^{${n - 1}} \\frac{${d} - i}{${d}} \\approx ${num(allDiff)}\\).`,
+          { sim: (r) => ind(sample(r)) },
+        ),
+        step(
+          `What is the probability at least two ${setting.what}? (4 decimals)`,
+          1 - allDiff,
+          num(1 - allDiff),
+          "Complement of all different.",
+          `\\(1 - ${num(allDiff)} = ${num(1 - allDiff)}\\).`,
+          { sim: (r) => ind(!sample(r)) },
+        ),
+        step(
+          "What is the smallest group size for which a match is more likely than not?",
+          half,
+          `${half}`,
+          "Keep multiplying factors until the all-different probability drops below 1/2.",
+          `With ${half - 1} it's \\(${num(1 - distinct(half - 1))}\\); with ${half} it's \\(${num(1 - distinct(half))}\\).`,
+        ),
+      ],
+      solution: `\\(P(\\text{all different}) = \\prod_{i=0}^{n-1} \\left(1 - \\frac{i}{${d}}\\right) \\approx ${num(allDiff)}\\), so a match has probability \\(\\approx ${num(1 - allDiff)}\\). It crosses 50% at just ${half}: there are \\(\\binom{n}{2}\\) pairs, which grows like \\(n^2\\), so matches come far sooner than intuition says (roughly \\(\\sqrt{2 \\ln 2 \\cdot ${d}}\\)).`,
+    };
+  },
+};
+
+const montyHall: Template = {
+  id: "monty-hall",
+  difficulty: "medium",
+  topic: "Probability",
+  make(rng) {
+    const n = pick(rng, [3, 4, 5, 6, 8, 10]);
+    const k = int(rng, 1, n - 2);
+    const rest = n - 1 - k; // unopened doors other than yours
+    const stay = 1 / n;
+    const sw = (n - 1) / (n * rest);
+    const play = (r: Rng, switchDoor: boolean) => {
+      const car = Math.floor(r() * n);
+      // You pick door 0. The host opens k goat doors among the others, at random.
+      const goats = Array.from({ length: n - 1 }, (_, i) => i + 1).filter((x) => x !== car);
+      for (let i = goats.length - 1; i > 0; i--) {
+        const j = Math.floor(r() * (i + 1));
+        [goats[i], goats[j]] = [goats[j], goats[i]];
+      }
+      const opened = new Set(goats.slice(0, k));
+      const others = Array.from({ length: n - 1 }, (_, i) => i + 1).filter((x) => !opened.has(x));
+      const final = switchDoor ? others[Math.floor(r() * others.length)] : 0;
+      return ind(final === car);
+    };
+    return {
+      title: pick(rng, ["Let's Make a Deal", "Switch or Stay", "Door Number Two"]),
+      category: "Probability",
+      story: `A game show has ${n} doors: one hides a car, the rest hide goats. You pick a door. The host, who knows where the car is, opens ${k === 1 ? "one other door" : `${k} other doors`} that ${k === 1 ? "hides a goat" : "all hide goats"}. You may stay, or switch to ${rest === 1 ? "the one other closed door" : `one of the ${rest} other closed doors, chosen at random`}. Should you switch?`,
+      steps: [
+        step("What is the probability you win if you stay?", stay, frac(1, n), "The host's reveal tells you nothing new about your own door.", `Your door was right with probability \\(\\frac{1}{${n}}\\) and that doesn't change.`, {
+          sim: (r) => play(r, false),
+        }),
+        step(
+          `What is the probability you win if you switch${rest > 1 ? " (to a random closed door)" : ""}?`,
+          sw,
+          frac(n - 1, n * rest),
+          `The other doors held the car with probability \\(\\frac{${n - 1}}{${n}}\\), and now that is spread over the ${rest} still closed.`,
+          `\\(\\frac{${n - 1}}{${n}} \\cdot \\frac{1}{${rest}} = ${texFrac(n - 1, n * rest)}\\).`,
+          { sim: (r) => play(r, true) },
+        ),
+        step(
+          "How many times more likely are you to win by switching than by staying?",
+          sw / stay,
+          frac(n - 1, rest),
+          "Divide step 2 by step 1.",
+          `\\(\\frac{${n - 1}}{${rest}}${rest === n - 1 ? "" : ` = ${texFrac(n - 1, rest)}`}\\).`,
+        ),
+      ],
+      solution: `Staying wins with \\(\\frac{1}{${n}}\\). The other ${n - 1} doors jointly held the car with \\(\\frac{${n - 1}}{${n}}\\); the host only opens goats, so that whole probability now sits on the ${rest} closed door${rest === 1 ? "" : "s"}, and switching wins with \\(${texFrac(n - 1, n * rest)}\\), ${num(sw / stay)} times better. Always switch.`,
+    };
+  },
+};
+
+export const PROBABILITY: Template[] = [diceSum, atLeastOne, cardsBoth, duel, birthday, montyHall, orderStats, uniformSum];
