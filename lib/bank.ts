@@ -1,3 +1,4 @@
+import { Phi } from "./puzzles/kit";
 import { DIFFICULTIES, TOPICS, type Difficulty, type Puzzle } from "./types";
 
 /**
@@ -6,43 +7,6 @@ import { DIFFICULTIES, TOPICS, type Difficulty, type Puzzle } from "./types";
  * so the daily is never a re-skin of something you just practised.
  */
 export const BANK: Puzzle[] = [
-  {
-    id: "bank-gamblers-ruin",
-    title: "Gambler's Ruin",
-    category: "Markets",
-    difficulty: "hard",
-    story:
-      "You start with $3 and repeatedly bet $1 on a coin flip, winning or losing $1 each time. You stop when you reach $10 or go broke. Explore the fair game, then a game with an edge.",
-    steps: [
-      {
-        question: "With a fair coin, what is the probability you reach $10 before going broke?",
-        answer: 0.3,
-        answerDisplay: "0.3",
-        tolerance: 0.01,
-        hint: "A fair game is a martingale: your expected wealth at the end equals what you started with.",
-        explanation: "\\(\\mathbb{E}[\\text{final}] = 10p + 0 \\cdot (1-p) = 3\\), so \\(p = \\tfrac{3}{10}\\).",
-      },
-      {
-        question: "With a fair coin, what is the expected number of bets until the game ends?",
-        answer: 21,
-        answerDisplay: "21",
-        tolerance: 0.01,
-        hint: "For symmetric random walk between \\(0\\) and \\(N\\) started at \\(i\\), the expected duration is \\(i(N - i)\\).",
-        explanation: "\\(3 \\times (10 - 3) = 21\\).",
-      },
-      {
-        question:
-          "Now you win each bet with probability \\(0.6\\). What is the probability you reach $10 before going broke? (4 decimals)",
-        answer: (1 - Math.pow(2 / 3, 3)) / (1 - Math.pow(2 / 3, 10)),
-        answerDisplay: "≈ 0.7161",
-        tolerance: 0.005,
-        hint: "With \\(r = q/p\\), \\(P = \\dfrac{1 - r^i}{1 - r^N}\\).",
-        explanation: "\\(r = 0.4/0.6 = \\tfrac{2}{3}\\). \\(P = \\dfrac{1 - (2/3)^3}{1 - (2/3)^{10}} \\approx \\dfrac{0.7037}{0.9827} \\approx 0.7161\\).",
-      },
-    ],
-    solution:
-      "Fair game: wealth is a martingale, so \\(P(\\text{win}) = \\tfrac{3}{10}\\), and the duration is \\(i(N-i) = 21\\) bets. With a 60% edge, use \\(r = q/p = \\tfrac{2}{3}\\) and \\(P = \\dfrac{1 - r^3}{1 - r^{10}} \\approx 0.716\\). A small edge more than doubles your chances of hitting the target.",
-  },
   {
     id: "bank-two-uniforms",
     title: "Two Points on a Line",
@@ -78,78 +42,6 @@ export const BANK: Puzzle[] = [
     ],
     solution:
       "Geometric probability: \\((X, Y)\\) is uniform on the unit square. The points with \\(|x - y| \\geq \\tfrac{1}{2}\\) form two right triangles with legs \\(\\tfrac{1}{2}\\), total area \\(\\tfrac{1}{4}\\). So \\(P(|X - Y| < \\tfrac{1}{2}) = \\tfrac{3}{4}\\). Along the way, the max and min split \\([0,1]\\) into three equal expected pieces: \\(\\tfrac{1}{3}, \\tfrac{2}{3}\\).",
-  },
-  {
-    id: "bank-binomial-call",
-    title: "Two-Step Tree",
-    category: "Markets",
-    difficulty: "expert",
-    story:
-      "A stock trades at $100. Each period it moves up \\(\\times 1.2\\) or down \\(\\times 0.9\\). Interest rates are zero. Price a European call with strike $100 expiring after two periods.",
-    steps: [
-      {
-        question: "What is the risk-neutral probability of an up move?",
-        answer: 1 / 3,
-        answerDisplay: "1/3",
-        tolerance: 0.01,
-        hint: "With \\(r = 0\\) the stock must be a martingale: \\(100 = 120q + 90(1-q)\\).",
-        explanation: "\\(30q = 10\\), so \\(q = \\tfrac{1}{3}\\).",
-      },
-      {
-        question: "What is the call worth at the node after one up move (stock at $120)?",
-        answer: 20,
-        answerDisplay: "20",
-        tolerance: 0.01,
-        hint: "From $120 the stock goes to $144 or $108. Payoffs are \\(44\\) and \\(8\\).",
-        explanation: "\\(\\tfrac{1}{3} \\cdot 44 + \\tfrac{2}{3} \\cdot 8 = \\tfrac{44}{3} + \\tfrac{16}{3} = 20\\).",
-      },
-      {
-        question: "What is the call worth today?",
-        answer: 76 / 9,
-        answerDisplay: "76/9 ≈ 8.444",
-        tolerance: 0.005,
-        hint: "You also need the down node ($90 → $108 or $81). Then discount one more step with \\(q\\).",
-        explanation: "Down node: \\(\\tfrac{1}{3} \\cdot 8 + \\tfrac{2}{3} \\cdot 0 = \\tfrac{8}{3}\\). Today: \\(\\tfrac{1}{3} \\cdot 20 + \\tfrac{2}{3} \\cdot \\tfrac{8}{3} = \\tfrac{20}{3} + \\tfrac{16}{9} = \\tfrac{76}{9} \\approx 8.44\\).",
-      },
-    ],
-    solution:
-      "Risk-neutral \\(q = \\tfrac{1}{3}\\) from \\(100 = 120q + 90(1-q)\\). Terminal payoffs: \\(44\\) (\\(uu\\)), \\(8\\) (\\(ud/du\\)), \\(0\\) (\\(dd\\)). Rolling back: \\(V_{\\text{up}} = 20\\), \\(V_{\\text{down}} = \\tfrac{8}{3}\\), \\(V_0 = \\tfrac{1}{3}(20) + \\tfrac{2}{3}\\left(\\tfrac{8}{3}\\right) = \\tfrac{76}{9}\\), about $8.44. Note the real-world probabilities never enter.",
-  },
-  {
-    id: "bank-kelly",
-    title: "Bet Like Kelly",
-    category: "Markets",
-    difficulty: "expert",
-    story:
-      "You're offered a repeated even-money bet that you win with probability \\(0.6\\). You bet a fixed fraction \\(f\\) of your bankroll each round. What fraction maximizes long-run growth, and how fast do you grow?",
-    steps: [
-      {
-        question: "What is your expected profit per $1 wagered?",
-        answer: 0.2,
-        answerDisplay: "0.2",
-        tolerance: 0.01,
-        hint: "Win $1 with probability \\(0.6\\), lose $1 with probability \\(0.4\\).",
-        explanation: "\\(0.6 - 0.4 = 0.2\\).",
-      },
-      {
-        question: "What fraction \\(f\\) maximizes \\(\\mathbb{E}[\\log \\text{wealth growth}]\\) per round?",
-        answer: 0.2,
-        answerDisplay: "0.2 (20%)",
-        tolerance: 0.01,
-        hint: "Maximize \\(g(f) = 0.6 \\ln(1+f) + 0.4 \\ln(1-f)\\). Set \\(g'(f) = 0\\).",
-        explanation: "\\(\\dfrac{0.6}{1+f} = \\dfrac{0.4}{1-f}\\) gives \\(f = 0.6 - 0.4 = 0.2\\). For even-money bets, Kelly \\(= p - q\\).",
-      },
-      {
-        question: "At that fraction, what is the expected log growth rate per round? (4 decimals)",
-        answer: 0.6 * Math.log(1.2) + 0.4 * Math.log(0.8),
-        answerDisplay: "≈ 0.0201",
-        tolerance: 0.01,
-        hint: "Plug \\(f = 0.2\\) into \\(g(f) = 0.6 \\ln(1.2) + 0.4 \\ln(0.8)\\).",
-        explanation: "\\(0.6 \\cdot 0.1823 + 0.4 \\cdot (-0.2231) \\approx 0.1094 - 0.0893 \\approx 0.0201\\).",
-      },
-    ],
-    solution:
-      "Kelly maximizes \\(g(f) = p \\ln(1+f) + q \\ln(1-f)\\). For an even-money bet that gives \\(f^* = p - q = 0.2\\), and growth \\(g \\approx 0.0201\\) per round, about 2% compounded. Bet more than \\(2f^* = 40\\%\\) and your long-run growth turns negative even with an edge.",
   },
   {
     id: "bank-even-product",
@@ -759,6 +651,165 @@ export const BANK: Puzzle[] = [
     ],
     solution:
       "The sample mean is fitted to the data, so deviations from it are smaller than deviations from the true mean: \\(\\mathbb{E}\\left[\\sum (X_i - \\bar X)^2\\right] = (n - 1)\\sigma^2\\). Dividing by \\(n\\) underestimates \\(\\sigma^2 = \\frac{35}{12}\\) as \\(\\frac{35}{18}\\); dividing by \\(n - 1\\) fixes it. One degree of freedom was spent estimating the mean.",
+  },
+  {
+    id: "bank-rule-of-72",
+    title: "Rule of 72",
+    category: "Markets",
+    difficulty: "easy",
+    story: "How fast does money grow? Work out a few compounding numbers, and check the trader's rule of thumb that money doubles in about 72 / (rate in %) years.",
+    steps: [
+      {
+        question: "$1 grows at 10% a year, compounded yearly. What is it worth after 7 years? (4 decimals)",
+        answer: 1.1 ** 7,
+        answerDisplay: "1.9487",
+        tolerance: 0.005,
+        hint: "Multiply by 1.1 seven times.",
+        explanation: "\\(1.1^7 \\approx 1.949\\): nearly doubled, as \\(72/10 \\approx 7\\) predicts.",
+      },
+      {
+        question: "At 6% a year, exactly how many years does it take to double? (2 decimals)",
+        answer: Math.LN2 / Math.log(1.06),
+        answerDisplay: "11.90",
+        tolerance: 0.005,
+        hint: "Solve \\(1.06^t = 2\\).",
+        explanation: "\\(t = \\frac{\\ln 2}{\\ln 1.06} \\approx 11.90\\), versus the rule's \\(72/6 = 12\\).",
+      },
+      {
+        question: "With 5% compounded continuously, what is $1 worth after 10 years? (4 decimals)",
+        answer: Math.exp(0.5),
+        answerDisplay: "1.6487",
+        tolerance: 0.005,
+        hint: "Continuous compounding gives \\(e^{rt}\\).",
+        explanation: "\\(e^{0.05 \\times 10} = e^{0.5} \\approx 1.6487\\).",
+      },
+    ],
+    solution:
+      "Doubling time is \\(\\frac{\\ln 2}{\\ln(1 + r)} \\approx \\frac{0.693}{r}\\) for small \\(r\\). Using 72 instead of 69.3 compensates for \\(\\ln(1 + r) < r\\) at typical rates, and 72 has lots of divisors, which is why the rule of 72 works so well.",
+  },
+  {
+    id: "bank-lottery",
+    title: "Lottery Math",
+    category: "Markets",
+    difficulty: "medium",
+    story:
+      "A lottery draws 6 numbers from 1 to 49. A $2 ticket picks 6 numbers and wins the jackpot if they match the draw exactly. Ignore the smaller prizes and taxes. When is a ticket worth buying?",
+    steps: [
+      {
+        question: "How many different tickets are possible?",
+        answer: 13983816,
+        answerDisplay: "13983816",
+        tolerance: 0,
+        hint: "Order doesn't matter.",
+        explanation: "\\(\\binom{49}{6} = 13{,}983{,}816\\).",
+      },
+      {
+        question: "With a $20M jackpot (and no sharing), what is the expected value of one ticket, in dollars? (4 decimals)",
+        answer: 20e6 / 13983816,
+        answerDisplay: "1.4302",
+        tolerance: 0.005,
+        hint: "Jackpot times the chance of winning.",
+        explanation: "\\(\\frac{20{,}000{,}000}{13{,}983{,}816} \\approx \\$1.43\\), less than the $2 price.",
+      },
+      {
+        question: "At what jackpot (in $M) does a ticket break even? (2 decimals)",
+        answer: (2 * 13983816) / 1e6,
+        answerDisplay: "27.97",
+        tolerance: 0.005,
+        hint: "Set the expected value equal to $2.",
+        explanation: "\\(2 \\times 13{,}983{,}816 \\approx \\$27.97\\)M.",
+      },
+      {
+        question: "Big jackpots draw crowds. If 10 million other tickets are bought at random, what is the probability none of them also hits the jackpot? (4 decimals)",
+        answer: (1 - 1 / 13983816) ** 1e7,
+        answerDisplay: "0.4891",
+        tolerance: 0.005,
+        hint: "Each other ticket misses with probability \\(1 - 1/N\\). Or use the Poisson approximation.",
+        explanation: "\\(\\left(1 - \\frac{1}{13{,}983{,}816}\\right)^{10^7} \\approx e^{-0.715} \\approx 0.489\\).",
+      },
+    ],
+    solution:
+      "A ticket is worth \\(\\frac{J}{13{,}983{,}816}\\), so you need a jackpot above about $28M to break even. But the jackpots that big attract so many tickets that you'd probably share it: with 10M others, you'd keep it all only about 49% of the time. The expected value almost never really exceeds the price.",
+  },
+  {
+    id: "bank-annual-sharpe",
+    title: "Annualize It",
+    category: "Markets",
+    difficulty: "hard",
+    story:
+      "A strategy's daily returns are independent and normal with mean 0.05% and standard deviation 1%. There are 252 trading days a year. How good is it, really?",
+    steps: [
+      {
+        question: "What is the annual standard deviation, in percent? (2 decimals)",
+        answer: Math.sqrt(252),
+        answerDisplay: "15.87",
+        tolerance: 0.005,
+        hint: "Variances add over independent days.",
+        explanation: "\\(1\\% \\times \\sqrt{252} \\approx 15.87\\%\\).",
+      },
+      {
+        question: "What is the annual Sharpe ratio (zero risk-free rate)? (4 decimals)",
+        answer: 0.05 * Math.sqrt(252),
+        answerDisplay: "0.7937",
+        tolerance: 0.005,
+        hint: "The mean scales by 252 and the SD by \\(\\sqrt{252}\\).",
+        explanation: "\\(\\frac{252 \\times 0.05\\%}{15.87\\%} = 0.05\\sqrt{252} \\approx 0.794\\).",
+      },
+      {
+        question: "What is the probability of a losing year? (4 decimals)",
+        answer: Phi(-0.05 * Math.sqrt(252)),
+        answerDisplay: "0.2137",
+        tolerance: 0.01,
+        hint: "The annual return is normal; how many SDs below the mean is zero?",
+        explanation: "\\(\\Phi(-0.794) \\approx 0.214\\): roughly one year in five.",
+      },
+    ],
+    solution:
+      "Sharpe ratios scale with \\(\\sqrt{T}\\): a daily 0.05 becomes \\(0.05\\sqrt{252} \\approx 0.79\\) a year. That's respectable, yet the strategy still loses money in about 21% of years. A good Sharpe doesn't mean smooth returns.",
+  },
+  {
+    id: "bank-atm-option",
+    title: "Quick Vol Math",
+    category: "Markets",
+    difficulty: "expert",
+    story:
+      "A stock is at $100 with 20% annual volatility. Rates are zero. Price an at-the-money European call with 3 months to expiry, first with a trader's shortcut and then exactly with Black-Scholes.",
+    steps: [
+      {
+        question: "What is \\(\\sigma\\sqrt{T}\\)?",
+        answer: 0.1,
+        answerDisplay: "0.1",
+        tolerance: 0.01,
+        hint: "\\(T\\) is in years.",
+        explanation: "\\(0.2 \\times \\sqrt{0.25} = 0.1\\).",
+      },
+      {
+        question: "The shortcut for an at-the-money option is \\(C \\approx 0.4 \\, S \\sigma\\sqrt{T}\\). What does it give?",
+        answer: 4,
+        answerDisplay: "4",
+        tolerance: 0.01,
+        hint: "Multiply.",
+        explanation: "\\(0.4 \\times 100 \\times 0.1 = 4\\). (The 0.4 is \\(1/\\sqrt{2\\pi} \\approx 0.399\\).)",
+      },
+      {
+        question: "What is the exact Black-Scholes price? (4 decimals)",
+        answer: 100 * (2 * Phi(0.05) - 1),
+        answerDisplay: "3.9878",
+        tolerance: 0.002,
+        hint: "At the money with zero rates, \\(d_1 = \\frac{\\sigma\\sqrt{T}}{2}\\) and \\(d_2 = -d_1\\), so \\(C = S(\\Phi(d_1) - \\Phi(-d_1))\\).",
+        explanation: "\\(d_1 = 0.05\\), so \\(C = 100(2\\Phi(0.05) - 1) \\approx 3.988\\).",
+      },
+      {
+        question: "What does the at-the-money straddle (call plus put) cost? (4 decimals)",
+        answer: 200 * (2 * Phi(0.05) - 1),
+        answerDisplay: "7.9757",
+        tolerance: 0.002,
+        hint: "Put-call parity with \\(S = K\\) and zero rates.",
+        explanation: "\\(C - P = S - K = 0\\), so \\(P = C\\) and the straddle costs \\(2 \\times 3.988 \\approx 7.976\\).",
+      },
+    ],
+    solution:
+      "At the money, \\(C \\approx \\frac{S\\sigma\\sqrt{T}}{\\sqrt{2\\pi}} \\approx 0.4 S\\sigma\\sqrt{T} = 4\\), within a cent or so of the exact 3.988. It's linear in vol and in \\(\\sqrt{T}\\), which is why traders quote options in vol and can price them in their heads. A straddle costs about \\(0.8 S\\sigma\\sqrt{T}\\), roughly the expected absolute move.",
   },
 ];
 
