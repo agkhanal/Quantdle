@@ -1,6 +1,6 @@
 /** Expected Value puzzle templates, easiest first. */
 
-import { pick, int, die, flip, frac, texFrac, num, step, ind, type Rng, type Template } from "./kit";
+import { pick, int, die, flip, frac, texFrac, texFracApprox, num, choose, step, ind, type Rng, type Template } from "./kit";
 
 const reroll: Template = {
   id: "reroll",
@@ -261,4 +261,98 @@ const optimalStopping: Template = {
   },
 };
 
-export const EXPECTED_VALUE: Template[] = [reroll, patterns, distinctFaces, coupon, optimalStopping];
+const geomWait: Template = {
+  id: "geometric-wait",
+  difficulty: "easy",
+  topic: "Expected Value",
+  make(rng) {
+    const s = pick(rng, [6, 8, 10, 12, 20]);
+    const m = int(rng, 1, Math.floor(s / 2));
+    const t = int(rng, 2, 5);
+    const what = m === 1 ? `a ${s}` : `${s - m + 1} or higher`;
+    const p = m / s;
+    const wait = (r: Rng) => {
+      let n = 1;
+      while (die(r, s) <= s - m) n++;
+      return n;
+    };
+    return {
+      title: pick(rng, ["Waiting Game", "Until It Lands", "Patience"]),
+      category: "Expected Value",
+      story: `You roll a fair ${s}-sided die until you get ${what}. On average, how many rolls does it take? And if the first ${t} rolls all miss, how long should you expect to keep going?`,
+      steps: [
+        step("What is the expected number of rolls, counting the successful one?", 1 / p, frac(s, m), `Each roll succeeds with probability \\(${texFrac(m, s)}\\). A geometric wait averages \\(1/p\\).`, `\\(\\frac{1}{p} = ${texFrac(s, m)}\\).`, {
+          sim: wait,
+        }),
+        step("What is the expected number of misses before the first success?", 1 / p - 1, frac(s - m, m), "Every roll except the last one is a miss.", `\\(${texFrac(s, m)} - 1 = ${texFrac(s - m, m)}\\).`, {
+          sim: (r) => wait(r) - 1,
+        }),
+        step(
+          `Given the first ${t} rolls all missed, what is the expected total number of rolls?`,
+          t + 1 / p,
+          frac(t * m + s, m),
+          "The die has no memory of the misses.",
+          `Memoryless: \\(${t} + ${texFrac(s, m)} = ${texFrac(t * m + s, m)}\\).`,
+          { sim: (r) => {
+            const n = wait(r);
+            return n > t ? n : NaN;
+          } },
+        ),
+      ],
+      solution: `A geometric wait with success probability \\(${texFrac(m, s)}\\) averages \\(${texFrac(s, m)}\\) rolls. Because the die is memoryless, ${t} misses don't make a hit "due": you still expect \\(${texFrac(s, m)}\\) more, for \\(${texFracApprox(t * m + s, m)}\\) in total.`,
+    };
+  },
+};
+
+const adjacentPairs: Template = {
+  id: "adjacent-pairs",
+  difficulty: "easy",
+  topic: "Expected Value",
+  make(rng) {
+    const s = pick(rng, [4, 6, 8, 10, 12]);
+    const n = int(rng, 4, 12);
+    const roll = (r: Rng) => Array.from({ length: n }, () => die(r, s));
+    const scene = pick(rng, [
+      `${n} fair ${s}-sided dice are rolled and lined up in a row.`,
+      `${n} people stand in a line and each rolls a fair ${s}-sided die.`,
+      `${n} players sit in a row and each rolls a fair ${s}-sided die.`,
+    ]);
+    return {
+      title: pick(rng, ["Matching Neighbours", "Side by Side", "Same as Next"]),
+      category: "Expected Value",
+      story: `${scene} How many neighbouring pairs do you expect to show the same number? And how many matching pairs overall?`,
+      steps: [
+        step("What is the probability that two particular dice match?", 1 / s, frac(1, s), "Whatever the first shows, the second has to equal it.", `\\(\\frac{1}{${s}}\\).`, {
+          sim: (r) => ind(die(r, s) === die(r, s)),
+        }),
+        step(
+          "What is the expected number of neighbouring pairs that match?",
+          (n - 1) / s,
+          frac(n - 1, s),
+          "Linearity of expectation: add up an indicator for each neighbouring pair, even though they're not independent.",
+          `There are ${n - 1} neighbouring pairs: \\(\\frac{${n - 1}}{${s}}${(n - 1) % s ? "" : ` = ${(n - 1) / s}`}\\).`,
+          { sim: (r) => {
+            const xs = roll(r);
+            return xs.slice(1).filter((x, i) => x === xs[i]).length;
+          } },
+        ),
+        step(
+          "What is the expected number of matching pairs among all pairs, neighbours or not?",
+          choose(n, 2) / s,
+          frac(choose(n, 2), s),
+          "Same idea over every pair.",
+          `\\(\\binom{${n}}{2} \\cdot \\frac{1}{${s}} = ${texFrac(choose(n, 2), s)}\\).`,
+          { sim: (r) => {
+            const xs = roll(r);
+            let c = 0;
+            for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) c += ind(xs[i] === xs[j]);
+            return c;
+          } },
+        ),
+      ],
+      solution: `Write the count as a sum of indicators, one per pair, each with expectation \\(\\frac{1}{${s}}\\). Linearity doesn't care that the pairs overlap: ${n - 1} neighbouring pairs give \\(${texFracApprox(n - 1, s)}\\), and all \\(\\binom{${n}}{2}\\) pairs give \\(${texFracApprox(choose(n, 2), s)}\\).`,
+    };
+  },
+};
+
+export const EXPECTED_VALUE: Template[] = [reroll, geomWait, adjacentPairs, patterns, distinctFaces, coupon, optimalStopping];
