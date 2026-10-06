@@ -1,8 +1,9 @@
-import type { Difficulty, Puzzle } from "./types";
+import { DIFFICULTIES, TOPICS, type Difficulty, type Puzzle } from "./types";
 
 /**
- * Hand-checked puzzles. They power the Daily puzzle (same for everyone) and
- * act as the fallback for Practice when no ANTHROPIC_API_KEY is configured.
+ * Hand-checked puzzles for the Daily (the same for everyone), one per topic and difficulty.
+ * They're deliberately on different ideas from the Practice templates in `lib/puzzles/`,
+ * so the daily is never a re-skin of something you just practised.
  */
 export const BANK: Puzzle[] = [
   // ───────────── EASY ─────────────
@@ -451,9 +452,17 @@ export function bankByDifficulty(d: Difficulty): Puzzle[] {
 
 export { dailyNumber } from "./day";
 
+/**
+ * Day n plays topic n mod 5 at difficulty n mod 4. Because 4 and 5 share no factor, every
+ * topic meets every difficulty exactly once in each 20-day cycle, and neither repeats two days running.
+ */
 export function dailyPuzzle(n: number): Puzzle {
-  // Interleave difficulties so the week has variety rather than 3 easy days in a row.
-  const order = [0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11];
-  const idx = order[((n - 1) % order.length + order.length) % order.length];
-  return BANK[idx];
+  const i = (((n - 1) % 20) + 20) % 20;
+  const topic = TOPICS[i % TOPICS.length];
+  const difficulty = DIFFICULTIES[i % DIFFICULTIES.length];
+  return (
+    BANK.find((p) => p.category === topic && p.difficulty === difficulty) ??
+    bankByDifficulty(difficulty)[0] ??
+    BANK[i % BANK.length]
+  );
 }

@@ -74,7 +74,7 @@ export function periodEnd(period: "daily" | "weekly", now = Date.now()): number 
 }
 
 export function parseDailyId(id: string): number | null {
-  const m = /^daily-(\d+)$/.exec(id);
+  const m = /^daily-(\d+)(?:-|$)/.exec(id);
   return m ? Number(m[1]) : null;
 }
 
