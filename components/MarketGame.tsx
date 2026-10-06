@@ -34,7 +34,8 @@ type Props =
  * and survives a refresh. Practice markets are random and skippable.
  */
 export default function MarketGame(props: Props) {
-  const dailyKey = props.daily ? `quantdle-market-daily-${props.dailyNumber}` : null;
+  // v2: daily markets moved to their own contracts, so quotes saved under the old key don't apply.
+  const dailyKey = props.daily ? `quantdle-market-daily-v2-${props.dailyNumber}` : null;
   const [game, setGame] = useState<MarketGameState | null>(null);
   const [bid, setBid] = useState("");
   const [ask, setAsk] = useState("");
@@ -56,7 +57,7 @@ export default function MarketGame(props: Props) {
   useEffect(() => {
     if (props.daily) {
       const saved = loadJSON<[number, number][]>(dailyKey!) ?? [];
-      setGame(replay(dailyMarketSeed(props.dailyNumber), difficulty, saved));
+      setGame(replay(dailyMarketSeed(props.dailyNumber), difficulty, saved, "daily"));
     } else {
       fresh();
     }

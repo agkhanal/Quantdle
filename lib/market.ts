@@ -223,6 +223,151 @@ const FAMILIES: Record<Difficulty, Record<string, Family>> = {
   },
 };
 
+/**
+ * Contracts reserved for the daily market, so the daily is never a contract you could
+ * have just played in practice (and practice never repeats the daily).
+ */
+const DAILY_FAMILIES: Record<Difficulty, Record<string, Family>> = {
+  easy: {
+    difference(rng) {
+      const s = pick(rng, [8, 10, 12]);
+      return {
+        family: "difference",
+        name: `First minus second, two d${s}`,
+        blurb: `Two fair ${s}-sided dice: settles at the first minus the second. It can be negative.`,
+        draws: dice(2, s),
+        settle: (xs) => xs[0] - xs[1],
+      };
+    },
+    oddSum(rng) {
+      const n = int(rng, 3, 4);
+      return {
+        family: "odd-sum",
+        name: `Odd dice only, ${n} dice`,
+        blurb: `Roll ${n} fair dice. Settles at the total of the dice showing odd numbers; even dice count for nothing.`,
+        draws: dice(n, 6),
+        settle: (xs) => sum(xs.filter((x) => x % 2 === 1)),
+      };
+    },
+    dieAndCoins(rng) {
+      const m = int(rng, 2, 4);
+      const k = pick(rng, [3, 5]);
+      return {
+        family: "die-and-coins",
+        name: `A die plus ${k} per head (${m} coins)`,
+        blurb: `Roll a fair die, then flip ${m} coins. Settles at the die plus ${k} for every head.`,
+        draws: [...dice(1, 6), ...coins(m)],
+        settle: (xs) => xs[0] + k * sum(xs.slice(1)),
+      };
+    },
+  },
+  medium: {
+    pairBonus(rng) {
+      const n = int(rng, 2, 3);
+      return {
+        family: "pair-bonus",
+        name: `Sum of ${n} dice, +10 for a match`,
+        blurb: `Roll ${n} fair dice. Settles at their total, plus 10 if any two dice show the same number.`,
+        draws: dice(n, 6),
+        settle: (xs) => sum(xs) + (new Set(xs).size < xs.length ? 10 : 0),
+      };
+    },
+    longestRun(rng) {
+      const n = int(rng, 5, 7);
+      const k = pick(rng, [1, 5]);
+      return {
+        family: "longest-run",
+        name: `${k === 1 ? "" : `${k} × `}longest run of heads, ${n} flips`,
+        blurb: `Flip ${n} fair coins in order. Settles at ${k === 1 ? "" : `${k} times `}the length of the longest streak of consecutive heads.`,
+        draws: coins(n),
+        settle: (xs) => {
+          let best = 0;
+          let run = 0;
+          for (const x of xs) best = Math.max(best, (run = x ? run + 1 : 0));
+          return k * best;
+        },
+      };
+    },
+    beatTheFirst(rng) {
+      const n = int(rng, 3, 5);
+      return {
+        family: "beat-the-first",
+        name: `Beat the first die, ${n} dice`,
+        blurb: `Roll ${n} fair dice in order. Settles at 10 for every later die that is higher than the first.`,
+        draws: dice(n, 6),
+        settle: (xs) => 10 * xs.slice(1).filter((x) => x > xs[0]).length,
+      };
+    },
+  },
+  hard: {
+    median(rng) {
+      const s = pick(rng, [6, 8, 10]);
+      return {
+        family: "median",
+        name: `Middle of 3 ${dieName(s)}`,
+        blurb: `Roll three fair ${dieName(s)}. Settles at the middle value.`,
+        draws: dice(3, s),
+        settle: (xs) => [...xs].sort((a, b) => a - b)[1],
+      };
+    },
+    switches(rng) {
+      const n = int(rng, 5, 7);
+      const k = pick(rng, [2, 5]);
+      return {
+        family: "switches",
+        name: `${k} × switches in ${n} flips`,
+        blurb: `Flip ${n} fair coins in order. Settles at ${k} for every flip that differs from the one before it.`,
+        draws: coins(n),
+        settle: (xs) => k * xs.slice(1).filter((x, i) => x !== xs[i]).length,
+      };
+    },
+    gap(rng) {
+      const s = pick(rng, [10, 12, 20]);
+      return {
+        family: "gap",
+        name: `Gap between two d${s}`,
+        blurb: `Two fair ${s}-sided dice: settles at the absolute difference between them.`,
+        draws: dice(2, s),
+        settle: (xs) => Math.abs(xs[0] - xs[1]),
+      };
+    },
+  },
+  expert: {
+    dieTimesHeads(rng) {
+      const m = int(rng, 3, 4);
+      return {
+        family: "die-x-heads",
+        name: `Die × heads in ${m} flips`,
+        blurb: `Roll a fair die, then flip ${m} coins. Settles at the die times the number of heads.`,
+        draws: [...dice(1, 6), ...coins(m)],
+        settle: (xs) => xs[0] * sum(xs.slice(1)),
+      };
+    },
+    betterPair() {
+      return {
+        family: "better-pair",
+        name: "Better of two pairs",
+        blurb: "Roll four fair dice: the first two are one pair, the last two another. Settles at the larger pair total.",
+        draws: dice(4, 6),
+        settle: (xs) => Math.max(xs[0] + xs[1], xs[2] + xs[3]),
+      };
+    },
+    beforeSix(rng) {
+      const n = int(rng, 3, 4);
+      return {
+        family: "before-six",
+        name: `Total before the first six, ${n} dice`,
+        blurb: `Roll ${n} fair dice in order. Settles at the total of the dice before the first 6 (all of them if no 6 shows).`,
+        draws: dice(n, 6),
+        settle: (xs) => {
+          const at = xs.indexOf(6);
+          return sum(at < 0 ? xs : xs.slice(0, at));
+        },
+      };
+    },
+  },
+};
+
 /** How each difficulty plays: market width (in standard deviations of the contract) and how often the sharp trader shows up. */
 const LEVELS: Record<Difficulty, { widthSd: number; sharpRate: number }> = {
   easy: { widthSd: 1.0, sharpRate: 0.15 },
@@ -231,7 +376,14 @@ const LEVELS: Record<Difficulty, { widthSd: number; sharpRate: number }> = {
   expert: { widthSd: 0.65, sharpRate: 0.25 },
 };
 
-export const familyCount = (d: Difficulty) => Object.keys(FAMILIES[d]).length;
+export type MarketPool = "practice" | "daily";
+const POOLS: Record<MarketPool, typeof FAMILIES> = { practice: FAMILIES, daily: DAILY_FAMILIES };
+
+export const familyCount = (d: Difficulty, pool: MarketPool = "practice") => Object.keys(POOLS[pool][d]).length;
+
+/** Family ids in a pool, for checking the daily and practice pools never share a contract. */
+export const familyIds = (pool: MarketPool) =>
+  DIFFICULTIES.flatMap((d) => Object.values(POOLS[pool][d]).map((f) => f(mulberry32(1)).family));
 
 // ───────────── fair value ─────────────
 
@@ -290,8 +442,8 @@ export interface MarketGameState {
 }
 
 /** Build a contract for a difficulty from a seed (deterministic). */
-export function makeContract(difficulty: Difficulty, rng: Rng): Contract {
-  const fam = pick(rng, Object.values(FAMILIES[difficulty]));
+export function makeContract(difficulty: Difficulty, rng: Rng, pool: MarketPool = "practice"): Contract {
+  const fam = pick(rng, Object.values(POOLS[pool][difficulty]));
   const base = fam(rng);
   const level = LEVELS[difficulty];
   const draft: Contract = { ...base, difficulty, maxWidth: 1, sharpRate: level.sharpRate };
@@ -301,9 +453,9 @@ export function makeContract(difficulty: Difficulty, rng: Rng): Contract {
   return draft;
 }
 
-export function newMarket(seed: number, difficulty: Difficulty): MarketGameState {
+export function newMarket(seed: number, difficulty: Difficulty, pool: MarketPool = "practice"): MarketGameState {
   const rng = mulberry32(seed);
-  const contract = makeContract(difficulty, rng);
+  const contract = makeContract(difficulty, rng, pool);
   return { contract, draws: sampleDraws(contract, rng), rounds: [], seed };
 }
 
@@ -367,8 +519,8 @@ export function playRound(g: MarketGameState, bid: number, ask: number): MarketG
 }
 
 /** Rebuild a game from its seed and the quotes played (used to restore the daily market). */
-export function replay(seed: number, difficulty: Difficulty, quotes: [number, number][]): MarketGameState {
-  let g = newMarket(seed, difficulty);
+export function replay(seed: number, difficulty: Difficulty, quotes: [number, number][], pool: MarketPool = "daily"): MarketGameState {
+  let g = newMarket(seed, difficulty, pool);
   for (const [b, a] of quotes) {
     if (isOver(g)) break;
     g = playRound(g, b, a);
