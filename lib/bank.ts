@@ -6,77 +6,6 @@ import { DIFFICULTIES, TOPICS, type Difficulty, type Puzzle } from "./types";
  * so the daily is never a re-skin of something you just practised.
  */
 export const BANK: Puzzle[] = [
-  // ───────────── EASY ─────────────
-  {
-    id: "bank-dice-seven",
-    title: "Lucky Seven",
-    category: "Probability",
-    difficulty: "easy",
-    story: "You roll two fair six-sided dice. What is the probability that they sum to 7?",
-    steps: [
-      {
-        question: "How many equally likely outcomes are there when rolling two distinguishable dice?",
-        answer: 36,
-        answerDisplay: "36",
-        tolerance: 0,
-        hint: "Each die has 6 faces, and the dice are independent.",
-        explanation: "\\(6 \\times 6 = 36\\) ordered outcomes.",
-      },
-      {
-        question: "How many of those outcomes sum to 7?",
-        answer: 6,
-        answerDisplay: "6",
-        tolerance: 0,
-        hint: "Whatever the first die shows, how many values of the second die complete the 7?",
-        explanation: "\\((1,6)\\), \\((2,5)\\), \\((3,4)\\), \\((4,3)\\), \\((5,2)\\), \\((6,1)\\): exactly one partner for each first roll.",
-      },
-      {
-        question: "So what is \\(P(\\text{sum} = 7)\\)?",
-        answer: 1 / 6,
-        answerDisplay: "1/6 ≈ 0.1667",
-        tolerance: 0.01,
-        hint: "Favourable over total.",
-        explanation: "\\(\\frac{6}{36} = \\frac{1}{6}\\).",
-      },
-    ],
-    solution:
-      "There are 36 equally likely ordered outcomes. For any value of the first die there's exactly one value of the second die that makes 7, giving 6 favourable outcomes, so \\(P = \\frac{6}{36} = \\frac{1}{6}\\). Fun fact: 7 is the most likely sum of two dice.",
-  },
-  {
-    id: "bank-three-flips",
-    title: "At Least One Head",
-    category: "Probability",
-    difficulty: "easy",
-    story: "You flip a fair coin three times. What is the probability of getting at least one head?",
-    steps: [
-      {
-        question: "How many equally likely sequences of three flips are there?",
-        answer: 8,
-        answerDisplay: "8",
-        tolerance: 0,
-        hint: "Two choices per flip.",
-        explanation: "\\(2^3 = 8\\) sequences.",
-      },
-      {
-        question: "What is the probability of getting no heads at all?",
-        answer: 1 / 8,
-        answerDisplay: "1/8 = 0.125",
-        tolerance: 0.01,
-        hint: "Only one sequence has zero heads.",
-        explanation: "Only \\(\\text{TTT}\\), so \\(\\tfrac{1}{8}\\).",
-      },
-      {
-        question: "What is \\(P(\\text{at least one head})\\)?",
-        answer: 7 / 8,
-        answerDisplay: "7/8 = 0.875",
-        tolerance: 0.01,
-        hint: "'At least one' problems are usually easiest via the complement.",
-        explanation: "\\(1 - \\tfrac{1}{8} = \\tfrac{7}{8}\\).",
-      },
-    ],
-    solution:
-      "Use the complement: the only way to get no heads is TTT, which has probability \\(\\left(\\tfrac{1}{2}\\right)^3 = \\tfrac{1}{8}\\). So \\(P(\\text{at least one head}) = 1 - \\tfrac{1}{8} = \\tfrac{7}{8}\\). The complement trick is a quant-interview staple.",
-  },
   {
     id: "bank-die-reroll",
     title: "Roll It Back",
@@ -113,8 +42,6 @@ export const BANK: Puzzle[] = [
     solution:
       "A fresh roll is worth \\(3.5\\), so keep the first roll only if it's 4 or more. \\(\\text{EV} = P(\\text{keep}) \\cdot \\mathbb{E}[\\text{roll} \\mid \\text{keep}] + P(\\text{re-roll}) \\cdot 3.5 = \\tfrac{1}{2}(5) + \\tfrac{1}{2}(3.5) = 4.25\\). This is backward induction: value the last decision first.",
   },
-
-  // ───────────── MEDIUM ─────────────
   {
     id: "bank-hh-vs-ht",
     title: "HH vs HT",
@@ -153,42 +80,6 @@ export const BANK: Puzzle[] = [
       "HT takes 4 flips but HH takes 6, even though both have probability \\(\\tfrac{1}{4}\\) at any given position. The difference: when you're chasing HH and flip T after an H, you lose all progress. Chasing HT, an extra H keeps you right where you were. Solve \\(E = (E_H + 1) + \\tfrac{1}{2}E\\) with \\(E_H = 2\\) to get \\(E = 6\\).",
   },
   {
-    id: "bank-two-reds",
-    title: "Seeing Red",
-    category: "Probability",
-    difficulty: "medium",
-    story:
-      "You draw two cards without replacement from a well-shuffled standard 52-card deck. What is the probability that both are red?",
-    steps: [
-      {
-        question: "What is the probability the first card is red?",
-        answer: 0.5,
-        answerDisplay: "1/2",
-        tolerance: 0.01,
-        hint: "26 of the 52 cards are red.",
-        explanation: "\\(\\frac{26}{52} = \\frac{1}{2}\\).",
-      },
-      {
-        question: "Given the first card is red, what is the probability the second is red?",
-        answer: 25 / 51,
-        answerDisplay: "25/51 ≈ 0.4902",
-        tolerance: 0.005,
-        hint: "One red card is gone. How many reds, and how many cards, are left?",
-        explanation: "25 reds remain among 51 cards: \\(\\tfrac{25}{51}\\).",
-      },
-      {
-        question: "What is \\(P(\\text{both red})\\)?",
-        answer: 25 / 102,
-        answerDisplay: "25/102 ≈ 0.2451",
-        tolerance: 0.005,
-        hint: "Chain rule: multiply the two previous answers.",
-        explanation: "\\(\\tfrac{1}{2} \\cdot \\tfrac{25}{51} = \\tfrac{25}{102} \\approx 0.245\\).",
-      },
-    ],
-    solution:
-      "\\(P(\\text{both red}) = P(\\text{1st red}) \\cdot P(\\text{2nd red} \\mid \\text{1st red}) = \\frac{26}{52} \\cdot \\frac{25}{51} = \\frac{25}{102} \\approx 0.245\\). That's slightly less than \\(\\tfrac{1}{4}\\), because drawing without replacement makes a second red a bit less likely.",
-  },
-  {
     id: "bank-bayes-test",
     title: "False Alarm",
     category: "Statistics",
@@ -224,8 +115,6 @@ export const BANK: Puzzle[] = [
     solution:
       "By Bayes' rule, \\(P(\\text{sick} \\mid +) = 0.0099 / 0.0594 = \\tfrac{1}{6} \\approx 16.7\\%\\). Because the disease is rare, false positives from the large healthy population far outnumber true positives. Base rates matter.",
   },
-
-  // ───────────── HARD ─────────────
   {
     id: "bank-gamblers-ruin",
     title: "Gambler's Ruin",
@@ -334,8 +223,6 @@ export const BANK: Puzzle[] = [
     solution:
       "Coupon collector: break the process into stages. With \\(k\\) faces seen, a new face appears with probability \\(\\tfrac{6-k}{6}\\), so the stage takes \\(\\tfrac{6}{6-k}\\) rolls on average. Summing: \\(6 \\cdot H_6 = 6 \\times \\tfrac{49}{20} = 14.7\\) rolls.",
   },
-
-  // ───────────── EXPERT ─────────────
   {
     id: "bank-binomial-call",
     title: "Two-Step Tree",
@@ -409,40 +296,127 @@ export const BANK: Puzzle[] = [
       "Kelly maximizes \\(g(f) = p \\ln(1+f) + q \\ln(1-f)\\). For an even-money bet that gives \\(f^* = p - q = 0.2\\), and growth \\(g \\approx 0.0201\\) per round, about 2% compounded. Bet more than \\(2f^* = 40\\%\\) and your long-run growth turns negative even with an edge.",
   },
   {
-    id: "bank-uniform-sum",
-    title: "Over the Line",
+    id: "bank-even-product",
+    title: "Even Odds",
     category: "Probability",
-    difficulty: "expert",
-    story:
-      "You keep drawing independent \\(\\text{Uniform}(0,1)\\) numbers and adding them up. Let \\(N\\) be the number of draws needed for the running sum to exceed \\(1\\). What is \\(\\mathbb{E}[N]\\)?",
+    difficulty: "easy",
+    story: "You roll two fair six-sided dice and multiply the numbers. What is the probability the product is even?",
     steps: [
       {
-        question: "What is \\(P(U_1 + U_2 < 1)\\)?",
-        answer: 0.5,
+        question: "What is the probability the first die shows an odd number?",
+        answer: 1 / 2,
         answerDisplay: "1/2",
         tolerance: 0.01,
-        hint: "Area under the line \\(x + y = 1\\) inside the unit square.",
-        explanation: "A triangle with area \\(\\tfrac{1}{2}\\).",
+        hint: "Three of the six faces are odd.",
+        explanation: "1, 3 and 5: \\(\\frac{3}{6} = \\frac{1}{2}\\).",
       },
       {
-        question: "What is \\(P(U_1 + U_2 + U_3 < 1)\\)?",
-        answer: 1 / 6,
-        answerDisplay: "1/6",
+        question: "What is the probability the product is odd?",
+        answer: 1 / 4,
+        answerDisplay: "1/4",
         tolerance: 0.01,
-        hint: "The volume of the corner simplex of the unit cube. In general it's \\(1/n!\\).",
-        explanation: "The simplex \\(x+y+z<1\\) has volume \\(1/3! = \\tfrac{1}{6}\\).",
+        hint: "A product is odd only when every factor is odd.",
+        explanation: "Both dice must be odd: \\(\\frac{1}{2} \\cdot \\frac{1}{2} = \\frac{1}{4}\\).",
       },
       {
-        question: "What is \\(\\mathbb{E}[N]\\)?",
-        answer: Math.E,
-        answerDisplay: "e ≈ 2.718",
-        tolerance: 0.005,
-        hint: "\\(\\mathbb{E}[N] = \\sum P(N > n)\\) for \\(n \\geq 0\\), and \\(N > n\\) exactly when the first \\(n\\) draws sum to less than \\(1\\).",
-        explanation: "\\(\\mathbb{E}[N] = \\sum_{n \\geq 0} P(N > n) = \\sum_{n \\geq 0} \\tfrac{1}{n!} = e\\).",
+        question: "What is the probability the product is even?",
+        answer: 3 / 4,
+        answerDisplay: "3/4",
+        tolerance: 0.01,
+        hint: "Complement of step 2.",
+        explanation: "\\(1 - \\frac{1}{4} = \\frac{3}{4}\\).",
       },
     ],
     solution:
-      "\\(P(N > n) = P(U_1 + \\cdots + U_n < 1) = \\tfrac{1}{n!}\\), the volume of a simplex. Using the tail-sum formula, \\(\\mathbb{E}[N] = \\sum_{n \\geq 0} \\tfrac{1}{n!} = e \\approx 2.718\\). Euler's number shows up in a coin-free random process.",
+      "A product is even as soon as one factor is even, so count the opposite: both dice odd, \\(\\left(\\frac{1}{2}\\right)^2 = \\frac{1}{4}\\). So \\(P(\\text{even}) = \\frac{3}{4}\\). Compare the sum, which is even only half the time.",
+  },
+  {
+    id: "bank-tuesday-boy",
+    title: "Tuesday's Child",
+    category: "Probability",
+    difficulty: "medium",
+    story:
+      "A family has two children. Each child is equally likely to be a boy or a girl and to be born on any day of the week, independently. You learn that at least one of them is a boy born on a Tuesday. What is the probability both children are boys?",
+    steps: [
+      {
+        question: "Describe one child by (sex, weekday). How many equally likely descriptions are there?",
+        answer: 14,
+        answerDisplay: "14",
+        tolerance: 0,
+        hint: "Two sexes, seven days.",
+        explanation: "\\(2 \\times 7 = 14\\).",
+      },
+      {
+        question: "Of the \\(14 \\times 14 = 196\\) ordered pairs of children, how many include at least one boy born on a Tuesday?",
+        answer: 27,
+        answerDisplay: "27",
+        tolerance: 0,
+        hint: "Count the pairs with no Tuesday boy, and subtract.",
+        explanation: "Each child avoids being a Tuesday boy in 13 ways: \\(196 - 13^2 = 27\\).",
+      },
+      {
+        question: "How many of those 27 pairs are two boys?",
+        answer: 13,
+        answerDisplay: "13",
+        tolerance: 0,
+        hint: "Same trick, restricted to boys: each boy has 7 possible days.",
+        explanation: "Boy-boy pairs: \\(7^2 = 49\\); without a Tuesday boy: \\(6^2 = 36\\). So \\(49 - 36 = 13\\).",
+      },
+      {
+        question: "What is the probability both children are boys?",
+        answer: 13 / 27,
+        answerDisplay: "13/27 ≈ 0.4815",
+        tolerance: 0.01,
+        hint: "Every pair is equally likely, so divide.",
+        explanation: "\\(\\frac{13}{27} \\approx 0.4815\\).",
+      },
+    ],
+    solution:
+      "Of the 196 equally likely (sex, day) pairs, 27 contain a Tuesday boy and 13 of those are two boys, so \\(P = \\frac{13}{27}\\). That's close to \\(\\frac{1}{2}\\), not the \\(\\frac{1}{3}\\) you'd get from \"at least one boy\": the more specific the information, the less it overlaps between the two children, and the closer you get to learning about one particular child.",
+  },
+  {
+    id: "bank-lost-boarding-pass",
+    title: "The Last Seat",
+    category: "Probability",
+    difficulty: "expert",
+    story:
+      "100 passengers board a 100-seat plane one at a time, each with an assigned seat. The first has lost their boarding pass and sits in a uniformly random seat. Everyone after sits in their own seat if it's free, and otherwise picks a free seat at random. What is the probability the last passenger gets their own seat?",
+    steps: [
+      {
+        question: "Warm-up: with just 2 passengers and 2 seats, what is the probability the second gets their own seat?",
+        answer: 1 / 2,
+        answerDisplay: "1/2",
+        tolerance: 0.01,
+        hint: "The first passenger picks one of two seats.",
+        explanation: "The first takes their own seat or the second's, each with probability \\(\\frac{1}{2}\\).",
+      },
+      {
+        question: "With 100 passengers, what is the probability passenger 2 gets their own seat?",
+        answer: 99 / 100,
+        answerDisplay: "99/100",
+        tolerance: 0.001,
+        hint: "Passenger 2 is displaced only if passenger 1 happened to take seat 2.",
+        explanation: "\\(1 - \\frac{1}{100} = \\frac{99}{100}\\).",
+      },
+      {
+        question: "What is the probability passenger 50 gets their own seat?",
+        answer: 51 / 52,
+        answerDisplay: "51/52 ≈ 0.9808",
+        tolerance: 0.001,
+        hint: "Whenever someone picks at random, the seats that matter are seat 1, seat 50, and the seats of passengers 51 to 100, which are irrelevant until later. Think about which of seat 1 or seat 50 gets taken first among the decisive picks.",
+        explanation: "Each random chooser is equally likely to pick seat 1 (which ends the chain harmlessly) as any of seats 50, 51, ..., 100. Passenger 50 loses only if seat 50 is the first of those 52 seats to be taken: \\(1 - \\frac{1}{52} = \\frac{51}{52}\\).",
+      },
+      {
+        question: "What is the probability the last passenger gets their own seat?",
+        answer: 1 / 2,
+        answerDisplay: "1/2",
+        tolerance: 0.01,
+        hint: "By the time the last passenger boards, only one seat is left. Which seats can it be?",
+        explanation: "The last free seat is either seat 1 or seat 100: whichever of them a random chooser picks first decides it, and they're equally likely. So \\(\\frac{1}{2}\\).",
+      },
+    ],
+    solution:
+      "Every random chooser treats seat 1 and seat 100 symmetrically, and once either is taken the outcome is decided: taking seat 1 restores everyone else to their own seat, taking seat 100 dooms the last passenger. So the last seat is seat 1 or seat 100 with equal chance: \\(\\frac{1}{2}\\). In general passenger \\(k \\ge 2\\) of \\(n\\) gets their seat with probability \\(\\frac{n - k + 1}{n - k + 2}\\).",
   },
 ];
 
