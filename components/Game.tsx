@@ -1039,6 +1039,9 @@ function StatsView({ stats, compact }: { stats: Stats | null; compact?: boolean 
               </div>
             ))}
           </div>
+          <a className="btn wide stats-link" href="/stats">
+            Topic breakdown: what you solve and miss →
+          </a>
         </>
       )}
     </div>

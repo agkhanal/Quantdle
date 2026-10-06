@@ -4070,6 +4070,16 @@ b .track-icon {
 
 /* ───────── stats page ───────── */
 
+.stats-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 18px;
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.9rem;
+}
+
 .stats-page {
   max-width: 680px;
   margin: 0 auto;
