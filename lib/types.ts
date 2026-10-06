@@ -3,6 +3,11 @@ export type Difficulty = (typeof DIFFICULTIES)[number];
 
 export type Verdict = "green" | "yellow" | "grey";
 
+/** Practice puzzle topics (the `category` every generated puzzle is labelled with). */
+export const TOPICS = ["Probability", "Combinatorics", "Expected Value", "Statistics", "Markets"] as const;
+export type Topic = (typeof TOPICS)[number];
+export const isTopic = (x: unknown): x is Topic => TOPICS.includes(x as Topic);
+
 /** One segment of a puzzle. Every step has a single numeric answer. */
 export interface Step {
   question: string;

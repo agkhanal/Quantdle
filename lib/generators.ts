@@ -9,7 +9,7 @@
  */
 
 import { mulberry32, type Rng } from "./market";
-import type { Difficulty, Puzzle, Step } from "./types";
+import { DIFFICULTIES, type Difficulty, type Puzzle, type Step, type Topic } from "./types";
 
 // ───────────── helpers ─────────────
 
@@ -105,6 +105,7 @@ interface Generated {
 interface Template {
   id: string;
   difficulty: Difficulty;
+  topic: Topic;
   make: (rng: Rng) => Generated;
 }
 
@@ -115,6 +116,7 @@ const ind = (b: boolean) => (b ? 1 : 0);
 const diceSum: Template = {
   id: "dice-sum",
   difficulty: "easy",
+  topic: "Probability",
   make(rng) {
     const s = pick(rng, [4, 6, 8, 10, 12]);
     const k = int(rng, 3, 2 * s - 1);
@@ -151,6 +153,7 @@ const diceSum: Template = {
 const atLeastOne: Template = {
   id: "at-least-one",
   difficulty: "easy",
+  topic: "Probability",
   make(rng) {
     const s = pick(rng, [6, 8, 10, 12, 20]);
     const m = pick(rng, [1, 2, 3]);
@@ -196,6 +199,7 @@ const atLeastOne: Template = {
 const reroll: Template = {
   id: "reroll",
   difficulty: "easy",
+  topic: "Expected Value",
   make(rng) {
     const s = 2 * int(rng, 2, 15); // even-sided dice 4..30, so a fresh roll is never a tie
     const ev = (s + 1) / 2;
@@ -240,6 +244,7 @@ const reroll: Template = {
 const cardsBoth: Template = {
   id: "cards-both",
   difficulty: "easy",
+  topic: "Probability",
   make(rng) {
     const [label, c] = pick(rng, [
       ["hearts", 13],
@@ -298,6 +303,7 @@ const cardsBoth: Template = {
 const binomialHeads: Template = {
   id: "binomial-heads",
   difficulty: "easy",
+  topic: "Combinatorics",
   make(rng) {
     const n = int(rng, 4, 10);
     const k = int(rng, 1, n - 1);
@@ -332,6 +338,7 @@ const binomialHeads: Template = {
 const bayes: Template = {
   id: "bayes",
   difficulty: "medium",
+  topic: "Statistics",
   make(rng) {
     const prev = pick(rng, [0.001, 0.005, 0.01, 0.02, 0.05]);
     const sens = pick(rng, [0.9, 0.95, 0.99]);
@@ -394,6 +401,7 @@ const bayes: Template = {
 const patterns: Template = {
   id: "patterns",
   difficulty: "medium",
+  topic: "Expected Value",
   make(rng) {
     const p = int(rng, 4, 16) / 20; // 0.2, 0.25, ..., 0.8
     const q = 1 - p;
@@ -445,6 +453,7 @@ const patterns: Template = {
 const distinctFaces: Template = {
   id: "distinct-faces",
   difficulty: "medium",
+  topic: "Expected Value",
   make(rng) {
     const s = pick(rng, [4, 6, 8, 10, 12]);
     const n = int(rng, 3, 2 * s);
@@ -488,6 +497,7 @@ const distinctFaces: Template = {
 const coupon: Template = {
   id: "coupon",
   difficulty: "medium",
+  topic: "Expected Value",
   make(rng) {
     const s = int(rng, 3, 10);
     let harmonic = 0;
@@ -559,6 +569,7 @@ const coupon: Template = {
 const duel: Template = {
   id: "duel",
   difficulty: "medium",
+  topic: "Probability",
   make(rng) {
     const s = pick(rng, [6, 8, 10, 12]);
     const m = pick(rng, [1, 2, 3]);
@@ -605,6 +616,7 @@ const duel: Template = {
 const gamblersRuin: Template = {
   id: "gamblers-ruin",
   difficulty: "hard",
+  topic: "Markets",
   make(rng) {
     const i = int(rng, 2, 6);
     const N = i + int(rng, 3, 8);
@@ -658,6 +670,7 @@ const gamblersRuin: Template = {
 const orderStats: Template = {
   id: "order-stats",
   difficulty: "hard",
+  topic: "Probability",
   make(rng) {
     const n = int(rng, 2, 10);
     const sample = (r: Rng) => Array.from({ length: n }, () => r());
@@ -705,6 +718,7 @@ const orderStats: Template = {
 const optimalStopping: Template = {
   id: "optimal-stopping",
   difficulty: "hard",
+  topic: "Expected Value",
   make(rng) {
     const s = pick(rng, [6, 8, 10, 12, 20]);
     const n = pick(rng, [3, 4]);
@@ -750,6 +764,7 @@ const optimalStopping: Template = {
 const derangement: Template = {
   id: "derangement",
   difficulty: "hard",
+  topic: "Combinatorics",
   make(rng) {
     const n = int(rng, 4, 8);
     let d = 0;
@@ -799,6 +814,7 @@ const derangement: Template = {
 const binomialTree: Template = {
   id: "binomial-tree",
   difficulty: "expert",
+  topic: "Markets",
   make(rng) {
     const u = pick(rng, [1.1, 1.2, 1.25]);
     const d = pick(rng, [0.8, 0.9]);
@@ -856,6 +872,7 @@ const binomialTree: Template = {
 const kelly: Template = {
   id: "kelly",
   difficulty: "expert",
+  topic: "Markets",
   make(rng) {
     const p = pick(rng, [0.52, 0.55, 0.58, 0.6, 0.62, 0.65, 0.68, 0.7, 0.75]);
     const b = pick(rng, [1, 1.5, 2, 3]);
@@ -896,6 +913,7 @@ const kelly: Template = {
 const uniformSum: Template = {
   id: "uniform-sum",
   difficulty: "expert",
+  topic: "Probability",
   make(rng) {
     const t = int(rng, 3, 10) / 10; // 0.3 .. 1.0
     const draws = (r: Rng) => {
@@ -946,6 +964,7 @@ const uniformSum: Template = {
 const ballot: Template = {
   id: "ballot",
   difficulty: "expert",
+  topic: "Combinatorics",
   make(rng) {
     const a = int(rng, 3, 8);
     const b = int(rng, 1, a - 1);
@@ -1055,8 +1074,21 @@ export function monteCarloCheck(steps: GenStep[], rng: Rng, trialsScale = 1, z =
   return out;
 }
 
-export function templatesFor(d: Difficulty) {
-  return TEMPLATES.filter((t) => t.difficulty === d);
+export function templatesFor(d: Difficulty, topic?: Topic) {
+  return TEMPLATES.filter((t) => t.difficulty === d && (!topic || t.topic === topic));
+}
+
+/** The difficulties that have at least one template for a topic (all of them when no topic is picked). */
+export function levelsFor(topic?: Topic | null): Difficulty[] {
+  return DIFFICULTIES.filter((d) => templatesFor(d, topic ?? undefined).length > 0);
+}
+
+/** The level closest to `d` that has templates for the topic (`d` itself when it has some). */
+export function nearestLevel(d: Difficulty, topic?: Topic | null): Difficulty {
+  const levels = levelsFor(topic);
+  if (!levels.length || levels.includes(d)) return d;
+  const at = DIFFICULTIES.indexOf(d);
+  return levels.reduce((best, l) => (Math.abs(DIFFICULTIES.indexOf(l) - at) < Math.abs(DIFFICULTIES.indexOf(best) - at) ? l : best));
 }
 
 /** Build a template's puzzle for a given seed, without the Monte Carlo check. */
@@ -1069,7 +1101,7 @@ function toPuzzle(t: Template, id: string, g: Generated): Puzzle {
   return {
     id,
     title: g.title,
-    category: g.category,
+    category: t.topic,
     difficulty: t.difficulty,
     story: g.story,
     // Strip simulators: only plain data goes into the sealed token.
@@ -1079,11 +1111,12 @@ function toPuzzle(t: Template, id: string, g: Generated): Puzzle {
 }
 
 /**
- * Generate a verified puzzle. Picks a template for the difficulty, builds it from
- * the seed, and only returns it if every simulated step agrees with the exact answer.
+ * Generate a verified puzzle. Picks a template for the difficulty (and topic, if given),
+ * builds it from the seed, and only returns it if every simulated step agrees with the
+ * exact answer. A topic with no template at that difficulty uses its nearest level.
  */
-export function generatePuzzle(difficulty: Difficulty, seed: number = Math.floor(Math.random() * 2 ** 31)): Puzzle {
-  const pool = templatesFor(difficulty);
+export function generatePuzzle(difficulty: Difficulty, seed: number = Math.floor(Math.random() * 2 ** 31), topic?: Topic): Puzzle {
+  const pool = templatesFor(nearestLevel(difficulty, topic), topic);
   for (let attempt = 0; attempt < 8; attempt++) {
     const s = (seed + attempt * 104_729) >>> 0;
     const t = pool[s % pool.length];
