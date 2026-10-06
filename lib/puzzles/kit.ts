@@ -105,3 +105,14 @@ export interface Template {
 }
 
 export const ind = (b: boolean) => (b ? 1 : 0);
+
+/** Fisher–Yates shuffle, in place. */
+export function shuffle<T>(rng: Rng, xs: T[]): T[] {
+  for (let i = xs.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [xs[i], xs[j]] = [xs[j], xs[i]];
+  }
+  return xs;
+}
+
+export const cap = (s: string) => s[0].toUpperCase() + s.slice(1);

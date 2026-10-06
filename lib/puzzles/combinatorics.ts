@@ -1,6 +1,6 @@
 /** Combinatorics puzzle templates, easiest first. */
 
-import { pick, int, flip, NAMES, frac, texFrac, texFracApprox, num, choose, factorial, step, ind, type Rng, type Template } from "./kit";
+import { pick, int, flip, NAMES, frac, texFrac, texFracApprox, num, choose, factorial, step, ind, shuffle, cap, type Rng, type Template } from "./kit";
 
 const binomialHeads: Template = {
   id: "binomial-heads",
@@ -141,4 +141,96 @@ const ballot: Template = {
   },
 };
 
-export const COMBINATORICS: Template[] = [binomialHeads, derangement, ballot];
+const anagrams: Template = {
+  id: "anagrams",
+  difficulty: "easy",
+  topic: "Combinatorics",
+  make(rng) {
+    const word = pick(rng, ["LETTER", "BANANA", "COFFEE", "PEPPER", "STATS", "ASSESS", "SUCCESS", "BALLOON", "TATTOO", "COOKBOOK", "BOOKKEEPER", "MISSISSIPPI"]);
+    const n = word.length;
+    const counts = new Map<string, number>();
+    for (const c of word) counts.set(c, (counts.get(c) ?? 0) + 1);
+    const [glue, c] = [...counts.entries()].reduce((best, e) => (e[1] > best[1] ? e : best));
+    const denom = [...counts.values()].reduce((p, x) => p * factorial(x), 1);
+    const distinct = factorial(n) / denom;
+    const glued = factorial(n - c + 1) / (denom / factorial(c));
+    const together = (r: Rng) => {
+      const tiles = shuffle(r, [...word]);
+      const at = tiles.flatMap((x, i) => (x === glue ? [i] : []));
+      return at[at.length - 1] - at[0] === c - 1;
+    };
+    const reps = [...counts.entries()].filter(([, x]) => x > 1);
+    return {
+      title: pick(rng, ["Letter Shuffle", "Tile Rack", "Rearranged"]),
+      category: "Combinatorics",
+      story: `The ${n} letter tiles of ${word} are shuffled and laid out in a row. How many different strings can appear, and how likely is it that all ${c} ${glue}s end up next to each other?`,
+      steps: [
+        step(`If all ${n} tiles were different, how many orders would there be?`, factorial(n), `${factorial(n)}`, "Any of the tiles first, then any of the rest, ...", `\\(${n}! = ${factorial(n).toLocaleString("en-US")}\\).`),
+        step(
+          `How many different strings can the tiles spell?`,
+          distinct,
+          `${distinct}`,
+          "Swapping two identical tiles gives the same string. Divide out those swaps.",
+          `\\(\\frac{${n}!}{${reps.map(([, x]) => `${x}!`).join(" \\cdot ")}} = ${distinct.toLocaleString("en-US")}\\), dividing out the repeated ${reps.map(([l]) => l).join(", ")}.`,
+        ),
+        step(
+          `What is the probability all ${c} ${glue}s are next to each other?`,
+          glued / distinct,
+          frac(glued, distinct),
+          `Glue the ${glue}s into a single block and count strings of ${n - c + 1} items.`,
+          `With the block there are ${glued.toLocaleString("en-US")} strings, out of ${distinct.toLocaleString("en-US")}: \\(${texFrac(glued, distinct)}\\).`,
+          { sim: (r) => ind(together(r)) },
+        ),
+      ],
+      solution: `Strings: \\(\\frac{${n}!}{\\prod (\\text{repeats})!} = ${distinct.toLocaleString("en-US")}\\). Gluing the ${c} ${glue}s into one block leaves ${n - c + 1} items and ${glued.toLocaleString("en-US")} strings, so \\(P = ${texFracApprox(glued, distinct)}\\). Every string is equally likely when the tiles are shuffled, so counting strings is enough.`,
+    };
+  },
+};
+
+const latticePaths: Template = {
+  id: "lattice-paths",
+  difficulty: "easy",
+  topic: "Combinatorics",
+  make(rng) {
+    const a = int(rng, 3, 6);
+    const b = int(rng, 2, 5);
+    const x = int(rng, 1, a - 1);
+    const y = int(rng, 1, b - 1);
+    const total = choose(a + b, a);
+    const via = choose(x + y, x) * choose(a - x + b - y, a - x);
+    const name = pick(rng, NAMES);
+    const spot = pick(rng, ["a coffee shop", "a newsstand", "a friend's flat", "a bakery"]);
+    const passes = (r: Rng) => {
+      const moves = shuffle(r, [...Array(a).fill(1), ...Array(b).fill(0)]);
+      let [px, py] = [0, 0];
+      for (const m of moves) {
+        if (px === x && py === y) return true;
+        if (m) px++;
+        else py++;
+      }
+      return px === x && py === y;
+    };
+    return {
+      title: pick(rng, ["City Blocks", "Shortest Routes", "Grid Walk"]),
+      category: "Combinatorics",
+      story: `${name}'s office is ${a} blocks east and ${b} blocks north of home, on a perfect grid. ${name} only ever walks east or north, and picks one of the shortest routes uniformly at random. ${cap(spot)} sits on the corner ${x} east and ${y} north of home. What is the chance the walk goes past it?`,
+      steps: [
+        step("How many shortest routes are there?", total, `${total}`, `A route is a string of ${a} E's and ${b} N's.`, `\\(\\binom{${a + b}}{${a}} = ${total}\\).`),
+        step(
+          `How many of them pass the corner (${x}, ${y})?`,
+          via,
+          `${via}`,
+          "Count routes to the corner, then from the corner on, and multiply.",
+          `\\(\\binom{${x + y}}{${x}} \\cdot \\binom{${a - x + b - y}}{${a - x}} = ${choose(x + y, x)} \\cdot ${choose(a - x + b - y, a - x)} = ${via}\\).`,
+          { sim: (r) => ind(passes(r)) * total },
+        ),
+        step(`What is the probability the walk passes ${spot}?`, via / total, frac(via, total), "Divide.", `\\(\\frac{${via}}{${total}} = ${texFrac(via, total)}\\).`, {
+          sim: (r) => ind(passes(r)),
+        }),
+      ],
+      solution: `There are \\(\\binom{${a + b}}{${a}} = ${total}\\) shortest routes and \\(\\binom{${x + y}}{${x}}\\binom{${a + b - x - y}}{${a - x}} = ${via}\\) go through (${x}, ${y}), so \\(P = ${texFracApprox(via, total)}\\).`,
+    };
+  },
+};
+
+export const COMBINATORICS: Template[] = [binomialHeads, anagrams, latticePaths, derangement, ballot];
