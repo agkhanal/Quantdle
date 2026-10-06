@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { loadHistory, summarize, type GameMode, type GameResult, type TopicSummary } from "@/lib/history";
+import { isTopic } from "@/lib/types";
+import { MARKET_TOPIC, loadHistory, summarize, type GameMode, type GameResult, type TopicSummary } from "@/lib/history";
 import { DonutChart, Legend, topicColor, type Slice } from "./DonutChart";
 
 /** Fewer games than this in a topic and we don't call it a strength or a weakness yet. */
@@ -162,7 +163,14 @@ function TopicRow({ t, tag }: { t: TopicSummary; tag: "best" | "worst" | null })
         <span style={{ width: `${pct}%`, background: topicColor(t.topic) }} />
       </div>
       <div className="topic-row-meta muted small">
-        {t.won}/{t.played} {t.kind === "market" ? "profitable" : "solved"} · {Math.round(t.missRate * 100)}% of {unit} missed
+        <span>
+          {t.won}/{t.played} {t.kind === "market" ? "profitable" : "solved"} · {Math.round(t.missRate * 100)}% of {unit} missed
+        </span>
+        {(isTopic(t.topic) || t.topic === MARKET_TOPIC) && (
+          <a className={`topic-practice${tag === "worst" ? " urgent" : ""}`} href={`/?topic=${encodeURIComponent(t.topic)}`}>
+            Practice →
+          </a>
+        )}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { evaluate, fmt } from "@/lib/math";
-import { recordGame } from "@/lib/history";
+import { MARKET_TOPIC, recordGame } from "@/lib/history";
 import { loadJSON, loadStats, recordResult, saveJSON, type Stats } from "@/lib/stats";
 import { dailyNumber } from "@/lib/bank";
 import { levelsFor, nearestLevel } from "@/lib/generators";
@@ -195,7 +195,23 @@ export default function Game() {
       setModal("account");
       window.history.replaceState(null, "", window.location.pathname);
     }
-    load("daily", "medium", null);
+    // The stats page links here with ?topic=... to practice one topic (or the market game).
+    const linked = new URLSearchParams(window.location.search).get("topic");
+    if (isTopic(linked)) {
+      const d = nearestLevel("medium", linked);
+      setMode("practice");
+      setTopic(linked);
+      setDifficulty(d);
+      saveJSON(TOPIC_KEY, linked);
+      load("practice", d, linked);
+    } else {
+      if (linked === MARKET_TOPIC) {
+        setMode("practice");
+        setTracks((ts) => ({ ...ts, practice: "market" }));
+      }
+      load("daily", "medium", null);
+    }
+    if (linked !== null) window.history.replaceState(null, "", window.location.pathname);
     if (!localStorage.getItem("quantdle-seen-tutorial")) setTutorial("gate");
   }, [load]);
 

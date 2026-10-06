@@ -4186,6 +4186,29 @@ b .track-icon {
   color: #e07a3f;
 }
 
+.topic-row-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.topic-practice {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.topic-practice:hover {
+  text-decoration: underline;
+}
+
+.topic-practice.urgent {
+  color: #e07a3f;
+}
+
 .topic-bar {
   height: 8px;
   border-radius: 999px;
