@@ -16,7 +16,7 @@ Two tabs, each with two games:
 | | 🎲 Puzzle / Probability | 📈 Market making |
 | --- | --- | --- |
 | **Daily** | One hand-checked puzzle per day, the same for everyone. | One market per day, the same for everyone. Difficulty rotates daily. Can't be skipped, and progress survives a refresh. |
-| **Practice** | Endless generated puzzles, Easy to Expert. Skip any you don't like. | Endless generated markets, Easy to Expert. Skip any you don't like. |
+| **Practice** | Endless generated puzzles, Easy to Expert. Pick a topic (Probability, Combinatorics, Expected Value, Statistics, Markets) or a mix. Skip any you don't like. | Endless generated markets, Easy to Expert. Skip any you don't like. |
 
 **Market making:** a contract settles on some hidden dice or coins (sum of dice, product, highest, range, heads squared, ...). Each round you quote a bid and an ask, counterparties trade with you, and one draw is revealed. Finish with the best P&L. Each round's tile is green/yellow/grey by how close your mid was to fair value.
 
@@ -24,9 +24,15 @@ Who trades with you: a **sharp** trader who has peeked at the next draw (adverse
 
 Markets are procedural too: 18 contract families with random parameters, grouped by difficulty. Harder levels have trickier payoffs (products, squares, order statistics) and narrower markets relative to the contract's volatility. Fair value is computed exactly by enumerating every outcome.
 
+## Your stats
+
+The chart button opens your win record and guess distribution, and links to **`/stats`**: a page of donut charts showing which topics you solve and which you miss, with each puzzle topic and the market game ranked by win rate. Your strongest topic and the one that needs work are labelled, and every row has a **Practice →** link that opens practice on that topic. Filter by Daily or Practice.
+
+A puzzle counts as solved when every step is cracked within six guesses, and its misses are wrong guesses. A market counts as won when it finishes in profit, and its misses are rounds where your mid wasn't close to fair. Results are kept in your browser (`lib/history.ts`), so the page works signed out and covers the market game too.
+
 ## Procedural puzzles
 
-Practice puzzles come from 18 templates in `lib/generators.ts` (dice, cards, Bayes, coupon collector, gambler's ruin, optimal stopping, derangements, binomial option pricing, Kelly betting, the ballot problem, ...). Each template picks random parameters and computes every answer exactly.
+Practice puzzles come from 18 templates in `lib/generators.ts` (dice, cards, Bayes, coupon collector, gambler's ruin, optimal stopping, derangements, binomial option pricing, Kelly betting, the ballot problem, ...). Each template picks random parameters and computes every answer exactly, and is filed under one practice topic. Not every topic has every level (Statistics is Medium only, for example), so picking a topic greys out the levels it doesn't have.
 
 Every random quantity also has a simulator. Before a puzzle is served, it's simulated thousands of times (Monte Carlo) and thrown away if any exact answer falls outside 5 standard errors of the simulation. To stress-test all templates across many seeds:
 
@@ -90,7 +96,8 @@ npm run dev                  # http://localhost:3000
 ```
 app/
   page.tsx                   UI entry
-  api/puzzle/route.ts        GET a daily or practice puzzle (returns public view + sealed token)
+  stats/page.tsx             Your stats: topic breakdown charts
+  api/puzzle/route.ts        GET a daily or practice puzzle, optionally by ?topic= (returns public view + sealed token)
   api/guess/route.ts         POST a guess -> verdict, direction, feedback; scores wins and losses (points, streak)
   api/reveal/route.ts        POST at game end -> full worked solution
   api/auth/route.ts          Sign up, sign in, sign out, who am I
@@ -105,7 +112,10 @@ components/MarketGame.tsx    The market-making game (daily and practice)
 components/Account.tsx       Sign-in form
 components/Profile.tsx       Your profile and public profiles
 components/Leaderboard.tsx   Players / schools leaderboard panel
-lib/generators.ts            Procedural puzzle templates + Monte Carlo checks
+components/StatsPage.tsx     The /stats page: solved and missed problems by topic
+components/DonutChart.tsx    Ring chart used on the stats page
+lib/generators.ts            Procedural puzzle templates (by topic) + Monte Carlo checks
+lib/history.ts               Local log of finished games and per-topic summaries
 lib/bank.ts                  Hand-checked puzzles for the Daily
 lib/market.ts                Market contract generator, fair value, counterparties, P&L
 lib/auth.ts                  Password hashing and session cookies
