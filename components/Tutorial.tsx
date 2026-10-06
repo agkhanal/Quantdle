@@ -5,6 +5,7 @@ import { evaluate, fmt, relativeError } from "@/lib/math";
 import { winPoints } from "@/lib/scoring";
 import type { Verdict } from "@/lib/types";
 import Modal from "./Modal";
+import { ChartIcon, DiceIcon } from "./TrackIcons";
 
 const SLIDE_TITLES = ["Welcome", "How guessing works", "Try it yourself", "Points example", "Market making", "You're set!"];
 
@@ -87,7 +88,7 @@ function WelcomeSlide() {
         build to a final answer, and you get 6 guesses for the whole thing.
       </p>
       <p className="muted small">
-        There are two tracks: 🎲 probability puzzles, and 📈 market making. This tour covers both.
+        There are two tracks: <DiceIcon size={14} /> probability puzzles, and <ChartIcon size={14} /> market making. This tour covers both.
       </p>
     </div>
   );

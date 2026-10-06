@@ -3676,3 +3676,21 @@ textarea:not(:focus)::selection {
   gap: 10px;
   margin-top: 18px;
 }
+
+/* Icons on the Puzzle / Market tabs */
+.tracks button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.track-icon {
+  flex: none;
+}
+
+/* The same icons used inside a sentence */
+p .track-icon,
+b .track-icon {
+  display: inline-block;
+  vertical-align: -0.15em;
+}

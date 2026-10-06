@@ -24,6 +24,7 @@ import { AdminPanel } from "./AdminPanel";
 import { Avatar } from "./Avatar";
 import { BugReport } from "./BugReport";
 import { Chat } from "./Chat";
+import { ChartIcon, DiceIcon } from "./TrackIcons";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
 import { RichText } from "./RichText";
@@ -488,7 +489,8 @@ export default function Game() {
       <div className="tracks" role="tablist" aria-label="Game type">
         {(["puzzle", "market"] as Track[]).map((t) => (
           <button key={t} role="tab" aria-selected={track === t} className={track === t ? "on" : ""} onClick={() => switchTrack(t)}>
-            {t === "puzzle" ? (mode === "daily" ? "🎲 Puzzle" : "🎲 Probability") : mode === "daily" ? "📈 Market" : "📈 Market making"}
+            {t === "puzzle" ? <DiceIcon /> : <ChartIcon />}
+            {t === "puzzle" ? (mode === "daily" ? "Puzzle" : "Probability") : mode === "daily" ? "Market" : "Market making"}
           </button>
         ))}
       </div>
@@ -929,7 +931,9 @@ function HowTo({ onReplay }: { onReplay: () => void }) {
       <p className="muted small">
         <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> is endless: puzzles are generated from templates with
         random numbers, and every answer is double-checked by simulation. Skip any you don&apos;t like.
-        Both tabs also have a <b>📈 Market</b> game: quote a bid and ask on a dice or coin contract and finish with a profit.
+        Both tabs also have a <b>
+          <ChartIcon size={14} /> Market
+        </b>{" "}game: quote a bid and ask on a dice or coin contract and finish with a profit.
         The daily market can&apos;t be skipped; practice markets come in Easy to Expert.
       </p>
     </div>
