@@ -3,7 +3,7 @@ import { aiEnabled, generatePuzzle as generateWithAI } from "@/lib/ai";
 import { dailyNumber, dailyPuzzle } from "@/lib/bank";
 import { generatePuzzle } from "@/lib/generators";
 import { seal } from "@/lib/token";
-import { DIFFICULTIES, toPublic, type Difficulty, type Puzzle, type PuzzleResponse } from "@/lib/types";
+import { DIFFICULTIES, isTopic, toPublic, type Difficulty, type Puzzle, type PuzzleResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120; // only matters if AI puzzles are turned on
@@ -24,17 +24,19 @@ export async function GET(req: Request) {
 
   const d = url.searchParams.get("difficulty") as Difficulty;
   const difficulty: Difficulty = DIFFICULTIES.includes(d) ? d : "medium";
+  const t = url.searchParams.get("topic");
+  const topic = isTopic(t) ? t : undefined; // anything else (or nothing) means a mix of every topic
 
   if (useAI()) {
     try {
-      const puzzle = await generateWithAI(difficulty);
+      const puzzle = await generateWithAI(difficulty, topic);
       if (puzzle) return json({ token: seal(puzzle), puzzle: toPublic(puzzle), source: "ai" });
     } catch (err) {
       console.error("[quantdle] AI generation failed, using a generated puzzle:", err);
     }
   }
 
-  const puzzle = generatePuzzle(difficulty);
+  const puzzle = generatePuzzle(difficulty, undefined, topic);
   return json({ token: seal(puzzle), puzzle: toPublic(puzzle), source: "generated" });
 }
 

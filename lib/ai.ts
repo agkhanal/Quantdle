@@ -92,8 +92,8 @@ Rules:
 - Prefer classic interview ideas with a fresh twist over textbook drills.
 - Write math as LaTeX in \\( ... \\) delimiters (e.g. \\(P(A \\mid B) = \\frac{1}{6}\\), \\(2^{10}\\), \\(\\sum_{k=0}^{n} \\frac{1}{k!}\\)) in the story, questions, hints, explanations and solution. Keep ordinary words outside the delimiters, and never use $ for math: dollar signs mean money. Keep answerDisplay plain text, like "1/6 ≈ 0.1667".`;
 
-export async function generatePuzzle(difficulty: Difficulty): Promise<Puzzle | null> {
-  const category = CATEGORIES[crypto.randomInt(CATEGORIES.length)];
+export async function generatePuzzle(difficulty: Difficulty, topic?: string): Promise<Puzzle | null> {
+  const category = topic ?? CATEGORIES[crypto.randomInt(CATEGORIES.length)];
   const flavor = FLAVORS[crypto.randomInt(FLAVORS.length)];
 
   const response = await getClient().beta.messages.parse({
@@ -126,7 +126,7 @@ Random seed (for variety): ${crypto.randomUUID()}`,
   return {
     id: `ai-${crypto.randomUUID()}`,
     title: g.title,
-    category: g.category || category,
+    category: topic ?? (g.category || category),
     difficulty,
     story: g.story,
     steps,
