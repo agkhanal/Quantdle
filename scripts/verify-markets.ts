@@ -7,7 +7,7 @@
  *   npx tsx scripts/verify-markets.ts          # 400 markets per difficulty
  *   npx tsx scripts/verify-markets.ts 2000
  */
-import { fairValue, isOver, mulberry32, newMarket, playRound, revealedDraws, book, sampleDraws, type MarketGameState } from "../lib/market";
+import { familyIds, fairValue, isOver, mulberry32, newMarket, playRound, revealedDraws, book, sampleDraws, type MarketGameState } from "../lib/market";
 import { DIFFICULTIES } from "../lib/types";
 
 const N = Number(process.argv[2] ?? 400);
@@ -69,6 +69,15 @@ for (const d of DIFFICULTIES) {
   if (avg(pnl["off by 1 sd"]) >= avg(pnl["fair, max width"])) {
     failures++;
     console.log(`  ✗ mispricing should cost money on ${d}`);
+  }
+}
+
+// The daily market has its own contracts: none may also appear in practice.
+const practice = new Set(familyIds("practice"));
+for (const f of familyIds("daily")) {
+  if (practice.has(f)) {
+    console.log(`  ✗ contract family "${f}" is in both the daily and practice pools`);
+    failures++;
   }
 }
 

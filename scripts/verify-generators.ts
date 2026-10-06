@@ -5,14 +5,16 @@
  *   npx tsx scripts/verify-generators.ts            # 60 seeds per template
  *   npx tsx scripts/verify-generators.ts 300        # more seeds
  */
-import { TEMPLATES, buildFromTemplate, levelsFor, monteCarloCheck } from "../lib/generators";
+import { BANK } from "../lib/bank";
+import { TEMPLATES, buildFromTemplate, monteCarloCheck, templatesFor } from "../lib/generators";
 import { mulberry32 } from "../lib/market";
 import { evaluate } from "../lib/math";
-import { TOPICS } from "../lib/types";
+import { DIFFICULTIES, TOPICS } from "../lib/types";
 
 const seeds = Number(process.argv[2] ?? 60);
 let failures = 0;
 const variety = new Map<string, Set<string>>();
+const practiceTitles = new Set<string>();
 
 for (const t of TEMPLATES) {
   const stories = new Set<string>();
@@ -20,6 +22,7 @@ for (const t of TEMPLATES) {
   for (let seed = 1; seed <= seeds; seed++) {
     const { generated: g, id } = buildFromTemplate(t, seed * 7919);
     stories.add(g.story);
+    practiceTitles.add(g.title);
 
     if (g.steps.length < 3) fail(id, "fewer than 3 steps");
     if (g.category !== t.topic) fail(id, `labelled "${g.category}" but filed under the "${t.topic}" topic`);
@@ -43,12 +46,21 @@ for (const t of TEMPLATES) {
   console.log(`${t.difficulty.padEnd(6)} ${t.id.padEnd(17)} ${String(stories.size).padStart(4)} distinct stories   worst |z| = ${worstZ.toFixed(2)}`);
 }
 
-// Every practice topic needs puzzles, and the topic picker shows which levels have them.
-console.log("\nTopics:");
+// Every topic needs at least 3 different practice templates at every level, and one daily.
+const MIN_PER_LEVEL = 3;
+console.log("\nTemplates per topic (easy / medium / hard / expert), and the daily for each:");
 for (const topic of TOPICS) {
-  const levels = levelsFor(topic);
-  if (!levels.length) fail(topic, "no templates for this topic");
-  console.log(`  ${topic.padEnd(15)} ${levels.join(", ") || "(none)"}`);
+  const counts = DIFFICULTIES.map((d) => templatesFor(d, topic).length);
+  DIFFICULTIES.forEach((d, i) => {
+    if (counts[i] < MIN_PER_LEVEL) fail(topic, `only ${counts[i]} ${d} template(s), want ${MIN_PER_LEVEL}`);
+    if (!BANK.some((p) => p.category === topic && p.difficulty === d)) fail(topic, `no ${d} daily puzzle`);
+  });
+  console.log(`  ${topic.padEnd(15)} ${counts.join(" / ")}`);
+}
+
+// The daily is hand-written and must not be a re-skin of a practice template.
+for (const p of BANK) {
+  if (practiceTitles.has(p.title)) fail(p.id, `daily title "${p.title}" is also a practice title`);
 }
 
 function fail(id: string, msg: string) {
