@@ -4067,3 +4067,136 @@ b .track-icon {
     animation: none;
   }
 }
+
+/* ───────── stats page ───────── */
+
+.stats-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  display: grid;
+  gap: 16px;
+}
+
+.stats-page > h1 {
+  margin: 8px 0 0;
+}
+
+.stats-page > p {
+  margin: 0;
+}
+
+.stats-page h2 {
+  font-size: 1.05rem;
+  margin: 0 0 14px;
+}
+
+.stats-empty {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.stats-empty p {
+  margin: 0;
+}
+
+.stats-empty .btn {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.stat-nums b.stat-topic {
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.3;
+  min-height: 2.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.chart-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.chart-row .legend {
+  min-width: 140px;
+}
+
+.topic-rows {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.topic-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topic-row-pct {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
+.topic-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  user-select: none;
+}
+
+.topic-tag.best {
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  color: var(--green);
+}
+
+.topic-tag.worst {
+  background: color-mix(in srgb, #e07a3f 18%, transparent);
+  color: #e07a3f;
+}
+
+.topic-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  margin: 6px 0 4px;
+  overflow: hidden;
+}
+
+.topic-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  animation: bar-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transform-origin: left;
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topic-bar span {
+    animation: none;
+  }
+}
