@@ -105,6 +105,7 @@ export default function Game() {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const loadSeq = useRef(0);
+  const appRef = useRef<HTMLDivElement>(null);
   const loadedKey = useRef("");
   const track = tracks[mode];
 
@@ -207,7 +208,8 @@ export default function Game() {
   }, [mode, data, rows, solved, status]);
 
   useEffect(() => {
-    if (status === "playing") inputRef.current?.focus();
+    // Don't let the browser scroll down to the answer box when switching tabs or levels.
+    if (status === "playing") inputRef.current?.focus({ preventScroll: true });
   }, [status, step]);
 
   async function fetchReveal(token: string) {
@@ -238,6 +240,7 @@ export default function Game() {
   /** Fade the current content out, then make the change (the new content fades in). */
   function swap(change: () => void) {
     if (leaving) return;
+    holdHeight();
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return change();
     setLeaving(true);
     setTimeout(() => {
@@ -245,6 +248,21 @@ export default function Game() {
       setLeaving(false);
     }, 140);
   }
+
+  // While content swaps (and the new puzzle loads) the page would shrink, and the browser
+  // would jump you up to fit. Hold the page at its current height until the new content is in.
+  function holdHeight() {
+    const el = appRef.current;
+    if (el) el.style.minHeight = `${el.offsetHeight}px`;
+  }
+
+  useEffect(() => {
+    const el = appRef.current;
+    if (!el?.style.minHeight || leaving || status === "loading") return;
+    const id = setTimeout(() => (el.style.minHeight = ""), 400);
+    return () => clearTimeout(id);
+  }, [leaving, status]);
+
 
   function switchMode(m: Mode, t: Track = tracks[m]) {
     if (m === mode && t === track) return;
@@ -404,7 +422,7 @@ export default function Game() {
   // ───────────── render ─────────────
 
   return (
-    <div className="app">
+    <div className="app" ref={appRef}>
       <header className="topbar">
         <div className="topbar-side">
           <button className="icon-btn" aria-label="How to play" onClick={() => setModal("help")}>

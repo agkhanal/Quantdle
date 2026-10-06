@@ -64,6 +64,11 @@ export default function MarketGame(props: Props) {
 
   const openingSd = useMemo(() => (game ? fairValue(game.contract, []).sd : 1), [game?.contract]);
 
+  // Focus the bid box for each new market without scrolling the page down to it.
+  useEffect(() => {
+    bidRef.current?.focus({ preventScroll: true });
+  }, [game?.contract]);
+
   if (!game) return null;
 
   const c = game.contract;
@@ -86,7 +91,7 @@ export default function MarketGame(props: Props) {
     const next = playRound(game, b, a);
     setGame(next);
     if (dailyKey) saveJSON(dailyKey, next.rounds.map((r) => [r.bid, r.ask]));
-    bidRef.current?.focus();
+    bidRef.current?.focus({ preventScroll: true });
   }
 
   function shareText() {
@@ -184,7 +189,7 @@ export default function MarketGame(props: Props) {
           <div className="quote">
             <label>
               <span>Bid</span>
-              <input ref={bidRef} value={bid} onChange={(e) => setBid(e.target.value)} inputMode="decimal" placeholder="buy at" autoFocus />
+              <input ref={bidRef} value={bid} onChange={(e) => setBid(e.target.value)} inputMode="decimal" placeholder="buy at" />
             </label>
             <span className="quote-at">@</span>
             <label>
