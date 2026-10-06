@@ -1,6 +1,6 @@
 /** Combinatorics puzzle templates, easiest first. */
 
-import { pick, int, flip, NAMES, frac, texFrac, texFracApprox, num, choose, factorial, step, ind, shuffle, cap, type Rng, type Template } from "./kit";
+import { pick, int, flip, NAMES, gcd, frac, texFrac, texFracApprox, num, choose, factorial, step, ind, shuffle, cap, type Rng, type Template } from "./kit";
 
 const binomialHeads: Template = {
   id: "binomial-heads",
@@ -489,4 +489,112 @@ const couplesTable: Template = {
   },
 };
 
-export const COMBINATORICS: Template[] = [binomialHeads, anagrams, latticePaths, pokerHand, starsBars, voidSuit, derangement, prisoners, couplesTable, ballot];
+const longestRun: Template = {
+  id: "longest-run",
+  difficulty: "expert",
+  topic: "Combinatorics",
+  make(rng) {
+    const k = int(rng, 3, 5);
+    const n = int(rng, k + 5, 20);
+    // f[m] = binary strings of length m with no k heads in a row.
+    const f: number[] = [];
+    for (let m = 0; m <= n; m++) f.push(m < k ? 2 ** m : f.slice(m - k, m).reduce((a, b) => a + b, 0));
+    const safe = f[n];
+    const flips = (r: Rng) => Array.from({ length: n }, () => r() < 0.5);
+    const hasRun = (xs: boolean[]) => {
+      let run = 0;
+      return xs.some((h) => (run = h ? run + 1 : 0) >= k);
+    };
+    const thing = pick(rng, ["flip a fair coin", "toss a fair coin", "spin a fair coin"]);
+    return {
+      title: pick(rng, ["Hot Streak", "Longest Run", "Streaky"]),
+      category: "Combinatorics",
+      story: `You ${thing} ${n} times. What is the probability you see at least ${k} heads in a row somewhere?`,
+      steps: [
+        step(`What is the probability that flips 1 to ${k} are all heads?`, 1 / 2 ** k, frac(1, 2 ** k), "Independent fair flips.", `\\(2^{-${k}} = ${texFrac(1, 2 ** k)}\\).`, {
+          sim: (r) => ind(flips(r).slice(0, k).every(Boolean)),
+        }),
+        step(
+          `How many of the \\(2^{${n}}\\) sequences have no run of ${k} heads?`,
+          safe,
+          `${safe}`,
+          `Split by how the sequence ends: T, HT, ${k > 3 ? "HHT, ..., " : ""}${"H".repeat(k - 1)}T. That gives a recursion \\(f(m) = f(m-1) + \\cdots + f(m-${k})\\).`,
+          `Starting from \\(f(m) = 2^m\\) for \\(m < ${k}\\), the recursion reaches \\(f(${n}) = ${safe}\\).`,
+          { sim: (r) => ind(!hasRun(flips(r))) * 2 ** n },
+        ),
+        step(
+          `What is the probability of at least ${k} heads in a row? (4 decimals)`,
+          1 - safe / 2 ** n,
+          num(1 - safe / 2 ** n),
+          "Complement of step 2, over all sequences.",
+          `\\(1 - \\frac{${safe}}{${2 ** n}} \\approx ${num(1 - safe / 2 ** n)}\\).`,
+          { sim: (r) => ind(hasRun(flips(r))) },
+        ),
+      ],
+      solution: `Count the sequences that avoid ${k} heads in a row with a ${k}-step Fibonacci-style recursion (classify by the final T and the heads before it): \\(f(${n}) = ${safe}\\). So \\(P = 1 - ${safe}/2^{${n}} \\approx ${num(1 - safe / 2 ** n)}\\). Long streaks are much more common than people expect, which is why they make poor evidence of a "hot hand".`,
+    };
+  },
+};
+
+const necklaces: Template = {
+  id: "necklaces",
+  difficulty: "expert",
+  topic: "Combinatorics",
+  make(rng) {
+    const [n, k] = pick(rng, [
+      [4, 2],
+      [5, 2],
+      [6, 2],
+      [7, 2],
+      [8, 2],
+      [4, 3],
+      [5, 3],
+      [6, 3],
+    ] as const);
+    const total = k ** n;
+    let fixedPairs = 0;
+    for (let r = 0; r < n; r++) fixedPairs += k ** gcd(r, n);
+    const distinct = fixedPairs / n;
+    // A colouring is symmetric if some rotation by 1..n-1 leaves it unchanged.
+    const symmetric = (c: number[]) => Array.from({ length: n - 1 }, (_, i) => i + 1).some((r) => c.every((x, i) => x === c[(i + r) % n]));
+    let sym = 0;
+    for (let code = 0; code < total; code++) {
+      const c = Array.from({ length: n }, (_, i) => Math.floor(code / k ** i) % k);
+      if (symmetric(c)) sym++;
+    }
+    const colours = k === 2 ? "black or white" : "red, green or blue";
+    return {
+      title: pick(rng, ["Bead Count", "Burnside's Beads", "Spin Cycle"]),
+      category: "Combinatorics",
+      story: `A circular bracelet has ${n} equally spaced beads, each ${colours}. Two bracelets are the same if one can be rotated into the other (no flipping over). How many different bracelets are there?`,
+      steps: [
+        step("Ignoring rotations, how many colourings of the beads are there?", total, `${total}`, "Each bead independently.", `\\(${k}^{${n}} = ${total}\\).`),
+        step(
+          `Count the pairs (rotation, colouring) where the rotation leaves the colouring unchanged, over all ${n} rotations (including doing nothing).`,
+          fixedPairs,
+          `${fixedPairs}`,
+          `Rotating by \\(r\\) splits the beads into \\(\\gcd(r, ${n})\\) cycles, and each cycle must be one colour.`,
+          `\\(\\sum_{r=0}^{${n - 1}} ${k}^{\\gcd(r, ${n})} = ${fixedPairs}\\).`,
+        ),
+        step(
+          "How many different bracelets are there?",
+          distinct,
+          `${distinct}`,
+          "Burnside's lemma: the number of orbits is the average number of colourings fixed by a rotation.",
+          `\\(\\frac{${fixedPairs}}{${n}} = ${distinct}\\).`,
+        ),
+        step(
+          "A colouring is chosen uniformly at random. What is the probability some non-trivial rotation leaves it unchanged?",
+          sym / total,
+          frac(sym, total),
+          `Those are the colourings that repeat with a period dividing ${n} but smaller than it.`,
+          `${sym} of the ${total} colourings are symmetric: \\(${texFrac(sym, total)}\\).`,
+          { sim: (r) => ind(symmetric(Array.from({ length: n }, () => Math.floor(r() * k)))) },
+        ),
+      ],
+      solution: `Burnside: \\(\\#\\text{bracelets} = \\frac{1}{${n}} \\sum_{r} ${k}^{\\gcd(r, ${n})} = ${distinct}\\). Just dividing \\(${total}\\) by ${n} fails because symmetric colourings (${sym} of them here) have fewer than ${n} distinct rotations.`,
+    };
+  },
+};
+
+export const COMBINATORICS: Template[] = [binomialHeads, anagrams, latticePaths, pokerHand, starsBars, voidSuit, derangement, prisoners, couplesTable, ballot, longestRun, necklaces];
