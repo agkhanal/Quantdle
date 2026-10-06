@@ -1,6 +1,6 @@
 /** Statistics puzzle templates, easiest first. */
 
-import { pick, int, die, flip, frac, texFrac, num, step, ind, normal, Phi, type Rng, type Template } from "./kit";
+import { pick, int, die, flip, frac, texFrac, texFracApprox, num, choose, step, ind, shuffle, normal, Phi, type Rng, type Template } from "./kit";
 
 const bayes: Template = {
   id: "bayes",
@@ -313,4 +313,164 @@ const pooledTesting: Template = {
   },
 };
 
-export const STATISTICS: Template[] = [diceVariance, tableMoments, normalZ, bayes, correlation, pooledTesting];
+const germanTank: Template = {
+  id: "german-tank",
+  difficulty: "hard",
+  topic: "Statistics",
+  make(rng) {
+    const N = int(rng, 6, 30) * 10;
+    const k = int(rng, 3, 8);
+    const t = Math.round((N * pick(rng, [0.6, 0.7, 0.8])) / 10) * 10;
+    const m = int(rng, Math.round(N * 0.7), N);
+    const est = m * (1 + 1 / k) - 1;
+    const sample = (r: Rng) => shuffle(r, Array.from({ length: N }, (_, i) => i + 1)).slice(0, k);
+    const scene = pick(rng, [
+      ["An enemy numbers its tanks", "tanks", "serial numbers"],
+      ["A city numbers its taxis", "taxis", "licence numbers"],
+      ["A raffle numbers its tickets", "tickets", "ticket numbers"],
+    ] as const);
+    return {
+      title: pick(rng, ["German Tank Problem", "Count from the Max", "How Many Are There?"]),
+      category: "Statistics",
+      story: `${scene[0]} 1, 2, ..., \\(N\\). You see ${k} different ${scene[1]} at random. First, suppose \\(N = ${N}\\) and ask what you'd expect to see. Then estimate \\(N\\) from an actual sighting.`,
+      steps: [
+        step(
+          `If \\(N = ${N}\\), what is the probability that all ${k} ${scene[2]} you see are at most ${t}? (4 decimals)`,
+          choose(t, k) / choose(N, k),
+          num(choose(t, k) / choose(N, k)),
+          "Every set of k numbers is equally likely.",
+          `\\(\\binom{${t}}{${k}} \\big/ \\binom{${N}}{${k}} \\approx ${num(choose(t, k) / choose(N, k))}\\).`,
+          { sim: (r) => ind(Math.max(...sample(r)) <= t) },
+        ),
+        step(
+          `If \\(N = ${N}\\), what is the expected largest number you see? (4 significant figures)`,
+          (k * (N + 1)) / (k + 1),
+          num((k * (N + 1)) / (k + 1)),
+          `The ${k} numbers cut 1..N into ${k + 1} gaps of equal expected size.`,
+          `\\(\\frac{${k}(N + 1)}{${k + 1}} = \\frac{${k} \\cdot ${N + 1}}{${k + 1}} \\approx ${num((k * (N + 1)) / (k + 1))}\\).`,
+          { sim: (r) => Math.max(...sample(r)) },
+        ),
+        step(
+          `Now \\(N\\) is unknown and the largest of the ${k} you see is ${m}. What is the unbiased estimate of \\(N\\)? (2 decimals)`,
+          est,
+          num(est),
+          "Invert step 2: solve \\(\\mathbb{E}[\\max] = \\frac{k(N + 1)}{k + 1}\\) for \\(N\\), with the observed max in place of its expectation.",
+          `\\(\\hat N = m\\left(1 + \\frac{1}{k}\\right) - 1 = ${m} \\cdot ${texFrac(k + 1, k)} - 1 \\approx ${num(est)}\\).`,
+        ),
+      ],
+      solution: `The sample maximum averages \\(\\frac{k(N + 1)}{k + 1}\\), so \\(\\hat N = m(1 + \\frac{1}{k}) - 1\\) is unbiased: the max plus the average gap between observed numbers. In WWII this beat intelligence estimates of German tank production by a wide margin.`,
+    };
+  },
+};
+
+const bivariateNormal: Template = {
+  id: "bivariate-normal",
+  difficulty: "hard",
+  topic: "Statistics",
+  make(rng) {
+    const rho = pick(rng, [0.3, 0.5, 0.6, 0.7, 0.8, -0.5]);
+    const x = pick(rng, [1, 1.5, 2, 2.5]);
+    const both = 0.25 + Math.asin(rho) / (2 * Math.PI);
+    const pair = (r: Rng) => {
+      const a = normal(r);
+      return [a, rho * a + Math.sqrt(1 - rho * rho) * normal(r)];
+    };
+    const scene = pick(rng, [
+      ["a student's standardized maths score", "their physics score"],
+      ["a stock's standardized return today", "its sector's return"],
+      ["a parent's standardized height", "their adult child's"],
+    ] as const);
+    return {
+      title: pick(rng, ["Regression to the Mean", "Both Above Average", "Correlated Normals"]),
+      category: "Statistics",
+      story: `Let \\(X\\) be ${scene[0]} and \\(Y\\) ${scene[1]}. Both are standard normal (mean 0, SD 1) with correlation \\(\\rho = ${rho}\\), jointly normal. How much does knowing \\(X\\) tell you about \\(Y\\)?`,
+      steps: [
+        step(`If \\(X = ${x}\\), what is \\(\\mathbb{E}[Y \\mid X]\\)?`, rho * x, num(rho * x), "For standardized jointly normal variables, the regression line has slope \\(\\rho\\).", `\\(\\rho x = ${rho} \\cdot ${x} = ${num(rho * x)}\\).`),
+        step(
+          "What is \\(P(X > 0 \\text{ and } Y > 0)\\)? (4 decimals)",
+          both,
+          num(both),
+          "Write \\(Y = \\rho X + \\sqrt{1 - \\rho^2} Z\\). The event is a wedge in the plane of \\((X, Z)\\), and that plane is rotationally symmetric.",
+          `\\(\\frac{1}{4} + \\frac{\\arcsin \\rho}{2\\pi} = \\frac{1}{4} + \\frac{\\arcsin(${rho})}{2\\pi} \\approx ${num(both)}\\).`,
+          { sim: (r) => {
+            const [a, b] = pair(r);
+            return ind(a > 0 && b > 0);
+          } },
+        ),
+        step(
+          "What is \\(P(Y > 0 \\mid X > 0)\\)? (4 decimals)",
+          2 * both,
+          num(2 * both),
+          "Divide by \\(P(X > 0)\\).",
+          `\\(${num(both)} / 0.5 = ${num(2 * both)}\\).`,
+          { sim: (r) => {
+            const [a, b] = pair(r);
+            return a > 0 ? ind(b > 0) : NaN;
+          } },
+        ),
+      ],
+      solution: `The best guess for \\(Y\\) is \\(\\rho X = ${num(rho * x)}\\), pulled toward the mean: regression to the mean. For signs, \\(P(X > 0, Y > 0) = \\frac{1}{4} + \\frac{\\arcsin \\rho}{2\\pi}\\) (Sheppard's formula), so \\(P(Y > 0 \\mid X > 0) \\approx ${num(2 * both)}\\).`,
+    };
+  },
+};
+
+const laplace: Template = {
+  id: "laplace-succession",
+  difficulty: "hard",
+  topic: "Statistics",
+  make(rng) {
+    const n = int(rng, 3, 10);
+    const h = int(rng, 0, n);
+    const thing = pick(rng, [
+      ["a coin from a novelty shop", "flip", "heads", "flips"],
+      ["a new trading strategy", "trade", "winners", "trades"],
+      ["a bent thumbtack", "toss", "point-up landings", "tosses"],
+    ] as const);
+    const trial = (r: Rng) => {
+      const p = r();
+      let k = 0;
+      for (let i = 0; i < n; i++) if (r() < p) k++;
+      return { p, k, next: () => r() < p };
+    };
+    return {
+      title: pick(rng, ["Rule of Succession", "Unknown Bias", "Bayes Your Coin"]),
+      category: "Statistics",
+      story: `You know nothing about ${thing[0]}: its chance \\(p\\) of a success is equally likely to be anything from 0 to 1. Each ${thing[1]} succeeds independently with probability \\(p\\). You see ${h} ${thing[2]} in ${n} ${thing[3]}. What should you believe now?`,
+      steps: [
+        step(
+          `Before looking, what was the probability of exactly ${h} successes in ${n}?`,
+          1 / (n + 1),
+          frac(1, n + 1),
+          "Average the binomial probability over \\(p\\), or picture \\(n + 1\\) uniform points and ask where the one for \\(p\\) lands.",
+          `\\(\\int_0^1 \\binom{${n}}{${h}} p^{${h}}(1 - p)^{${n - h}} \\, dp = \\frac{1}{${n + 1}}\\), the same for every count.`,
+          { sim: (r) => ind(trial(r).k === h) },
+        ),
+        step(
+          "What is your posterior mean for \\(p\\)? This is also the chance the next one succeeds.",
+          (h + 1) / (n + 2),
+          frac(h + 1, n + 2),
+          "The posterior is Beta(h + 1, n − h + 1).",
+          `\\(\\frac{h + 1}{n + 2} = ${texFrac(h + 1, n + 2)}\\) (Laplace's rule of succession).`,
+          { sim: (r) => {
+            const t = trial(r);
+            return t.k === h ? t.p : NaN;
+          }, trials: 60_000 },
+        ),
+        step(
+          "What is the probability the next two both succeed?",
+          ((h + 1) * (h + 2)) / ((n + 2) * (n + 3)),
+          frac((h + 1) * (h + 2), (n + 2) * (n + 3)),
+          "Not the square of step 2: after one more success you update again.",
+          `\\(\\frac{${h + 1}}{${n + 2}} \\cdot \\frac{${h + 2}}{${n + 3}} = ${texFrac((h + 1) * (h + 2), (n + 2) * (n + 3))}\\).`,
+          { sim: (r) => {
+            const t = trial(r);
+            return t.k === h ? ind(t.next() && t.next()) : NaN;
+          }, trials: 60_000 },
+        ),
+      ],
+      solution: `With a uniform prior, seeing ${h} of ${n} gives a Beta(${h + 1}, ${n - h + 1}) posterior, mean \\(\\frac{${h + 1}}{${n + 2}}\\). It's like adding one imaginary success and one failure, so ${h === n ? "even a perfect record doesn't make you certain" : h === 0 ? "even zero successes doesn't make you rule it out" : "small samples get pulled toward \\(\\tfrac{1}{2}\\)"}. Two more successes: \\(${texFracApprox((h + 1) * (h + 2), (n + 2) * (n + 3))}\\).`,
+    };
+  },
+};
+
+export const STATISTICS: Template[] = [diceVariance, tableMoments, normalZ, bayes, correlation, pooledTesting, germanTank, bivariateNormal, laplace];
