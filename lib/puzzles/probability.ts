@@ -1,6 +1,6 @@
 /** Probability puzzle templates, easiest first. */
 
-import { pick, int, die, NAMES, frac, texFrac, texFracApprox, num, step, ind, type Rng, type Template } from "./kit";
+import { pick, int, die, NAMES, frac, texFrac, texFracApprox, num, choose, step, ind, type Rng, type Template } from "./kit";
 
 const diceSum: Template = {
   id: "dice-sum",
@@ -505,4 +505,124 @@ const buffon: Template = {
   },
 };
 
-export const PROBABILITY: Template[] = [diceSum, atLeastOne, cardsBoth, duel, birthday, montyHall, orderStats, brokenStick, buffon, uniformSum];
+const polya: Template = {
+  id: "polya-urn",
+  difficulty: "expert",
+  topic: "Probability",
+  make(rng) {
+    const a = int(rng, 1, 3);
+    const b = int(rng, 1, 3);
+    const n = int(rng, 3, 5);
+    const j = int(rng, 1, n - 1);
+    const rising = (x: number, k: number) => Array.from({ length: k }, (_, i) => x + i).reduce((p, y) => p * y, 1);
+    const top = rising(a, j) * rising(b, n - j);
+    const bottom = rising(a + b, n);
+    const draws = (r: Rng) => {
+      let [red, blue] = [a, b];
+      return Array.from({ length: n }, () => {
+        const isRed = r() * (red + blue) < red;
+        if (isRed) red++;
+        else blue++;
+        return isRed;
+      });
+    };
+    const pl = (k: number, w: string) => `${k} ${w}${k === 1 ? "" : "s"}`;
+    return {
+      title: pick(rng, ["Pólya's Urn", "Rich Get Richer", "Self-Reinforcing"]),
+      category: "Probability",
+      story: `An urn holds ${pl(a, "red ball")} and ${pl(b, "blue ball")}. You draw a ball at random, then put it back along with one extra ball of the same colour. You do this ${n} times. What is the probability exactly ${j} of your ${n} draws are red?`,
+      steps: [
+        step(
+          "What is the probability the second draw is red?",
+          a / (a + b),
+          frac(a, a + b),
+          "Condition on the first draw, then simplify. The answer may surprise you.",
+          `\\(\\frac{${a}}{${a + b}} \\cdot \\frac{${a + 1}}{${a + b + 1}} + \\frac{${b}}{${a + b}} \\cdot \\frac{${a}}{${a + b + 1}} = ${texFrac(a, a + b)}\\): the same as the first draw.`,
+          { sim: (r) => ind(draws(r)[1]) },
+        ),
+        step(
+          `What is the probability the first ${j} draws are red and the remaining ${n - j} are blue, in that order?`,
+          top / bottom,
+          frac(top, bottom),
+          "Multiply the conditional probabilities draw by draw; the urn grows by one each time.",
+          `Numerators \\(${a}${j > 1 ? ` \\cdots ${a + j - 1}` : ""}\\) for red and \\(${b}${n - j > 1 ? ` \\cdots ${b + n - j - 1}` : ""}\\) for blue, over \\(${a + b} \\cdots ${a + b + n - 1}\\): \\(${texFrac(top, bottom)}\\).`,
+          { sim: (r) => ind(draws(r).every((x, i) => x === i < j)) },
+        ),
+        step(
+          `What is the probability exactly ${j} of the ${n} draws are red?`,
+          (choose(n, j) * top) / bottom,
+          frac(choose(n, j) * top, bottom),
+          "Does the order of the colours change the product you found in step 2?",
+          `Every order has the same probability (the numerators are just rearranged), so multiply by \\(\\binom{${n}}{${j}} = ${choose(n, j)}\\): \\(${texFrac(choose(n, j) * top, bottom)}\\).`,
+          { sim: (r) => ind(draws(r).filter(Boolean).length === j) },
+        ),
+      ],
+      solution: `Pólya's urn is exchangeable: any sequence with ${j} reds has probability \\(\\frac{a^{\\overline{${j}}}\\, b^{\\overline{${n - j}}}}{(a+b)^{\\overline{${n}}}} = ${texFrac(top, bottom)}\\) (rising factorials), whatever the order. So \\(P = \\binom{${n}}{${j}} \\cdot ${texFrac(top, bottom)} = ${texFracApprox(choose(n, j) * top, bottom)}\\).${a === 1 && b === 1 ? ` Starting from one of each, the number of reds is uniform on \\(0, \\ldots, ${n}\\).` : ""}`,
+    };
+  },
+};
+
+const penney: Template = {
+  id: "penney",
+  difficulty: "expert",
+  topic: "Probability",
+  make(rng) {
+    const pat = () => Array.from({ length: 3 }, () => pick(rng, ["H", "T"])).join("");
+    const A = pat();
+    const flipSide = (c: string) => (c === "H" ? "T" : "H");
+    let B = rng() < 0.7 ? flipSide(A[1]) + A[0] + A[1] : pat(); // usually Conway's best reply
+    while (B === A) B = pat();
+    // Conway's correlation: weight 2^(k-1) when the last k of x equal the first k of y.
+    const corr = (x: string, y: string) => [1, 2, 3].reduce((s, k) => s + (x.slice(3 - k) === y.slice(0, k) ? 2 ** (k - 1) : 0), 0);
+    const [AA, AB, BB, BA] = [corr(A, A), corr(A, B), corr(B, B), corr(B, A)];
+    const num1 = BB - BA;
+    const den = AA - AB + (BB - BA);
+    const wait = (r: Rng, x: string) => {
+      let s = "";
+      while (!s.endsWith(x)) s += r() < 0.5 ? "H" : "T";
+      return s.length;
+    };
+    const race = (r: Rng) => {
+      let s = "";
+      for (;;) {
+        s += r() < 0.5 ? "H" : "T";
+        if (s.endsWith(A)) return 1;
+        if (s.endsWith(B)) return 0;
+      }
+    };
+    return {
+      title: pick(rng, ["Penney's Game", "Pattern Race", "Pick Second"]),
+      category: "Probability",
+      story: `You pick the pattern ${A} and your opponent picks ${B}. A fair coin is flipped until one of the two patterns appears as three consecutive flips; whoever's pattern comes first wins. What is your probability of winning?`,
+      steps: [
+        step(
+          `On its own, how many flips does it take on average to see ${A}?`,
+          2 * AA,
+          `${2 * AA}`,
+          `Overlap matters: ${A === "HHH" || A === "TTT" ? "every suffix of the pattern is also a prefix" : "check which endings of the pattern are also beginnings"}.`,
+          `Add \\(2^k\\) for every \\(k\\) where the last \\(k\\) flips of ${A} equal its first \\(k\\): ${2 * AA}.`,
+          { sim: (r) => wait(r, A) },
+        ),
+        step(
+          `And on average to see ${B}?`,
+          2 * BB,
+          `${2 * BB}`,
+          "Same method, for the other pattern.",
+          `Overlaps of ${B} with itself give ${2 * BB}.`,
+          { sim: (r) => wait(r, B) },
+        ),
+        step(
+          `What is the probability ${A} appears before ${B}?`,
+          num1 / den,
+          frac(num1, den),
+          `Set up states for the useful partial matches, or use Conway's formula: the odds for ${A} are \\((BB - BA) : (AA - AB)\\), where \\(XY\\) adds \\(2^{k-1}\\) when the last \\(k\\) of \\(X\\) match the first \\(k\\) of \\(Y\\).`,
+          `\\(AA = ${AA}, AB = ${AB}, BB = ${BB}, BA = ${BA}\\), so \\(P = \\frac{${BB} - ${BA}}{(${AA} - ${AB}) + (${BB} - ${BA})} = ${texFrac(num1, den)}\\).`,
+          { sim: race },
+        ),
+      ],
+      solution: `Conway's leading numbers: \\(P(${A} \\text{ first}) = \\frac{BB - BA}{(AA - AB) + (BB - BA)} = ${texFracApprox(num1, den)}\\). ${2 * BB > 2 * AA && num1 / den < 0.5 ? `Even though ${B} takes longer on its own, it usually wins the race: it can only appear right after a near-miss for ${A}.` : num1 / den < 0.5 ? `${B} usually wins: whoever chooses second can always find a pattern that beats the first, so the game is non-transitive.` : "Here you're the favourite, but whoever picks second can always find a reply that beats any pattern: the game is non-transitive."}`,
+    };
+  },
+};
+
+export const PROBABILITY: Template[] = [diceSum, atLeastOne, cardsBoth, duel, birthday, montyHall, orderStats, brokenStick, buffon, uniformSum, polya, penney];
