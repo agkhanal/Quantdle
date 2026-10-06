@@ -4106,7 +4106,6 @@ b .track-icon {
   display: inline-flex;
   align-items: center;
   text-decoration: none;
-  color: inherit;
 }
 
 .stat-nums b.stat-topic {
