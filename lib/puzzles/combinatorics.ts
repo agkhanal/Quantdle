@@ -233,4 +233,141 @@ const latticePaths: Template = {
   },
 };
 
-export const COMBINATORICS: Template[] = [binomialHeads, anagrams, latticePaths, derangement, ballot];
+/** A dealt hand as ranks 0..12 and suits 0..3. */
+function deal(r: Rng, n: number) {
+  const deck = shuffle(r, Array.from({ length: 52 }, (_, i) => i));
+  return deck.slice(0, n).map((c) => ({ rank: c % 13, suit: Math.floor(c / 13) }));
+}
+
+/** Sorted rank multiplicities of a hand, e.g. [3, 2] for a full house. */
+function rankShape(hand: { rank: number }[]) {
+  const m = new Map<number, number>();
+  for (const c of hand) m.set(c.rank, (m.get(c.rank) ?? 0) + 1);
+  return [...m.values()].sort((a, b) => b - a).join("");
+}
+
+const pokerHand: Template = {
+  id: "poker-hand",
+  difficulty: "medium",
+  topic: "Combinatorics",
+  make(rng) {
+    const total = choose(52, 5);
+    const hand = pick(rng, [
+      { name: "a full house", shape: "32", ways: 13 * 4 * 12 * 6, how: "\\(13 \\cdot \\binom{4}{3} \\cdot 12 \\cdot \\binom{4}{2}\\)", hint: "Pick the rank of the triple and its suits, then the rank of the pair and its suits." },
+      { name: "two pair", shape: "221", ways: choose(13, 2) * 36 * 44, how: "\\(\\binom{13}{2} \\cdot \\binom{4}{2}^2 \\cdot 44\\)", hint: "Pick the two pair ranks together (order doesn't matter), their suits, then a fifth card of another rank." },
+      { name: "three of a kind (and nothing better)", shape: "311", ways: 13 * 4 * choose(12, 2) * 16, how: "\\(13 \\cdot \\binom{4}{3} \\cdot \\binom{12}{2} \\cdot 4^2\\)", hint: "Pick the triple, then two different other ranks, each in any suit." },
+      { name: "four of a kind", shape: "41", ways: 13 * 48, how: "\\(13 \\cdot 48\\)", hint: "Pick the rank of the four, then any one of the other cards." },
+      { name: "exactly one pair (and nothing better)", shape: "2111", ways: 13 * 6 * choose(12, 3) * 64, how: "\\(13 \\cdot \\binom{4}{2} \\cdot \\binom{12}{3} \\cdot 4^3\\)", hint: "Pick the pair, then three different other ranks, each in any suit." },
+    ] as const);
+    const p = hand.ways / total;
+    return {
+      title: pick(rng, ["Read the Hand", "Five Card Draw", "Deal Me In"]),
+      category: "Combinatorics",
+      story: `You're dealt 5 cards from a well-shuffled 52-card deck. What is the probability you're holding ${hand.name}?`,
+      steps: [
+        step("How many different 5-card hands are there?", total, `${total}`, "Order doesn't matter.", `\\(\\binom{52}{5} = ${total.toLocaleString("en-US")}\\).`),
+        step(`How many of those hands are ${hand.name}?`, hand.ways, `${hand.ways}`, hand.hint, `${hand.how} \\(= ${hand.ways.toLocaleString("en-US")}\\).`),
+        step(`What is the probability of ${hand.name}? (4 significant figures)`, p, num(p), "Divide.", `\\(\\frac{${hand.ways.toLocaleString("en-US")}}{${total.toLocaleString("en-US")}} \\approx ${num(p)}\\).`, {
+          sim: (r) => ind(rankShape(deal(r, 5)) === hand.shape),
+          trials: 150_000,
+        }),
+      ],
+      solution: `Count by building the hand rank by rank: ${hand.how} \\(= ${hand.ways.toLocaleString("en-US")}\\) hands, out of \\(\\binom{52}{5} = ${total.toLocaleString("en-US")}\\), so \\(P \\approx ${num(p)}\\). The classic trap is ordering ranks that play the same role (like the two pairs), which double counts.`,
+    };
+  },
+};
+
+const starsBars: Template = {
+  id: "stars-and-bars",
+  difficulty: "medium",
+  topic: "Combinatorics",
+  make(rng) {
+    const k = int(rng, 3, 5);
+    const n = int(rng, k + 3, 12);
+    const m = int(rng, 2, Math.min(4, n - k + 1));
+    const [thing, who] = pick(rng, [
+      ["identical sweets", "children"],
+      ["identical $1 coins", "charities"],
+      ["identical tasks", "servers"],
+    ] as const);
+    const all = choose(n + k - 1, k - 1);
+    const each = choose(n - 1, k - 1);
+    const lead = choose(n - m, k - 1);
+    // A uniformly random split: choose the k-1 bar positions among n+k-1 slots.
+    const split = (r: Rng) => {
+      const slots = shuffle(r, Array.from({ length: n + k - 1 }, (_, i) => i)).slice(0, k - 1).sort((a, b) => a - b);
+      return [...slots, n + k - 1].map((s, i) => s - (i ? slots[i - 1] + 1 : 0));
+    };
+    return {
+      title: pick(rng, ["Stars and Bars", "Share It Out", "Split the Pile"]),
+      category: "Combinatorics",
+      story: `${n} ${thing} are shared among ${k} ${who}. Only how many each one gets matters. How many ways are there to share them out, with and without everyone getting something?`,
+      steps: [
+        step(`How many ways are there if some ${who} may get nothing?`, all, `${all}`, `Line up ${n} stars and ${k - 1} bars; each arrangement is a split.`, `\\(\\binom{${n} + ${k - 1}}{${k - 1}} = ${all}\\).`),
+        step(
+          `How many ways if every one gets at least one?`,
+          each,
+          `${each}`,
+          `Hand out one each first, or choose ${k - 1} of the ${n - 1} gaps between stars.`,
+          `\\(\\binom{${n - 1}}{${k - 1}} = ${each}\\).`,
+          { sim: (r) => ind(split(r).every((x) => x >= 1)) * all },
+        ),
+        step(
+          `How many ways if every one gets at least one and the first gets at least ${m}?`,
+          lead,
+          `${lead}`,
+          `Pre-assign the guaranteed amounts, then share the rest freely.`,
+          `After giving out ${m} + ${k - 1} = ${m + k - 1}, share the remaining ${n - m - k + 1} freely: \\(\\binom{${n - m - k + 1} + ${k - 1}}{${k - 1}} = ${lead}\\).`,
+          { sim: (r) => {
+            const s = split(r);
+            return ind(s[0] >= m && s.every((x) => x >= 1)) * all;
+          } },
+        ),
+      ],
+      solution: `Stars and bars: \\(\\binom{n + k - 1}{k - 1} = ${all}\\) splits in all, \\(\\binom{n - 1}{k - 1} = ${each}\\) with nobody left out, and pre-assigning minimums reduces any lower-bound question to the free case: ${lead}.`,
+    };
+  },
+};
+
+const voidSuit: Template = {
+  id: "void-suit",
+  difficulty: "medium",
+  topic: "Combinatorics",
+  make(rng) {
+    const h = int(rng, 4, 10);
+    const total = choose(52, h);
+    const one = choose(39, h) / total;
+    const two = choose(26, h) / total;
+    const three = choose(13, h) / total;
+    const any = 4 * one - 6 * two + 4 * three;
+    const suits = (r: Rng) => new Set(deal(r, h).map((c) => c.suit));
+    return {
+      title: pick(rng, ["Missing Suit", "All Four Suits", "Void"]),
+      category: "Combinatorics",
+      story: `You're dealt ${h} cards from a well-shuffled 52-card deck. What is the probability your hand is missing at least one suit?`,
+      steps: [
+        step("What is the probability you have no spades? (4 decimals)", one, num(one), `All ${h} cards come from the 39 non-spades.`, `\\(\\binom{39}{${h}} / \\binom{52}{${h}} \\approx ${num(one)}\\).`, {
+          sim: (r) => ind(!suits(r).has(0)),
+        }),
+        step("What is the probability you have no spades and no hearts? (4 significant figures)", two, num(two), "Now all cards come from 26.", `\\(\\binom{26}{${h}} / \\binom{52}{${h}} \\approx ${num(two)}\\).`, {
+          sim: (r) => {
+            const s = suits(r);
+            return ind(!s.has(0) && !s.has(1));
+          },
+          trials: 120_000,
+        }),
+        step(
+          "What is the probability at least one suit is missing? (4 decimals)",
+          any,
+          num(any),
+          "Inclusion-exclusion over the 4 suits: add singles, subtract pairs, add triples.",
+          `\\(4 \\cdot ${num(one)} - 6 \\cdot ${num(two)} + 4 \\cdot ${num(three)} \\approx ${num(any)}\\).`,
+          { sim: (r) => ind(suits(r).size < 4) },
+        ),
+      ],
+      solution: `Adding \\(4 \\cdot P(\\text{no spades})\\) double counts hands missing two suits, so inclusion-exclusion gives \\(4\\binom{39}{${h}} - 6\\binom{26}{${h}} + 4\\binom{13}{${h}}\\) over \\(\\binom{52}{${h}}\\), about ${num(any)}. So all four suits show up with probability about ${num(1 - any)}.`,
+    };
+  },
+};
+
+export const COMBINATORICS: Template[] = [binomialHeads, anagrams, latticePaths, pokerHand, starsBars, voidSuit, derangement, ballot];
