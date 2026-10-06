@@ -3880,3 +3880,35 @@ b .track-icon {
     animation: none;
   }
 }
+
+/* Admin panel scroll areas: a slim scrollbar with its own gutter, so floating (macOS) or wide scrollbars
+   never sit on top of the type labels at the right edge of each row. */
+.admin-list,
+.bug-detail {
+  padding-right: 8px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 28%, transparent) transparent;
+}
+
+/* Safari / older engines use the -webkit-scrollbar pseudo-elements instead. */
+.admin-list::-webkit-scrollbar,
+.bug-detail::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-list::-webkit-scrollbar-track,
+.bug-detail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-list::-webkit-scrollbar-thumb,
+.bug-detail::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text) 28%, transparent);
+  border-radius: 999px;
+}
+
+.admin-list::-webkit-scrollbar-thumb:hover,
+.bug-detail::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text) 45%, transparent);
+}
