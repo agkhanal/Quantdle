@@ -1,6 +1,6 @@
 /** Statistics puzzle templates, easiest first. */
 
-import { pick, die, flip, frac, texFrac, num, step, ind, normal, Phi, type Rng, type Template } from "./kit";
+import { pick, int, die, flip, frac, texFrac, num, step, ind, normal, Phi, type Rng, type Template } from "./kit";
 
 const bayes: Template = {
   id: "bayes",
@@ -203,4 +203,114 @@ const normalZ: Template = {
   },
 };
 
-export const STATISTICS: Template[] = [diceVariance, tableMoments, normalZ, bayes];
+const correlation: Template = {
+  id: "correlation",
+  difficulty: "medium",
+  topic: "Statistics",
+  make(rng) {
+    const s = pick(rng, [6, 6, 8, 10]);
+    const a = int(rng, 1, 4);
+    const b = int(rng, 1, 5);
+    const v = (s * s - 1) / 12;
+    const mu = (s + 1) / 2;
+    const dice = s === 6 ? "fair dice" : `fair ${s}-sided dice`;
+    const roll = (r: Rng) => {
+      let x = 0;
+      for (let i = 0; i < a; i++) x += die(r, s);
+      let y = 0;
+      for (let i = 0; i < b; i++) y += die(r, s);
+      return [x, x + y];
+    };
+    const rho = Math.sqrt(a / (a + b));
+    return {
+      title: pick(rng, ["Shared Dice", "Overlap", "Partly Related"]),
+      category: "Statistics",
+      story: `You roll ${a + b} ${dice}. Let \\(X\\) be the total of the first ${a} and \\(S\\) the total of all ${a + b}. How strongly are \\(X\\) and \\(S\\) correlated?`,
+      steps: [
+        step(
+          "What is \\(\\operatorname{Var}(X)\\)?",
+          a * v,
+          frac(a * (s * s - 1), 12),
+          `One die has variance \\(${texFrac(s * s - 1, 12)}\\).`,
+          `\\(${a} \\cdot ${texFrac(s * s - 1, 12)} = ${texFrac(a * (s * s - 1), 12)}\\).`,
+          { sim: (r) => (roll(r)[0] - a * mu) ** 2 },
+        ),
+        step(
+          "What is \\(\\operatorname{Cov}(X, S)\\)?",
+          a * v,
+          frac(a * (s * s - 1), 12),
+          "Write \\(S = X + Y\\) with \\(Y\\) independent of \\(X\\), and expand.",
+          `\\(\\operatorname{Cov}(X, X + Y) = \\operatorname{Var}(X) + 0 = ${texFrac(a * (s * s - 1), 12)}\\).`,
+          { sim: (r) => {
+            const [x, t] = roll(r);
+            return (x - a * mu) * (t - (a + b) * mu);
+          } },
+        ),
+        step(
+          "What is the correlation of \\(X\\) and \\(S\\)? (4 decimals)",
+          rho,
+          num(rho),
+          "\\(\\rho = \\frac{\\operatorname{Cov}(X, S)}{\\sigma_X \\sigma_S}\\).",
+          `\\(\\frac{${a}\\sigma^2}{\\sqrt{${a}\\sigma^2 \\cdot ${a + b}\\sigma^2}} = \\sqrt{\\tfrac{${a}}{${a + b}}} \\approx ${num(rho)}\\).`,
+        ),
+      ],
+      solution: `\\(\\operatorname{Cov}(X, X + Y) = \\operatorname{Var}(X)\\), so \\(\\rho = \\sqrt{\\frac{${a}}{${a + b}}} \\approx ${num(rho)}\\): the square root of the share of the total that \\(X\\) contributes. The die size cancels out.`,
+    };
+  },
+};
+
+const pooledTesting: Template = {
+  id: "pooled-testing",
+  difficulty: "medium",
+  topic: "Statistics",
+  make(rng) {
+    const p = pick(rng, [0.005, 0.01, 0.02, 0.03, 0.05, 0.08, 0.1]);
+    const k = int(rng, 3, 12);
+    const q = 1 - p;
+    const perPerson = (g: number) => 1 / g + 1 - q ** g;
+    let best = 2;
+    for (let g = 3; g <= 40; g++) if (perPerson(g) < perPerson(best)) best = g;
+    const pool = (r: Rng) => Array.from({ length: k }, () => r() < p).some(Boolean);
+    const what = pick(rng, [
+      ["A lab screens blood samples for an infection", "people"],
+      ["A factory screens batches of water samples for a contaminant", "samples"],
+      ["A data team checks records for corruption", "records"],
+    ] as const);
+    const pct = `${+(p * 100).toFixed(1)}%`;
+    return {
+      title: pick(rng, ["Pool the Samples", "Group Testing", "Test Smarter"]),
+      category: "Statistics",
+      story: `${what[0]} that affects ${pct} of ${what[1]}, independently. Instead of testing each one, it mixes ${k} together and tests the pool once; only if the pool is positive does it test those ${k} individually. How many tests does that cost per ${what[1].slice(0, -1)}?`,
+      steps: [
+        step(`What is the probability a pool of ${k} tests positive? (4 decimals)`, 1 - q ** k, num(1 - q ** k), "Complement of everyone in it being clean.", `\\(1 - ${num(q)}^{${k}} \\approx ${num(1 - q ** k)}\\).`, {
+          sim: (r) => ind(pool(r)),
+        }),
+        step(
+          "What is the expected number of tests per pool? (4 decimals)",
+          1 + k * (1 - q ** k),
+          num(1 + k * (1 - q ** k)),
+          `One pooled test always, plus ${k} more when it's positive.`,
+          `\\(1 + ${k} \\cdot ${num(1 - q ** k)} \\approx ${num(1 + k * (1 - q ** k))}\\).`,
+          { sim: (r) => 1 + (pool(r) ? k : 0) },
+        ),
+        step(
+          `What is the expected number of tests per ${what[1].slice(0, -1)}? (4 decimals)`,
+          perPerson(k),
+          num(perPerson(k)),
+          `Divide by ${k}.`,
+          `\\(\\frac{1}{${k}} + ${num(1 - q ** k)} \\approx ${num(perPerson(k))}\\).`,
+        ),
+        step(
+          "Which pool size from 2 to 40 needs the fewest tests per item?",
+          best,
+          `${best}`,
+          `Minimize \\(\\frac{1}{g} + 1 - ${num(q)}^g\\) over whole numbers \\(g\\).`,
+          `\\(g = ${best}\\) gives \\(\\approx ${num(perPerson(best))}\\) tests each.`,
+        ),
+      ],
+      solution: `Dorfman pooling costs \\(\\frac{1}{g} + 1 - (1 - p)^g\\) tests per item: ${num(perPerson(k))} with pools of ${k}, and as low as ${num(perPerson(best))} with the best size, ${best}. When the condition is rare, almost every pool comes back clean and you save most of the tests.`,
+    };
+  },
+};
+
+export const STATISTICS: Template[] = [diceVariance, tableMoments, normalZ, bayes, correlation, pooledTesting];
