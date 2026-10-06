@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { evaluate, fmt } from "@/lib/math";
-import { identify } from "@/lib/analytics";
+import { capture, identify } from "@/lib/analytics";
 import { MARKET_TOPIC, recordGame } from "@/lib/history";
 import { loadJSON, loadStats, recordResult, saveJSON, type Stats } from "@/lib/stats";
 import { dailyNumber } from "@/lib/day";
@@ -163,6 +163,13 @@ export default function Game() {
         }
       }
       setStatus("playing");
+      capture("puzzle_started", {
+        mode: m,
+        topic: body.puzzle.category,
+        difficulty: body.puzzle.difficulty,
+        puzzle_id: body.puzzle.id,
+        daily_number: body.dailyNumber,
+      });
     } catch (e) {
       if (seq !== loadSeq.current) return;
       setErrorMsg(e instanceof Error ? e.message : "Something went wrong.");
@@ -272,6 +279,16 @@ export default function Game() {
     setStats(recordResult(won, finalRows.length, data?.dailyNumber));
     if (data) {
       const guesses = finalRows.filter((r) => r.kind === "guess");
+      capture("puzzle_completed", {
+        mode,
+        won,
+        topic: data.puzzle.category,
+        difficulty: data.puzzle.difficulty,
+        puzzle_id: data.puzzle.id,
+        guesses: guesses.length,
+        hints: finalRows.length - guesses.length,
+        steps_solved: won ? totalSteps : solved.length,
+      });
       recordGame({
         mode,
         kind: "puzzle",
@@ -322,6 +339,7 @@ export default function Game() {
 
   function switchMode(m: Mode, t: Track = tracks[m]) {
     if (m === mode && t === track) return;
+    capture("tab_switched", { mode: m, track: t });
     swap(() => {
       setMode(m);
       setTracks((ts) => ({ ...ts, [m]: t }));
@@ -427,6 +445,7 @@ export default function Game() {
       const newRows = [...rows, { kind: "guess" as const, step, text: input.trim(), verdict: g.verdict, direction: g.direction }];
       setRows(newRows);
       setFeedback({ text: g.feedback, verdict: g.verdict, judgedBy: g.judgedBy });
+      capture("puzzle_guess", { mode, step, verdict: g.verdict, judged_by: g.judgedBy, attempt: newRows.length, showed_work: showWork });
       if (g.award) {
         setAward(g.award);
         setUser(g.award.profile);
@@ -461,6 +480,7 @@ export default function Game() {
       const body = await res.json();
       if (!res.ok) return setFeedback({ text: body.error ?? "Couldn't get a hint.", verdict: "grey", judgedBy: "rules" });
       setRows((rs) => [...rs, { kind: "hint", step, text: String(body.hint) }]);
+      capture("puzzle_hint", { mode, step });
     } catch {
       setFeedback({ text: "Network hiccup. Try again.", verdict: "grey", judgedBy: "rules" });
     } finally {
@@ -487,6 +507,7 @@ export default function Game() {
     const text = shareText();
     try {
       await navigator.clipboard.writeText(text);
+      capture("result_shared", { game: "puzzle", mode });
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
@@ -728,7 +749,14 @@ export default function Game() {
                     💡 Hint <span className="muted">(costs a guess)</span>
                   </button>
                   {mode === "practice" && (
-                    <button className="link" onClick={() => load("practice", difficulty, topic, data.puzzle.id)} type="button">
+                    <button
+                      className="link"
+                      type="button"
+                      onClick={() => {
+                        capture("puzzle_skipped", { topic: data.puzzle.category, difficulty, puzzle_id: data.puzzle.id, attempts: rows.length });
+                        load("practice", difficulty, topic, data.puzzle.id);
+                      }}
+                    >
                       Skip →
                     </button>
                   )}

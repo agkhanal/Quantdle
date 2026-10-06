@@ -6,7 +6,7 @@ export function analyticsOn(): boolean {
 }
 
 /** Sends a product event to PostHog. A no-op when analytics is off. */
-export function track(event: string, props?: Record<string, unknown>) {
+export function capture(event: string, props?: Record<string, unknown>) {
   if (analyticsOn()) posthog.capture(event, props);
 }
 

@@ -17,6 +17,7 @@ import {
   type MarketGameState,
   type Trade,
 } from "@/lib/market";
+import { capture } from "@/lib/analytics";
 import { MARKET_TOPIC, recordGame } from "@/lib/history";
 import { loadJSON, saveJSON } from "@/lib/stats";
 import type { Difficulty, Verdict } from "@/lib/types";
@@ -46,7 +47,9 @@ export default function MarketGame(props: Props) {
   const difficulty = props.daily ? dailyMarketDifficulty(props.dailyNumber) : props.difficulty;
 
   function fresh() {
-    setGame(newMarket(Math.floor(Math.random() * 2 ** 31), difficulty));
+    const next = newMarket(Math.floor(Math.random() * 2 ** 31), difficulty);
+    capture("market_started", { mode: "practice", difficulty, contract: next.contract.name });
+    setGame(next);
     setBid("");
     setAsk("");
     setError("");
@@ -57,7 +60,9 @@ export default function MarketGame(props: Props) {
   useEffect(() => {
     if (props.daily) {
       const saved = loadJSON<[number, number][]>(dailyKey!) ?? [];
-      setGame(replay(dailyMarketSeed(props.dailyNumber), difficulty, saved, "daily"));
+      const next = replay(dailyMarketSeed(props.dailyNumber), difficulty, saved, "daily");
+      if (!isOver(next)) capture("market_started", { mode: "daily", difficulty, contract: next.contract.name, daily_number: props.dailyNumber, resumed_at_round: next.rounds.length });
+      setGame(next);
     } else {
       fresh();
     }
@@ -92,8 +97,17 @@ export default function MarketGame(props: Props) {
     setError("");
     const next = playRound(game, b, a);
     setGame(next);
+    capture("market_round", { mode: props.daily ? "daily" : "practice", difficulty, round: next.rounds.length, verdict: next.rounds[next.rounds.length - 1].verdict });
     if (dailyKey) saveJSON(dailyKey, next.rounds.map((r) => [r.bid, r.ask]));
     if (isOver(next)) {
+      capture("market_completed", {
+        mode: props.daily ? "daily" : "practice",
+        difficulty,
+        contract: c.name,
+        won: (book(next).pnl ?? 0) > 0,
+        pnl: book(next).pnl,
+        rounds: next.rounds.length,
+      });
       recordGame({
         mode: props.daily ? "daily" : "practice",
         kind: "market",
@@ -117,6 +131,7 @@ export default function MarketGame(props: Props) {
   async function share() {
     try {
       await navigator.clipboard.writeText(shareText());
+      capture("result_shared", { game: "market", mode: props.daily ? "daily" : "practice" });
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
@@ -220,7 +235,14 @@ export default function MarketGame(props: Props) {
           {!props.daily && (
             <div className="tools">
               <span />
-              <button className="link" type="button" onClick={fresh}>
+              <button
+                className="link"
+                type="button"
+                onClick={() => {
+                  capture("market_skipped", { difficulty, contract: c.name, round });
+                  fresh();
+                }}
+              >
                 Skip this market →
               </button>
             </div>
