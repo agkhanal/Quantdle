@@ -1,6 +1,6 @@
 /** Markets puzzle templates, easiest first. */
 
-import { pick, int, die, flip, frac, texFrac, texFracApprox, num, choose, step, ind, type Rng, type Template } from "./kit";
+import { pick, int, die, flip, frac, texFrac, texFracApprox, num, choose, step, ind, cap, normal, type Rng, type Template } from "./kit";
 
 const gamblersRuin: Template = {
   id: "gamblers-ruin",
@@ -307,4 +307,152 @@ const bookmaker: Template = {
   },
 };
 
-export const MARKETS: Template[] = [fairOdds, putCallParity, bookmaker, gamblersRuin, binomialTree, kelly];
+const volatilityDrag: Template = {
+  id: "volatility-drag",
+  difficulty: "medium",
+  topic: "Markets",
+  make(rng) {
+    const [up, down] = pick(rng, [
+      [50, 40],
+      [30, 25],
+      [60, 50],
+      [25, 20],
+      [40, 35],
+      [20, 20],
+      [80, 50],
+    ] as const);
+    const n = 2 * int(rng, 2, 6);
+    const [u, d] = [1 + up / 100, 1 - down / 100];
+    const mean = ((u + d) / 2) ** n;
+    const typical = (u * d) ** (n / 2);
+    let above = 0;
+    for (let k = 0; k <= n; k++) if (u ** k * d ** (n - k) > 1 + 1e-12) above += choose(n, k);
+    const path = (r: Rng) => {
+      let x = 1;
+      for (let i = 0; i < n; i++) x *= r() < 0.5 ? u : d;
+      return x;
+    };
+    const what = pick(rng, ["A volatile stock", "A crypto token", "A leveraged fund"]);
+    return {
+      title: pick(rng, ["Volatility Drag", "Average vs Typical", "Up Then Down"]),
+      category: "Markets",
+      story: `${what} either rises ${up}% or falls ${down}% each year, with equal probability, independently. You hold it for ${n} years. How much do you expect to have per $1, and how much do you typically end up with?`,
+      steps: [
+        step(
+          `What is the expected value of $1 after ${n} years? (4 decimals)`,
+          mean,
+          num(mean),
+          "Expected one-year growth factor, compounded over independent years.",
+          `\\(\\left(\\frac{${u} + ${d}}{2}\\right)^{${n}} = ${num((u + d) / 2)}^{${n}} \\approx ${num(mean)}\\).`,
+          { sim: path, trials: 100_000 },
+        ),
+        step(
+          `What is $1 worth after exactly ${n / 2} up years and ${n / 2} down years? (4 decimals)`,
+          typical,
+          num(typical),
+          "Order doesn't matter; multiply the factors.",
+          `\\((${u} \\cdot ${d})^{${n / 2}} = ${num(u * d)}^{${n / 2}} \\approx ${num(typical)}\\).`,
+        ),
+        step(
+          "What is the probability you end with more than you started? (4 decimals)",
+          above / 2 ** n,
+          frac(above, 2 ** n),
+          `Find the fewest up years \\(k\\) with \\(${u}^k \\cdot ${d}^{${n} - k} > 1\\), then add binomial probabilities.`,
+          `${above} of the \\(2^{${n}}\\) equally likely paths end above $1: \\(${texFrac(above, 2 ** n)}\\).`,
+          { sim: (r) => ind(path(r) > 1 + 1e-12) },
+        ),
+      ],
+      solution: `The mean grows like \\(${num((u + d) / 2)}^n\\), but the typical path grows like \\(\\sqrt{${num(u * d)}}^{\\,n}\\)${u * d < 1 ? ", which shrinks" : ""}: arithmetic and geometric averages differ. The mean is propped up by rare lucky paths, so most investors ${above / 2 ** n < 0.5 ? "lose money" : "do worse than the average"} (here \\(P(\\text{gain}) \\approx ${num(above / 2 ** n)}\\)). That gap is volatility drag.`,
+    };
+  },
+};
+
+const portfolio: Template = {
+  id: "portfolio-risk",
+  difficulty: "medium",
+  topic: "Markets",
+  make(rng) {
+    const s1 = pick(rng, [10, 15, 20]);
+    const s2 = pick(rng, [20, 25, 30, 40]);
+    const rho = pick(rng, [-0.5, -0.2, 0, 0.3, 0.5]);
+    const w = pick(rng, [0.5, 0.6, 0.7, 0.8]);
+    const [a, b] = [s1 / 100, s2 / 100];
+    const v = w * w * a * a + (1 - w) ** 2 * b * b + 2 * w * (1 - w) * rho * a * b;
+    const wMin = (b * b - rho * a * b) / (a * a + b * b - 2 * rho * a * b);
+    const ret = (r: Rng) => {
+      const z1 = normal(r);
+      const z2 = rho * z1 + Math.sqrt(1 - rho * rho) * normal(r);
+      return w * a * z1 + (1 - w) * b * z2;
+    };
+    const [A, B] = pick(rng, [
+      ["a bond fund", "a stock index"],
+      ["gold", "tech stocks"],
+      ["a utilities ETF", "an emerging-markets ETF"],
+    ] as const);
+    return {
+      title: pick(rng, ["Diversify", "Two-Asset Portfolio", "Minimum Variance"]),
+      category: "Markets",
+      story: `${cap(A)} has annual volatility ${s1}% and ${B} ${s2}%, with correlation ${rho}. You put ${Math.round(w * 100)}% in ${A} and the rest in ${B}. How risky is the mix, and what mix is least risky?`,
+      steps: [
+        step(
+          "What is the portfolio's annual variance? (as a decimal, 4 significant figures)",
+          v,
+          num(v),
+          "\\(w^2\\sigma_1^2 + (1 - w)^2\\sigma_2^2 + 2w(1 - w)\\rho\\sigma_1\\sigma_2\\).",
+          `\\(${w}^2 \\cdot ${a}^2 + ${num(1 - w)}^2 \\cdot ${b}^2 + 2 \\cdot ${w} \\cdot ${num(1 - w)} \\cdot (${rho}) \\cdot ${a} \\cdot ${b} \\approx ${num(v)}\\).`,
+          { sim: (r) => ret(r) ** 2, trials: 60_000 },
+        ),
+        step("What is its volatility, in percent? (2 decimals)", 100 * Math.sqrt(v), num(100 * Math.sqrt(v)), "Square root of the variance.", `\\(\\sqrt{${num(v)}} \\approx ${num(100 * Math.sqrt(v))}\\%\\).`),
+        step(
+          `What weight in ${A} gives the lowest possible variance? (4 decimals)`,
+          wMin,
+          num(wMin),
+          "Differentiate the variance in \\(w\\) and set it to zero.",
+          `\\(w^* = \\frac{\\sigma_2^2 - \\rho\\sigma_1\\sigma_2}{\\sigma_1^2 + \\sigma_2^2 - 2\\rho\\sigma_1\\sigma_2} \\approx ${num(wMin)}\\).`,
+        ),
+      ],
+      solution: `Portfolio variance is \\(${num(v)}\\), so volatility \\(\\approx ${num(100 * Math.sqrt(v))}\\%\\)${100 * Math.sqrt(v) < w * s1 + (1 - w) * s2 - 0.01 ? `, below the weighted average of ${num(w * s1 + (1 - w) * s2)}% because the assets aren't perfectly correlated` : ""}. The minimum-variance mix holds ${num(wMin * 100)}% in ${A}.`,
+    };
+  },
+};
+
+const dieOptions: Template = {
+  id: "die-options",
+  difficulty: "medium",
+  topic: "Markets",
+  make(rng) {
+    const two = rng() < 0.5;
+    const s = two ? 6 : pick(rng, [6, 10, 12, 20]);
+    const outcomes: number[] = two ? Array.from({ length: 36 }, (_, i) => (i % 6) + 1 + Math.floor(i / 6) + 1) : Array.from({ length: s }, (_, i) => i + 1);
+    const mean = outcomes.reduce((a, b) => a + b, 0) / outcomes.length;
+    const K = two ? int(rng, 5, 9) : int(rng, 2, s - 1) + pick(rng, [0, 0.5]);
+    const avg = (f: (x: number) => number) => outcomes.reduce((a, x) => a + f(x), 0) / outcomes.length;
+    const call = avg((x) => Math.max(x - K, 0));
+    const put = avg((x) => Math.max(K - x, 0));
+    const draw = (r: Rng) => (two ? die(r, 6) + die(r, 6) : die(r, s));
+    const under = two ? "the sum of two fair dice" : `one roll of a fair ${s}-sided die`;
+    return {
+      title: pick(rng, ["Options on a Die", "Dice Derivatives", "Strike It"]),
+      category: "Markets",
+      story: `A contract settles at ${under}. A call struck at ${K} pays \\(\\max(X - ${K}, 0)\\) and a put struck at ${K} pays \\(\\max(${K} - X, 0)\\). What are they worth (no discounting)?`,
+      steps: [
+        step("What is the fair price of the call? (4 decimals)", call, num(call), `Average the payoff over the ${outcomes.length} equally likely outcomes.`, `\\(\\mathbb{E}[\\max(X - ${K}, 0)] \\approx ${num(call)}\\).`, {
+          sim: (r) => Math.max(draw(r) - K, 0),
+        }),
+        step("What is the fair price of the put? (4 decimals)", put, num(put), "Same, for outcomes below the strike.", `\\(\\mathbb{E}[\\max(${K} - X, 0)] \\approx ${num(put)}\\).`, {
+          sim: (r) => Math.max(K - draw(r), 0),
+        }),
+        step(
+          "What is call minus put?",
+          call - put,
+          num(call - put),
+          "Long call + short put pays \\(X - K\\) whatever happens.",
+          `\\(\\mathbb{E}[X] - K = ${num(mean)} - ${K} = ${num(call - put)}\\): put-call parity.`,
+        ),
+      ],
+      solution: `Call \\(\\approx ${num(call)}\\), put \\(\\approx ${num(put)}\\). Their difference is \\(\\mathbb{E}[X] - K = ${num(call - put)}\\) because \\(\\max(X - K, 0) - \\max(K - X, 0) = X - K\\) for every outcome: parity holds for any distribution, dice included.`,
+    };
+  },
+};
+
+export const MARKETS: Template[] = [fairOdds, putCallParity, bookmaker, volatilityDrag, portfolio, dieOptions, gamblersRuin, binomialTree, kelly];
