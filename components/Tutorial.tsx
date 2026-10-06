@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { evaluate, fmt, relativeError } from "@/lib/math";
+import { winPoints } from "@/lib/scoring";
 import type { Verdict } from "@/lib/types";
 import Modal from "./Modal";
 
@@ -53,7 +54,7 @@ export default function Tutorial({ startAtGate, onDone }: TutorialProps) {
           {slide === 0 && <WelcomeSlide />}
           {slide === 1 && <GuessSlide />}
           {slide === 2 && <SampleSlide />}
-          {slide === 3 && <PlaceholderSlide text="A worked points example is coming in the next update." />}
+          {slide === 3 && <PointsSlide />}
           {slide === 4 && <PlaceholderSlide text="A market-making demo is coming in the next update." />}
           {slide === 5 && <DoneSlide />}
         </div>
@@ -233,6 +234,38 @@ function SampleSlide() {
       ) : (
         <p className="muted small">{SAMPLE_EXPLANATION}</p>
       )}
+    </div>
+  );
+}
+
+/** A real breakdown from lib/scoring, fed made-up (but plausible) inputs — nothing here is actually awarded. */
+const EXAMPLE_POINTS = winPoints({ difficulty: "medium", steps: 3, guesses: 4, daily: true, streak: 4 });
+
+function PointsSlide() {
+  return (
+    <div className="tut-copy">
+      <p>Sign in and solve a puzzle to earn points like this:</p>
+      <div className="award">
+        <span className="chip ghost">Example — not real points</span>
+        <div className="award-total">
+          +{EXAMPLE_POINTS.points} <span>points</span>
+        </div>
+        <ul className="award-lines">
+          {EXAMPLE_POINTS.breakdown.map((b) => (
+            <li key={b.label}>
+              <span>{b.label}</span>
+              <b className={b.value < 0 ? "neg" : ""}>{b.value > 0 ? `+${b.value}` : b.value}</b>
+            </li>
+          ))}
+        </ul>
+        <div className="award-meta">
+          <span>🔥 4-day streak</span>
+        </div>
+      </div>
+      <p className="muted small">
+        Harder puzzles are worth more, fewer guesses is worth more, the daily puzzle is worth double plus a streak
+        bonus, and practice points are capped per day so they can&apos;t be farmed.
+      </p>
     </div>
   );
 }

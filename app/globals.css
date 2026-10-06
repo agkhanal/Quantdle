@@ -925,6 +925,14 @@ code {
   margin: 14px 0;
 }
 
+.tut-copy .award {
+  margin: 12px 0;
+}
+
+.tut-copy .award .chip {
+  justify-self: start;
+}
+
 .tut-copy p {
   margin: 0 0 10px;
 }
