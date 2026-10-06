@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { evaluate, fmt } from "@/lib/math";
+import { recordGame } from "@/lib/history";
 import { loadJSON, loadStats, recordResult, saveJSON, type Stats } from "@/lib/stats";
 import { dailyNumber } from "@/lib/bank";
 import { levelsFor, nearestLevel } from "@/lib/generators";
@@ -243,10 +244,22 @@ export default function Game() {
     } catch {}
   }
 
-  function finish(won: boolean, usedRows: number) {
+  function finish(won: boolean, finalRows: Row[]) {
     setStatus(won ? "won" : "lost");
-    setStats(recordResult(won, usedRows, data?.dailyNumber));
-    if (data) fetchReveal(data.token);
+    setStats(recordResult(won, finalRows.length, data?.dailyNumber));
+    if (data) {
+      const guesses = finalRows.filter((r) => r.kind === "guess");
+      recordGame({
+        mode,
+        kind: "puzzle",
+        topic: data.puzzle.category,
+        difficulty: data.puzzle.difficulty,
+        won,
+        misses: guesses.filter((r) => r.verdict !== "green").length,
+        attempts: guesses.length,
+      });
+      fetchReveal(data.token);
+    }
     setTimeout(() => setModal("result"), won ? 1400 : 900);
   }
 
@@ -401,10 +414,10 @@ export default function Game() {
         const newSolved = [...solved, g.solved];
         setSolved(newSolved);
         setReasoning("");
-        if (newSolved.length === totalSteps) finish(true, newRows.length);
-        else if (newRows.length >= MAX_GUESSES) finish(false, newRows.length);
+        if (newSolved.length === totalSteps) finish(true, newRows);
+        else if (newRows.length >= MAX_GUESSES) finish(false, newRows);
       } else if (newRows.length >= MAX_GUESSES) {
-        finish(false, newRows.length);
+        finish(false, newRows);
       }
     } catch {
       setFeedback({ text: "Network hiccup. Try again.", verdict: "grey", judgedBy: "rules" });
