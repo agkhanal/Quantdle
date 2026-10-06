@@ -7,42 +7,6 @@ import { DIFFICULTIES, TOPICS, type Difficulty, type Puzzle } from "./types";
  */
 export const BANK: Puzzle[] = [
   {
-    id: "bank-bayes-test",
-    title: "False Alarm",
-    category: "Statistics",
-    difficulty: "medium",
-    story:
-      "A disease affects 1% of a population. A test detects it 99% of the time when present, but also returns a false positive 5% of the time for healthy people. You test positive. What is the probability you actually have the disease?",
-    steps: [
-      {
-        question: "What is \\(P(\\text{sick AND positive})\\)?",
-        answer: 0.0099,
-        answerDisplay: "0.0099",
-        tolerance: 0.01,
-        hint: "\\(P(\\text{sick}) \\times P(\\text{positive} \\mid \\text{sick})\\).",
-        explanation: "\\(0.01 \\times 0.99 = 0.0099\\).",
-      },
-      {
-        question: "What is the overall \\(P(\\text{positive})\\)?",
-        answer: 0.0594,
-        answerDisplay: "0.0594",
-        tolerance: 0.01,
-        hint: "Add true positives and false positives: \\(0.99 \\times 0.01 + 0.05 \\times 0.99\\).",
-        explanation: "\\(0.0099 + 0.05 \\cdot 0.99 = 0.0099 + 0.0495 = 0.0594\\).",
-      },
-      {
-        question: "What is \\(P(\\text{sick} \\mid \\text{positive})\\)?",
-        answer: 1 / 6,
-        answerDisplay: "1/6 ≈ 0.1667",
-        tolerance: 0.01,
-        hint: "Bayes: divide step 1 by step 2.",
-        explanation: "\\(0.0099 / 0.0594 = \\tfrac{1}{6} \\approx 16.7\\%\\).",
-      },
-    ],
-    solution:
-      "By Bayes' rule, \\(P(\\text{sick} \\mid +) = 0.0099 / 0.0594 = \\tfrac{1}{6} \\approx 16.7\\%\\). Because the disease is rare, false positives from the large healthy population far outnumber true positives. Base rates matter.",
-  },
-  {
     id: "bank-gamblers-ruin",
     title: "Gambler's Ruin",
     category: "Markets",
@@ -627,6 +591,174 @@ export const BANK: Puzzle[] = [
     ],
     solution:
       "The tempting answer is 3 (\"just ignore the odd rolls, so it's a three-sided die\"), but that answers a different question. Conditioning on no odd rolls throws away every long sequence, since long runs are likely to contain an odd number. What's left is geometric with success probability \\(\\frac{2}{3}\\), so \\(\\mathbb{E}[N \\mid \\text{all even}] = \\frac{3}{2}\\).",
+  },
+  {
+    id: "bank-simpson",
+    title: "Simpson's Stones",
+    category: "Statistics",
+    difficulty: "easy",
+    story:
+      "A classic kidney-stone study compared two treatments. Treatment A worked for 81 of 87 patients with small stones and 192 of 263 with large stones. Treatment B worked for 234 of 270 with small stones and 55 of 80 with large stones. Which treatment is better?",
+    steps: [
+      {
+        question: "What is A's success rate for small stones? (4 decimals)",
+        answer: 81 / 87,
+        answerDisplay: "0.931",
+        tolerance: 0.005,
+        hint: "Successes over patients.",
+        explanation: "\\(\\frac{81}{87} \\approx 0.931\\), versus B's \\(\\frac{234}{270} \\approx 0.867\\).",
+      },
+      {
+        question: "What is A's success rate for large stones? (4 decimals)",
+        answer: 192 / 263,
+        answerDisplay: "0.730",
+        tolerance: 0.005,
+        hint: "Successes over patients.",
+        explanation: "\\(\\frac{192}{263} \\approx 0.730\\), versus B's \\(\\frac{55}{80} = 0.6875\\). A wins in both groups.",
+      },
+      {
+        question: "What is A's overall success rate?",
+        answer: 273 / 350,
+        answerDisplay: "0.78",
+        tolerance: 0.005,
+        hint: "Pool both groups: total successes over total patients.",
+        explanation: "\\(\\frac{81 + 192}{87 + 263} = \\frac{273}{350} = 0.78\\).",
+      },
+      {
+        question: "What is B's overall success rate? (4 decimals)",
+        answer: 289 / 350,
+        answerDisplay: "0.8257",
+        tolerance: 0.005,
+        hint: "Pool B's groups the same way.",
+        explanation: "\\(\\frac{234 + 55}{270 + 80} = \\frac{289}{350} \\approx 0.826\\): B looks better overall.",
+      },
+    ],
+    solution:
+      "A beats B for small stones (93% vs 87%) and for large stones (73% vs 69%), yet B wins overall (83% vs 78%). That's Simpson's paradox: A was given mostly to the hard, large-stone cases, and B mostly to easy ones. Stone size confounds the comparison, so the within-group numbers are the ones to trust: A is better.",
+  },
+  {
+    id: "bank-poll-margin",
+    title: "Margin of Error",
+    category: "Statistics",
+    difficulty: "medium",
+    story:
+      "A poll asks 1,000 randomly chosen voters a yes/no question, and exactly half say yes. How precise is that 50%, and how many people would you need for a tighter margin?",
+    steps: [
+      {
+        question: "What is the standard error of the sample proportion? (4 decimals)",
+        answer: Math.sqrt(0.25 / 1000),
+        answerDisplay: "0.01581",
+        tolerance: 0.01,
+        hint: "\\(\\sqrt{\\hat p(1 - \\hat p)/n}\\).",
+        explanation: "\\(\\sqrt{0.5 \\cdot 0.5 / 1000} \\approx 0.0158\\).",
+      },
+      {
+        question: "What is the 95% margin of error? (4 decimals)",
+        answer: 1.96 * Math.sqrt(0.25 / 1000),
+        answerDisplay: "0.03099",
+        tolerance: 0.01,
+        hint: "About 1.96 standard errors either side.",
+        explanation: "\\(1.96 \\times 0.0158 \\approx 0.031\\): the familiar \"±3 points\".",
+      },
+      {
+        question: "How many voters would you need for a 95% margin of ±2 points (at 50% support)?",
+        answer: 2401,
+        answerDisplay: "2401",
+        tolerance: 0.001,
+        hint: "Solve \\(1.96\\sqrt{0.25/n} = 0.02\\) for \\(n\\).",
+        explanation: "\\(n = \\left(\\frac{1.96 \\times 0.5}{0.02}\\right)^2 = 49^2 = 2401\\).",
+      },
+    ],
+    solution:
+      "The standard error is \\(\\sqrt{0.25/1000} \\approx 1.6\\) points, so the 95% margin is about ±3.1 points. Precision grows only like \\(\\sqrt{n}\\): shrinking the margin from 3 to 2 points takes 2,401 people, and halving it would take four times the sample.",
+  },
+  {
+    id: "bank-fair-coin-test",
+    title: "Is the Coin Fair?",
+    category: "Statistics",
+    difficulty: "hard",
+    story:
+      "You flip a coin 100 times and get 60 heads. Using the normal approximation, how surprising is that if the coin is fair?",
+    steps: [
+      {
+        question: "If the coin is fair, what is the standard deviation of the number of heads?",
+        answer: 5,
+        answerDisplay: "5",
+        tolerance: 0.01,
+        hint: "Binomial variance \\(np(1 - p)\\).",
+        explanation: "\\(\\sqrt{100 \\cdot 0.5 \\cdot 0.5} = 5\\).",
+      },
+      {
+        question: "What is the z-score of 60 heads?",
+        answer: 2,
+        answerDisplay: "2",
+        tolerance: 0.01,
+        hint: "(observed − expected) / SD.",
+        explanation: "\\(\\frac{60 - 50}{5} = 2\\).",
+      },
+      {
+        question: "What is the two-sided p-value from the normal approximation? (4 decimals)",
+        answer: 0.0455,
+        answerDisplay: "0.0455",
+        tolerance: 0.02,
+        hint: "\\(2(1 - \\Phi(z))\\).",
+        explanation: "\\(2(1 - \\Phi(2)) \\approx 2 \\times 0.02275 = 0.0455\\): just under 5%.",
+      },
+      {
+        question: "With a continuity correction (use 59.5 heads), what is the two-sided p-value? (4 decimals)",
+        answer: 0.0574,
+        answerDisplay: "0.0574",
+        tolerance: 0.02,
+        hint: "The count is discrete; \"60 or more\" covers the area from 59.5 up.",
+        explanation: "\\(z = \\frac{59.5 - 50}{5} = 1.9\\), and \\(2(1 - \\Phi(1.9)) \\approx 0.0574\\). The exact binomial answer is about 0.057.",
+      },
+    ],
+    solution:
+      "Under a fair coin, heads ~ \\(N(50, 5^2)\\) approximately, so 60 heads is \\(z = 2\\) and a two-sided p-value of about 0.046. But the continuity correction (z = 1.9) gives 0.057, much closer to the exact 0.057: the verdict \"significant at 5%\" hinges on an approximation detail, which is a good reason not to treat 0.05 as a bright line.",
+  },
+  {
+    id: "bank-bessel",
+    title: "Bessel's Correction",
+    category: "Statistics",
+    difficulty: "expert",
+    story:
+      "You roll three fair dice and estimate the variance of a die from them. Why do statisticians divide by \\(n - 1\\) rather than \\(n\\)?",
+    steps: [
+      {
+        question: "What is the true variance \\(\\sigma^2\\) of one die roll? (4 decimals)",
+        answer: 35 / 12,
+        answerDisplay: "35/12 ≈ 2.9167",
+        tolerance: 0.01,
+        hint: "\\(\\mathbb{E}[X^2] - \\mathbb{E}[X]^2 = \\frac{91}{6} - \\frac{49}{4}\\).",
+        explanation: "\\(\\frac{91}{6} - \\frac{49}{4} = \\frac{35}{12}\\).",
+      },
+      {
+        question: "If you knew the true mean 3.5, what is \\(\\mathbb{E}\\left[\\frac{1}{3}\\sum_i (X_i - 3.5)^2\\right]\\)? (4 decimals)",
+        answer: 35 / 12,
+        answerDisplay: "35/12 ≈ 2.9167",
+        tolerance: 0.01,
+        hint: "Each term has expectation \\(\\sigma^2\\).",
+        explanation: "\\(\\frac{1}{3} \\cdot 3\\sigma^2 = \\sigma^2 = \\frac{35}{12}\\): unbiased.",
+      },
+      {
+        question: "Using the sample mean \\(\\bar X\\) instead, what is \\(\\mathbb{E}\\left[\\frac{1}{3}\\sum_i (X_i - \\bar X)^2\\right]\\)? (4 decimals)",
+        answer: 35 / 18,
+        answerDisplay: "35/18 ≈ 1.9444",
+        tolerance: 0.01,
+        hint: "\\(\\sum (X_i - \\bar X)^2 = \\sum (X_i - \\mu)^2 - n(\\bar X - \\mu)^2\\), and \\(\\operatorname{Var}(\\bar X) = \\sigma^2/n\\).",
+        explanation: "\\(\\frac{1}{3}\\left(3\\sigma^2 - \\sigma^2\\right) = \\frac{2}{3}\\sigma^2 = \\frac{35}{18}\\).",
+      },
+      {
+        question: "What factor must you multiply that estimate by to make it unbiased?",
+        answer: 3 / 2,
+        answerDisplay: "3/2",
+        tolerance: 0.01,
+        hint: "Undo the \\(\\frac{n - 1}{n}\\).",
+        explanation: "\\(\\frac{n}{n - 1} = \\frac{3}{2}\\): divide by \\(n - 1 = 2\\) instead of 3.",
+      },
+    ],
+    solution:
+      "The sample mean is fitted to the data, so deviations from it are smaller than deviations from the true mean: \\(\\mathbb{E}\\left[\\sum (X_i - \\bar X)^2\\right] = (n - 1)\\sigma^2\\). Dividing by \\(n\\) underestimates \\(\\sigma^2 = \\frac{35}{12}\\) as \\(\\frac{35}{18}\\); dividing by \\(n - 1\\) fixes it. One degree of freedom was spent estimating the mean.",
   },
 ];
 
