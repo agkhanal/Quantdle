@@ -17,6 +17,7 @@ import {
   type MarketGameState,
   type Trade,
 } from "@/lib/market";
+import { MARKET_TOPIC, recordGame } from "@/lib/history";
 import { loadJSON, saveJSON } from "@/lib/stats";
 import type { Difficulty, Verdict } from "@/lib/types";
 
@@ -91,6 +92,17 @@ export default function MarketGame(props: Props) {
     const next = playRound(game, b, a);
     setGame(next);
     if (dailyKey) saveJSON(dailyKey, next.rounds.map((r) => [r.bid, r.ask]));
+    if (isOver(next)) {
+      recordGame({
+        mode: props.daily ? "daily" : "practice",
+        kind: "market",
+        topic: MARKET_TOPIC,
+        difficulty,
+        won: (book(next).pnl ?? 0) > 0,
+        misses: next.rounds.filter((r) => r.verdict !== "green").length,
+        attempts: next.rounds.length,
+      });
+    }
     bidRef.current?.focus({ preventScroll: true });
   }
 
