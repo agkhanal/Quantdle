@@ -370,4 +370,123 @@ const voidSuit: Template = {
   },
 };
 
-export const COMBINATORICS: Template[] = [binomialHeads, anagrams, latticePaths, pokerHand, starsBars, voidSuit, derangement, ballot];
+const prisoners: Template = {
+  id: "prisoners",
+  difficulty: "hard",
+  topic: "Combinatorics",
+  make(rng) {
+    const N = pick(rng, [6, 8, 10, 20, 50, 100]);
+    const n = N / 2;
+    const L = n + 1;
+    let longP = 0;
+    for (let k = n + 1; k <= N; k++) longP += 1 / k;
+    const cycles = (r: Rng) => {
+      const perm = shuffle(r, Array.from({ length: N }, (_, i) => i));
+      const seen = new Array<boolean>(N).fill(false);
+      const lens: number[] = [];
+      for (let i = 0; i < N; i++) {
+        let len = 0;
+        for (let j = i; !seen[j]; j = perm[j]) {
+          seen[j] = true;
+          len++;
+        }
+        if (len) lens.push(len);
+      }
+      return lens;
+    };
+    return {
+      title: pick(rng, ["Follow the Loop", "Prisoners and Boxes", "Box Chains"]),
+      category: "Combinatorics",
+      story: `${N} prisoners are numbered 1 to ${N}. Their numbers are placed at random in ${N} numbered boxes, one each. One at a time, each prisoner may open ${n} boxes; they all go free only if every prisoner finds their own number. They can't communicate once it starts, but they agree a strategy: open the box with your own number, then the box numbered by what you found, and so on. What is the chance they all go free?`,
+      steps: [
+        step(
+          `Under this strategy a prisoner fails exactly when their number sits on a cycle of the permutation longer than ${n}. What is the probability the random permutation has a cycle of length exactly ${L}?`,
+          1 / L,
+          frac(1, L),
+          `Count permutations with a ${L}-cycle: choose its elements, arrange them in a cycle, permute the rest. At most one cycle can be that long.`,
+          `\\(\\binom{${N}}{${L}} (${L} - 1)! \\, (${N - L})! \\,/\\, ${N}! = \\frac{1}{${L}}\\).`,
+          { sim: (r) => ind(cycles(r).includes(L)) },
+        ),
+        step(
+          `What is the probability there is a cycle longer than ${n}? (4 decimals)`,
+          longP,
+          num(longP),
+          `Same count for every length from ${n + 1} to ${N}; these events are disjoint.`,
+          `\\(\\sum_{k=${n + 1}}^{${N}} \\frac{1}{k} \\approx ${num(longP)}\\).`,
+          { sim: (r) => ind(Math.max(...cycles(r)) > n) },
+        ),
+        step(
+          "What is the probability they all go free? (4 decimals)",
+          1 - longP,
+          num(1 - longP),
+          "Everyone succeeds exactly when no cycle is too long.",
+          `\\(1 - ${num(longP)} = ${num(1 - longP)}\\).`,
+          { sim: (r) => ind(Math.max(...cycles(r)) <= n) },
+        ),
+      ],
+      solution: `Following the chain from your own box walks around your cycle of the permutation, so everyone wins iff the longest cycle has length at most ${n}. A random permutation of ${N} has a cycle of length \\(k > ${n}\\) with probability exactly \\(\\frac{1}{k}\\), so \\(P(\\text{free}) = 1 - \\sum_{k=${n + 1}}^{${N}} \\frac{1}{k} \\approx ${num(1 - longP)}\\), versus \\(2^{-${N}}\\) if everyone opened boxes at random. As \\(N\\) grows this tends to \\(1 - \\ln 2 \\approx 0.307\\).`,
+    };
+  },
+};
+
+const couplesTable: Template = {
+  id: "couples-table",
+  difficulty: "hard",
+  topic: "Combinatorics",
+  make(rng) {
+    const n = int(rng, 3, 5);
+    const seats = 2 * n;
+    const f = factorial;
+    // Inclusion-exclusion: k chosen couples glued (2 ways each) around a round table.
+    const together = (k: number) => (2 ** k * f(seats - k - 1)) / f(seats - 1);
+    let none = 0;
+    for (let k = 0; k <= n; k++) none += (-1) ** k * choose(n, k) * together(k);
+    const seated = (r: Rng) => shuffle(r, Array.from({ length: seats }, (_, i) => Math.floor(i / 2))); // person i is in couple floor(i/2)
+    const adjacent = (s: number[], c: number) => s.some((x, i) => x === c && s[(i + 1) % seats] === c);
+    const [who, where] = pick(rng, [
+      ["couples", "a round dinner table"],
+      ["pairs of twins", "a round table at a wedding"],
+      ["teams of two", "a circular conference table"],
+    ] as const);
+    return {
+      title: pick(rng, ["Seating Plan", "Split the Couples", "Round Table"]),
+      category: "Combinatorics",
+      story: `${n} ${who} (${seats} people) are seated completely at random around ${where}. What is the probability that no two partners sit next to each other?`,
+      steps: [
+        step(
+          "What is the probability one particular pair sits together?",
+          together(1),
+          frac(2, seats - 1),
+          "Fix one partner's seat; where can the other land?",
+          `The other partner is in one of the ${seats - 1} remaining seats, 2 of them adjacent: \\(${texFrac(2, seats - 1)}\\).`,
+          { sim: (r) => ind(adjacent(seated(r), 0)) },
+        ),
+        step(
+          "What is the probability two particular pairs both sit together?",
+          together(2),
+          frac(4, (seats - 1) * (seats - 2)),
+          "Glue each pair into a block (2 orders each) and seat the blocks and others around the table.",
+          `\\(\\frac{2^2 \\cdot ${seats - 3}!}{${seats - 1}!} = ${texFrac(4, (seats - 1) * (seats - 2))}\\).`,
+          { sim: (r) => {
+            const s = seated(r);
+            return ind(adjacent(s, 0) && adjacent(s, 1));
+          } },
+        ),
+        step(
+          "What is the probability no pair sits together? (4 decimals)",
+          none,
+          num(none),
+          "Inclusion-exclusion over which pairs are glued together.",
+          `\\(\\sum_{k=0}^{${n}} (-1)^k \\binom{${n}}{k} \\frac{2^k (${seats} - k - 1)!}{${seats - 1}!} \\approx ${num(none)}\\).`,
+          { sim: (r) => {
+            const s = seated(r);
+            return ind(Array.from({ length: n }).every((_, c) => !adjacent(s, c)));
+          } },
+        ),
+      ],
+      solution: `Let \\(A_i\\) be "pair \\(i\\) sits together". Gluing \\(k\\) pairs leaves \\(${seats} - k\\) units around a circle, \\((${seats} - k - 1)!\\) arrangements, times \\(2^k\\) for the order inside each block. Inclusion-exclusion gives \\(P(\\text{no pair together}) \\approx ${num(none)}\\). This is the cousin of the ménage problem.`,
+    };
+  },
+};
+
+export const COMBINATORICS: Template[] = [binomialHeads, anagrams, latticePaths, pokerHand, starsBars, voidSuit, derangement, prisoners, couplesTable, ballot];
