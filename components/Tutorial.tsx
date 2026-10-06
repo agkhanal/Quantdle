@@ -55,7 +55,7 @@ export default function Tutorial({ startAtGate, onDone }: TutorialProps) {
           {slide === 1 && <GuessSlide />}
           {slide === 2 && <SampleSlide />}
           {slide === 3 && <PointsSlide />}
-          {slide === 4 && <PlaceholderSlide text="A market-making demo is coming in the next update." />}
+          {slide === 4 && <MarketSlide />}
           {slide === 5 && <DoneSlide />}
         </div>
 
@@ -266,6 +266,64 @@ function PointsSlide() {
         Harder puzzles are worth more, fewer guesses is worth more, the daily puzzle is worth double plus a streak
         bonus, and practice points are capped per day so they can&apos;t be farmed.
       </p>
+    </div>
+  );
+}
+
+const MARKET_DEMO_STEPS = 3;
+const MARKET_STEP_DELAY_MS = 800;
+
+function MarketSlide() {
+  const [revealed, setRevealed] = useState(0);
+
+  const play = useCallback(() => {
+    setRevealed(0);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setRevealed(MARKET_DEMO_STEPS);
+      return;
+    }
+    for (let i = 1; i <= MARKET_DEMO_STEPS; i++) {
+      setTimeout(() => setRevealed((r) => Math.max(r, i)), i * MARKET_STEP_DELAY_MS);
+    }
+  }, []);
+
+  useEffect(() => play(), [play]);
+
+  return (
+    <div className="tut-copy">
+      <p>
+        The other track is <b>market making</b>: a contract settles on a hidden dice or coin draw, and you quote a{" "}
+        <b>bid</b> and an <b>ask</b> around where you think it&apos;s fair.
+      </p>
+      <div className="tut-demo-board">
+        {revealed > 0 && (
+          <div className="row">
+            <span className="row-step">R1</span>
+            <span className="row-text">14 @ 18</span>
+          </div>
+        )}
+        {revealed > 1 && (
+          <div className="feedback fb-grey" role="status">
+            <span className="fb-dot" />
+            <span>Sharp trader lifts your offer: buys 2 @ 18. They&apos;ve peeked at the next draw — adverse selection.</span>
+          </div>
+        )}
+        {revealed > 2 && (
+          <div className="row flip grey">
+            <span className="row-step">R1</span>
+            <span className="row-text">Settled 17</span>
+            <span className="row-trades">P&amp;L −2</span>
+          </div>
+        )}
+      </div>
+      <p className="muted small">
+        A <b>sharp</b> trader has peeked at the next draw, an <b>arb</b> trades against any mispricing, and{" "}
+        <b>noise</b> traders just pay your spread. Quote tight and the noise comes more often — but so does the
+        sharp trader.
+      </p>
+      <button className="link" onClick={play} type="button">
+        ▶ Replay demo
+      </button>
     </div>
   );
 }
