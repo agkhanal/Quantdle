@@ -120,3 +120,7 @@ scripts/verify-markets.ts    Check market fair values and game balance
 ```
 
 Built with Next.js. Deploys to Vercel as-is.
+
+---
+
+Have fun, and try guessing the name of a certain yellow friend. 👀
