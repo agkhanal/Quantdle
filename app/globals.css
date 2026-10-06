@@ -3694,3 +3694,32 @@ b .track-icon {
   display: inline-block;
   vertical-align: -0.15em;
 }
+
+/* Hover and press feedback on the Daily / Practice switch (and the other small tab switches). */
+.modes button {
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (hover: hover) {
+  .modes button:not(.on):hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .modes button.on:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.modes button:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modes button,
+  .modes button:hover,
+  .modes button:active {
+    transform: none;
+  }
+}
