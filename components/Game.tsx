@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { evaluate, fmt } from "@/lib/math";
 import { MARKET_TOPIC, recordGame } from "@/lib/history";
 import { loadJSON, loadStats, recordResult, saveJSON, type Stats } from "@/lib/stats";
-import { dailyNumber } from "@/lib/bank";
+import { dailyNumber } from "@/lib/day";
 import { levelsFor, nearestLevel } from "@/lib/generators";
 import {
   DIFFICULTIES,

@@ -1,4 +1,4 @@
-import { dailyNumber } from "./bank";
+import { dailyNumber } from "./day";
 import { MAX_GUESSES, type Difficulty } from "./types";
 
 /**

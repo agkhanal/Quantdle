@@ -449,12 +449,7 @@ export function bankByDifficulty(d: Difficulty): Puzzle[] {
   return BANK.filter((p) => p.difficulty === d);
 }
 
-/** Daily puzzles cycle through the bank. Day 1 = 2026-01-01 (UTC). */
-const EPOCH = Date.UTC(2026, 0, 1);
-
-export function dailyNumber(now = Date.now()): number {
-  return Math.floor((now - EPOCH) / 86_400_000) + 1;
-}
+export { dailyNumber } from "./day";
 
 export function dailyPuzzle(n: number): Puzzle {
   // Interleave difficulties so the week has variety rather than 3 easy days in a row.
