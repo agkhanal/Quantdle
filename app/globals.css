@@ -919,6 +919,7 @@ code {
 
 .tut-slide {
   min-height: 160px;
+  animation: fade 0.25s ease both;
 }
 
 .tut-demo-board {

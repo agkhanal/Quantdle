@@ -50,7 +50,7 @@ export default function Tutorial({ startAtGate, onDone }: TutorialProps) {
           ))}
         </div>
 
-        <div className="tut-slide">
+        <div className="tut-slide" key={slide}>
           {slide === 0 && <WelcomeSlide />}
           {slide === 1 && <GuessSlide />}
           {slide === 2 && <SampleSlide />}
@@ -91,10 +91,6 @@ function WelcomeSlide() {
       </p>
     </div>
   );
-}
-
-function PlaceholderSlide({ text }: { text: string }) {
-  return <p className="muted">{text}</p>;
 }
 
 type DemoItem =
