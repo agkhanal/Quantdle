@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { evaluate, fmt, relativeError } from "@/lib/math";
 import type { Verdict } from "@/lib/types";
 import Modal from "./Modal";
 
@@ -51,7 +52,7 @@ export default function Tutorial({ startAtGate, onDone }: TutorialProps) {
         <div className="tut-slide">
           {slide === 0 && <WelcomeSlide />}
           {slide === 1 && <GuessSlide />}
-          {slide === 2 && <PlaceholderSlide text="A sample puzzle you can actually solve is coming in the next update." />}
+          {slide === 2 && <SampleSlide />}
           {slide === 3 && <PlaceholderSlide text="A worked points example is coming in the next update." />}
           {slide === 4 && <PlaceholderSlide text="A market-making demo is coming in the next update." />}
           {slide === 5 && <DoneSlide />}
@@ -158,6 +159,80 @@ function GuessSlide() {
       <button className="link" onClick={play} type="button">
         ▶ Replay demo
       </button>
+    </div>
+  );
+}
+
+/** One easy, hardcoded step. Judged with the same math the real game uses, but nothing is sent anywhere. */
+const SAMPLE_QUESTION = "Flip a fair coin twice. What's the probability of getting at least one heads?";
+const SAMPLE_ANSWER = 0.75; // 3/4
+const SAMPLE_TOLERANCE = 0.05;
+const SAMPLE_NEAR = 0.15;
+const SAMPLE_EXPLANATION = "P(at least one heads) = 1 − P(no heads) = 1 − (1/2)² = 1 − 1/4 = 3/4.";
+
+interface SampleTry {
+  text: string;
+  verdict: Verdict;
+  direction: "higher" | "lower" | null;
+}
+
+function SampleSlide() {
+  const [input, setInput] = useState("");
+  const [tries, setTries] = useState<SampleTry[]>([]);
+  const solved = tries.some((t) => t.verdict === "green");
+  const preview = input.trim() ? evaluate(input) : undefined;
+
+  function submit() {
+    if (solved || preview === undefined || preview === null) return;
+    const relErr = relativeError(preview, SAMPLE_ANSWER);
+    const verdict: Verdict = relErr <= SAMPLE_TOLERANCE ? "green" : relErr <= SAMPLE_NEAR ? "yellow" : "grey";
+    const direction = verdict === "green" ? null : preview < SAMPLE_ANSWER ? "higher" : "lower";
+    setTries((t) => [...t, { text: input.trim(), verdict, direction }]);
+    setInput("");
+  }
+
+  return (
+    <div className="tut-copy">
+      <p>Try a real step — it&apos;s not scored or saved, and there&apos;s no guess limit here.</p>
+      <p className="question">{SAMPLE_QUESTION}</p>
+      <div className="board tut-demo-board">
+        {tries.map((t, i) => (
+          <div key={i} className={`row flip ${t.verdict}`}>
+            <span className="row-step">S1</span>
+            <span className="row-text">{t.text}</span>
+            <span className="row-dir">{t.verdict === "green" ? "✓" : t.direction === "higher" ? "↑" : "↓"}</span>
+          </div>
+        ))}
+        {!solved && <div className="row empty" />}
+      </div>
+      {!solved ? (
+        <form
+          className="answer"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <div className="input-wrap">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="e.g. 0.5, 1/2, 50%"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Your answer"
+            />
+            <span className={`preview ${preview === null ? "bad" : ""}`}>
+              {preview === undefined ? "" : preview === null ? "can't read" : `= ${fmt(preview)}`}
+            </span>
+          </div>
+          <button className="btn primary" disabled={preview === undefined || preview === null} type="submit">
+            Submit
+          </button>
+        </form>
+      ) : (
+        <p className="muted small">{SAMPLE_EXPLANATION}</p>
+      )}
     </div>
   );
 }
