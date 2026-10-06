@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { ActivityEvent, ActivityType, Profile } from "@/lib/types";
 import { AdminBugs } from "./AdminBugs";
 import { AdminTag } from "./AdminTag";
+import { useSwap } from "./useSwap";
 
 const KEEP = 500;
 const STORE_KEY = "quantdle-admin-open";
@@ -115,6 +116,7 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<"activity" | "bugs">("activity");
   const [bugsOpen, setBugsOpen] = useState(0);
+  const [swapping, swap] = useSwap();
 
   const list = useRef<HTMLDivElement>(null);
   const lastId = useRef<number | null>(null);
@@ -209,14 +211,16 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
 
       <aside className={`admin-panel ${open ? "open" : ""}`} aria-label="Admin activity log" aria-hidden={!open} inert={!open}>
         <div className="admin-views" role="tablist" aria-label="Admin sections">
-          <button role="tab" aria-selected={view === "activity"} className={view === "activity" ? "on" : ""} onClick={() => setView("activity")}>
+          <button role="tab" aria-selected={view === "activity"} className={view === "activity" ? "on" : ""} onClick={() => view !== "activity" && swap("view", () => setView("activity"))}>
             Activity log
           </button>
-          <button role="tab" aria-selected={view === "bugs"} className={view === "bugs" ? "on" : ""} onClick={() => setView("bugs")}>
+          <button role="tab" aria-selected={view === "bugs"} className={view === "bugs" ? "on" : ""} onClick={() => view !== "bugs" && swap("view", () => setView("bugs"))}>
             Bug reports{bugsOpen > 0 && <span className="admin-badge">{bugsOpen}</span>}
           </button>
         </div>
 
+        <div className={`admin-view-wrap${swapping === "view" ? " leaving" : ""}`}>
+        <div className="admin-view" key={view}>
         {view === "bugs" ? (
           <AdminBugs onOpenPlayer={onOpenPlayer} />
         ) : (
@@ -239,14 +243,22 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
 
         <div className="admin-filters" role="tablist" aria-label="Filter activity">
           {FILTERS.map((f) => (
-            <button key={f.key} role="tab" aria-selected={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() => setFilter(f.key)}>
+            <button key={f.key} role="tab" aria-selected={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() =>
+                filter !== f.key &&
+                swap("list", () => {
+                  setFilter(f.key);
+                  if (list.current) list.current.scrollTop = 0;
+                })
+              }
+            >
               {f.label}
             </button>
           ))}
         </div>
         <input className="admin-search" type="search" placeholder="Filter by player or text" aria-label="Filter activity" value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" spellCheck={false} />
 
-        <div className="admin-list" ref={list}>
+        <div className={`admin-list${swapping === "list" ? " leaving" : ""}`} ref={list}>
+         <div className="list-in" key={filter}>
           {!loaded && !failed && <p className="muted small admin-empty">Loading…</p>}
           {failed && <p className="muted small admin-empty">Couldn&apos;t load the log. {loaded ? "Retrying…" : "Are you signed in as an admin?"}</p>}
           {loaded && shown.length === 0 && <p className="muted small admin-empty">{events.length ? "Nothing matches that filter." : "No activity yet."}</p>}
@@ -269,12 +281,15 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
               </div>
             </div>
           ))}
+         </div>
         </div>
         <footer className="admin-foot muted small">
           {events.length > 0 ? `${shown.length} of ${events.length} shown · ` : ""}the newest few thousand actions are kept
         </footer>
           </>
         )}
+        </div>
+        </div>
 
         <AdjustPoints me={me} onChange={onMeChange} />
       </aside>

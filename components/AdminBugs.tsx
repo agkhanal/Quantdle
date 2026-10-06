@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { BugReport, BugStatus } from "@/lib/types";
 import { AdminTag } from "./AdminTag";
+import { useSwap } from "./useSwap";
 
 const FILTERS: { key: BugStatus | "all"; label: string }[] = [
   { key: "open", label: "Open" },
@@ -24,6 +25,7 @@ export function AdminBugs({ onOpenPlayer }: { onOpenPlayer: (username: string) =
   const [reports, setReports] = useState<BugReport[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
+  const [swapping, swap] = useSwap();
 
   const refresh = useCallback(async () => {
     try {
@@ -45,32 +47,34 @@ export function AdminBugs({ onOpenPlayer }: { onOpenPlayer: (username: string) =
 
   const current = reports?.find((r) => r.id === openId) ?? null;
 
-  if (openId !== null && current) {
-    return (
-      <BugDetail
-        report={current}
-        onBack={() => setOpenId(null)}
-        onOpenPlayer={onOpenPlayer}
-        onUpdated={(r) => setReports((rs) => rs && rs.map((x) => (x.id === r.id ? r : x)))}
-      />
-    );
-  }
+  const showingDetail = openId !== null && current !== null;
 
   return (
-    <>
+    <div className={`admin-view-wrap${swapping === "view" ? " leaving" : ""}`}>
+      <div className="admin-view" key={showingDetail ? "detail" : "list"}>
+        {showingDetail ? (
+          <BugDetail
+            report={current}
+            onBack={() => swap("view", () => setOpenId(null))}
+            onOpenPlayer={onOpenPlayer}
+            onUpdated={(r) => setReports((rs) => rs && rs.map((x) => (x.id === r.id ? r : x)))}
+          />
+        ) : (
+          <>
       <div className="admin-filters" role="tablist" aria-label="Filter bug reports">
         {FILTERS.map((f) => (
-          <button key={f.key} role="tab" aria-selected={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() => setFilter(f.key)}>
+          <button key={f.key} role="tab" aria-selected={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() => filter !== f.key && swap("list", () => setFilter(f.key))}>
             {f.label}
           </button>
         ))}
       </div>
-      <div className="admin-list">
+      <div className={`admin-list${swapping === "list" ? " leaving" : ""}`}>
+       <div className="list-in" key={filter}>
         {reports === null && !failed && <p className="muted small admin-empty">Loading…</p>}
         {failed && <p className="muted small admin-empty">Couldn&apos;t load the reports.</p>}
         {reports && reports.length === 0 && <p className="muted small admin-empty">{filter === "open" ? "No open bug reports. 🎉" : "Nothing here."}</p>}
         {reports?.map((r) => (
-          <button key={r.id} className={`bug-row st-${r.status}`} onClick={() => setOpenId(r.id)}>
+          <button key={r.id} className={`bug-row st-${r.status}`} onClick={() => swap("view", () => setOpenId(r.id))}>
             <span className="bug-row-top">
               <b>#{r.id}</b>
               <span className="admin-type">{r.category}</span>
@@ -85,8 +89,12 @@ export function AdminBugs({ onOpenPlayer }: { onOpenPlayer: (username: string) =
             </span>
           </button>
         ))}
+       </div>
       </div>
-    </>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

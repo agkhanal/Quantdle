@@ -3768,3 +3768,115 @@ b .track-icon {
     transition: none;
   }
 }
+
+/* ───────── admin panel: hovers and page transitions ───────── */
+
+.admin-filters button,
+.admin-views button {
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (hover: hover) {
+  .admin-filters button:not(.on):hover {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--text) 45%, var(--border));
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .admin-filters button.on:hover {
+    transform: translateY(-1px);
+  }
+
+  .admin-views button:not(.on):hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .admin-views button.on:hover {
+    transform: translateY(-1px);
+  }
+
+  .bug-cats button:not(.on):hover,
+  .bug-quick button:hover {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--text) 45%, var(--border));
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    transform: translateY(-1px);
+  }
+}
+
+.admin-filters button:active,
+.admin-views button:active,
+.bug-cats button:active,
+.bug-quick button:active {
+  transform: scale(0.95);
+}
+
+.bug-cats button,
+.bug-quick button {
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Switching Activity <-> Bugs, a filter, or a report list <-> detail: the old content fades out, the new one rises in. */
+.admin-view-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.admin-view-wrap.leaving,
+.admin-list.leaving {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+.admin-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: admin-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.admin-list {
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.list-in {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: admin-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes admin-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-filters button,
+  .admin-views button,
+  .admin-view-wrap,
+  .admin-list {
+    transition: none;
+  }
+  .admin-filters button:hover,
+  .admin-views button:hover,
+  .admin-filters button:active,
+  .admin-views button:active {
+    transform: none;
+  }
+  .admin-view,
+  .list-in {
+    animation: none;
+  }
+}
