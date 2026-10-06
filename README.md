@@ -15,14 +15,14 @@ Two tabs, each with two games:
 
 | | 🎲 Puzzle / Probability | 📈 Market making |
 | --- | --- | --- |
-| **Daily** | One hand-checked puzzle per day, the same for everyone. | One market per day, the same for everyone. Difficulty rotates daily. Can't be skipped, and progress survives a refresh. |
+| **Daily** | One hand-checked puzzle per day, the same for everyone. Rotates through every topic at every difficulty over 20 days. | One market per day, the same for everyone. Difficulty rotates daily. Can't be skipped, and progress survives a refresh. |
 | **Practice** | Endless generated puzzles, Easy to Expert. Pick a topic (Probability, Combinatorics, Expected Value, Statistics, Markets) or a mix. Skip any you don't like. | Endless generated markets, Easy to Expert. Skip any you don't like. |
 
 **Market making:** a contract settles on some hidden dice or coins (sum of dice, product, highest, range, heads squared, ...). Each round you quote a bid and an ask, counterparties trade with you, and one draw is revealed. Finish with the best P&L. Each round's tile is green/yellow/grey by how close your mid was to fair value.
 
 Who trades with you: a **sharp** trader who has peeked at the next draw (adverse selection), an **arb** who trades against any mispricing, and **noise** traders who pay your spread, more often when your market is tight.
 
-Markets are procedural too: 18 contract families with random parameters, grouped by difficulty. Harder levels have trickier payoffs (products, squares, order statistics) and narrower markets relative to the contract's volatility. Fair value is computed exactly by enumerating every outcome.
+Markets are procedural too: contract families with random parameters, grouped by difficulty. The daily market draws from its own set of 12 families (medians, streaks, matches, ...), separate from the 18 practice families, so the daily is never a contract you just practised. Harder levels have trickier payoffs (products, squares, order statistics) and narrower markets relative to the contract's volatility. Fair value is computed exactly by enumerating every outcome.
 
 ## Your stats
 
@@ -32,7 +32,9 @@ A puzzle counts as solved when every step is cracked within six guesses, and its
 
 ## Procedural puzzles
 
-Practice puzzles come from 18 templates in `lib/generators.ts` (dice, cards, Bayes, coupon collector, gambler's ruin, optimal stopping, derangements, binomial option pricing, Kelly betting, the ballot problem, ...). Each template picks random parameters and computes every answer exactly, and is filed under one practice topic. Not every topic has every level (Statistics is Medium only, for example), so picking a topic greys out the levels it doesn't have.
+Practice puzzles come from 60 templates in `lib/puzzles/`, one file per topic, with at least three different problems for every topic at every level: from anagrams, z-scores and fair odds up to Penney's game, Burnside's lemma, regression dilution and Glosten–Milgrom spreads. Each template is a distinct idea, not a re-skin of another, picks random parameters and computes every answer exactly.
+
+The Daily uses a separate bank of 20 hand-written puzzles in `lib/bank.ts`, one per topic and difficulty, on ideas the practice templates never use (the Tuesday-boy problem, the lost boarding pass, Simpson's paradox, Cayley's formula, ...). `verify-generators.ts` checks the coverage and that no daily puzzle duplicates a practice one.
 
 Every random quantity also has a simulator. Before a puzzle is served, it's simulated thousands of times (Monte Carlo) and thrown away if any exact answer falls outside 5 standard errors of the simulation. To stress-test all templates across many seeds:
 
@@ -114,9 +116,11 @@ components/Profile.tsx       Your profile and public profiles
 components/Leaderboard.tsx   Players / schools leaderboard panel
 components/StatsPage.tsx     The /stats page: solved and missed problems by topic
 components/DonutChart.tsx    Ring chart used on the stats page
-lib/generators.ts            Procedural puzzle templates (by topic) + Monte Carlo checks
+lib/generators.ts            Picks and verifies practice puzzles (Monte Carlo checks)
+lib/puzzles/                 Practice puzzle templates, one file per topic, plus shared helpers (kit.ts)
 lib/history.ts               Local log of finished games and per-topic summaries
-lib/bank.ts                  Hand-checked puzzles for the Daily
+lib/bank.ts                  Hand-checked puzzles for the Daily (server only)
+lib/day.ts                   Daily numbering, safe to use in the browser
 lib/market.ts                Market contract generator, fair value, counterparties, P&L
 lib/auth.ts                  Password hashing and session cookies
 lib/scoring.ts               Points and UTC day/week helpers
