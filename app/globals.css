@@ -2095,10 +2095,6 @@ div.field {
   color: var(--muted);
 }
 
-.how-scored summary {
-  cursor: pointer;
-  font-weight: 700;
-}
 
 .how-scored ul {
   margin: 8px 0 0;
@@ -4309,4 +4305,64 @@ body,
   display: none;
   width: 0;
   height: 0;
+}
+
+/* A disclosure that animates open and shut (used by "How scoring works"). */
+.collapsible-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.collapsible-toggle:hover,
+.collapsible.open .collapsible-toggle {
+  color: var(--text);
+}
+
+.collapsible-chevron {
+  flex: none;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.collapsible.open .collapsible-chevron {
+  transform: rotate(90deg);
+}
+
+.collapsible-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease;
+}
+
+.collapsible.open .collapsible-body {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapsible-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.collapsible-toggle {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapsible-body,
+  .collapsible-chevron {
+    transition: none;
+  }
 }
