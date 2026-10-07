@@ -61,7 +61,10 @@ function AdjustPoints({ me, onChange }: { me: Profile; onChange: (u: Profile) =>
       const body = await res.json();
       if (!res.ok) return setError(body.error ?? "That didn't work.");
       setNote(`${body.profile.username} now has ${body.profile.points.toLocaleString()} points.`);
+      // Start fresh for the next adjustment (the note above keeps the confirmation).
+      setUsername("");
       setPoints("");
+      setReason("");
       if (body.profile.username === me.username) onChange(body.profile);
     } catch {
       setError("Network hiccup. Try again.");
