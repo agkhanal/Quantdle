@@ -2095,10 +2095,6 @@ div.field {
   color: var(--muted);
 }
 
-.how-scored summary {
-  cursor: pointer;
-  font-weight: 700;
-}
 
 .how-scored ul {
   margin: 8px 0 0;
@@ -3943,37 +3939,6 @@ b .track-icon {
   }
 }
 
-/* Admin panel scroll areas: a slim scrollbar with its own gutter, so floating (macOS) or wide scrollbars
-   never sit on top of the type labels at the right edge of each row. */
-.admin-list,
-.bug-detail {
-  padding-right: 8px;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--text) 28%, transparent) transparent;
-}
-
-/* Safari / older engines use the -webkit-scrollbar pseudo-elements instead. */
-.admin-list::-webkit-scrollbar,
-.bug-detail::-webkit-scrollbar {
-  width: 8px;
-}
-
-.admin-list::-webkit-scrollbar-track,
-.bug-detail::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.admin-list::-webkit-scrollbar-thumb,
-.bug-detail::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--text) 28%, transparent);
-  border-radius: 999px;
-}
-
-.admin-list::-webkit-scrollbar-thumb:hover,
-.bug-detail::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--text) 45%, transparent);
-}
 
 /* ───────── donut charts ───────── */
 
@@ -4087,11 +4052,17 @@ b .track-icon {
 
 /* ───────── stats page ───────── */
 
+.stats-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
 .stats-link {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 18px;
+  margin-top: 0;
   text-decoration: none;
   color: inherit;
   font-size: 0.9rem;
@@ -4251,5 +4222,164 @@ b .track-icon {
 @media (prefers-reduced-motion: reduce) {
   .topic-bar span {
     animation: none;
+  }
+}
+
+/* Guess distribution heading with a round copy button at the right */
+.dist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0 8px;
+}
+
+.dist-head h3 {
+  margin: 0;
+}
+
+.copy-btn {
+  width: 34px;
+  height: 34px;
+  color: var(--muted);
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.2s ease, transform 0.15s ease;
+}
+
+.copy-btn:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--text) 45%, var(--border));
+}
+
+.copy-btn.is-ok {
+  color: var(--green);
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, var(--surface));
+}
+
+.copy-btn.is-fail {
+  color: #d1495b;
+  border-color: #d1495b;
+}
+
+/* The icon swaps with a little pop (copy -> check). */
+.copy-icon {
+  animation: copy-pop 0.28s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+@keyframes copy-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-icon {
+    animation: none;
+  }
+}
+
+/* Leaderboard rows must be allowed to shrink: a long school name used to stretch the whole grid wider
+   than the dialog (cropping the points and adding a scroll bar). */
+.leaderboard {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lb-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lb-list li {
+  min-width: 0;
+}
+
+.lb-score {
+  flex: none;
+}
+
+/* School names wrap onto a second line instead of being cut off. */
+.lb-person.static .lb-name {
+  white-space: normal;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  /* very long names stop after three lines (the full name is in the hover title) */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+/* No visible scrollbars anywhere (the page, dialogs, lists, panels). Everything still scrolls with the
+   wheel, trackpad, touch and keyboard; only the bars themselves are hidden. */
+html,
+body,
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* A disclosure that animates open and shut (used by "How scoring works"). */
+.collapsible-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.collapsible-toggle:hover,
+.collapsible.open .collapsible-toggle {
+  color: var(--text);
+}
+
+.collapsible-chevron {
+  flex: none;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.collapsible.open .collapsible-chevron {
+  transform: rotate(90deg);
+}
+
+.collapsible-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease;
+}
+
+.collapsible.open .collapsible-body {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapsible-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.collapsible-toggle {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapsible-body,
+  .collapsible-chevron {
+    transition: none;
   }
 }

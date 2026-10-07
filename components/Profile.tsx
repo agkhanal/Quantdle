@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Profile, School } from "@/lib/types";
 import { AdminTag } from "./AdminTag";
+import { Collapsible } from "./Collapsible";
 import { Avatar, SchoolLogo } from "./Avatar";
 import { SchoolPicker } from "./SchoolPicker";
 
@@ -179,8 +180,7 @@ export function ProfilePanel({ user, onChange }: { user: Profile; onChange: (u: 
         <p className="muted small">Your photo, school, LinkedIn, points and stats are public: anyone can see them by tapping your name on the leaderboard. Your school earns the points you earn from now on.</p>
       </div>
 
-      <details className="how-scored">
-        <summary>How scoring works</summary>
+      <Collapsible title="How scoring works" className="how-scored">
         <ul>
           <li>Solve a puzzle in six guesses to win points: Easy 10, Medium 20, Hard 35, Expert 50.</li>
           <li>Fewer guesses earn more. Using all six earns half.</li>
@@ -188,7 +188,7 @@ export function ProfilePanel({ user, onChange }: { user: Profile; onChange: (u: 
           <li>Practice points stop after 100 a day. Wins still count.</li>
           <li>Days reset at 00:00 UTC; weeks start Monday.</li>
         </ul>
-      </details>
+      </Collapsible>
 
       <button className="btn wide" onClick={signOut} disabled={busy}>
         Sign out

@@ -1089,9 +1089,35 @@ function HowTo({ onReplay }: { onReplay: () => void }) {
 }
 
 function StatsView({ stats, compact }: { stats: Stats | null; compact?: boolean }) {
+  const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
   if (!stats) return null;
   const max = Math.max(1, ...stats.dist);
   const winPct = stats.played ? Math.round((stats.wins / stats.played) * 100) : 0;
+
+  /** A shareable plain-text summary: headline numbers plus the guess distribution as little bars. */
+  function statsText() {
+    const lines = stats!.dist.map((n, i) => `${i + 1} ${"█".repeat(n ? Math.max(1, Math.round((n / max) * 10)) : 0)}${n ? " " : ""}${n}`);
+    return [
+      "Quantdle stats",
+      `Played ${stats!.played} · Win ${winPct}% · Streak ${stats!.streak} · Best ${stats!.maxStreak}`,
+      "",
+      "Guesses to win",
+      ...lines,
+      "",
+      window.location.origin,
+    ].join("\n");
+  }
+
+  async function copyStats() {
+    try {
+      await navigator.clipboard.writeText(statsText());
+      setCopied("ok");
+    } catch {
+      setCopied("fail");
+    }
+    setTimeout(() => setCopied("idle"), 1800);
+  }
+
   return (
     <div className={`stats ${compact ? "compact" : ""}`}>
       <div className="stat-nums">
@@ -1114,7 +1140,30 @@ function StatsView({ stats, compact }: { stats: Stats | null; compact?: boolean 
       </div>
       {!compact && (
         <>
-          <h3>Guess distribution</h3>
+          <div className="dist-head">
+            <h3>Guess distribution</h3>
+            <button
+              className={`icon-btn copy-btn${copied !== "idle" ? ` is-${copied}` : ""}`}
+              onClick={copyStats}
+              aria-label={copied === "ok" ? "Stats copied" : copied === "fail" ? "Couldn't copy" : "Copy stats"}
+              title={copied === "ok" ? "Copied!" : copied === "fail" ? "Couldn't copy" : "Copy stats"}
+            >
+              {copied === "ok" ? (
+                <svg key="ok" className="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                </svg>
+              ) : copied === "fail" ? (
+                <svg key="fail" className="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              ) : (
+                <svg key="copy" className="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="9" y="9" width="11" height="11" rx="2.5" />
+                  <path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15" />
+                </svg>
+              )}
+            </button>
+          </div>
           <div className="dist">
             {stats.dist.map((n, i) => (
               <div key={i} className="dist-row">
@@ -1125,9 +1174,11 @@ function StatsView({ stats, compact }: { stats: Stats | null; compact?: boolean 
               </div>
             ))}
           </div>
-          <a className="btn wide stats-link" href="/stats">
-            Topic breakdown: what you solve and miss →
-          </a>
+          <div className="stats-actions">
+            <a className="btn wide stats-link" href="/stats">
+              See stats by topic →
+            </a>
+          </div>
         </>
       )}
     </div>
