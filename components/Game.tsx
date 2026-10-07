@@ -1054,9 +1054,35 @@ function HowTo({ onReplay }: { onReplay: () => void }) {
 }
 
 function StatsView({ stats, compact }: { stats: Stats | null; compact?: boolean }) {
+  const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
   if (!stats) return null;
   const max = Math.max(1, ...stats.dist);
   const winPct = stats.played ? Math.round((stats.wins / stats.played) * 100) : 0;
+
+  /** A shareable plain-text summary: headline numbers plus the guess distribution as little bars. */
+  function statsText() {
+    const lines = stats!.dist.map((n, i) => `${i + 1} ${"█".repeat(n ? Math.max(1, Math.round((n / max) * 10)) : 0)}${n ? " " : ""}${n}`);
+    return [
+      "Quantdle stats",
+      `Played ${stats!.played} · Win ${winPct}% · Streak ${stats!.streak} · Best ${stats!.maxStreak}`,
+      "",
+      "Guesses to win",
+      ...lines,
+      "",
+      window.location.origin,
+    ].join("\n");
+  }
+
+  async function copyStats() {
+    try {
+      await navigator.clipboard.writeText(statsText());
+      setCopied("ok");
+    } catch {
+      setCopied("fail");
+    }
+    setTimeout(() => setCopied("idle"), 1800);
+  }
+
   return (
     <div className={`stats ${compact ? "compact" : ""}`}>
       <div className="stat-nums">
@@ -1090,9 +1116,14 @@ function StatsView({ stats, compact }: { stats: Stats | null; compact?: boolean 
               </div>
             ))}
           </div>
-          <a className="btn wide stats-link" href="/stats">
-            Topic breakdown: what you solve and miss →
-          </a>
+          <div className="stats-actions">
+            <button className="btn wide" onClick={copyStats}>
+              {copied === "ok" ? "Copied!" : copied === "fail" ? "Couldn't copy" : "Copy stats"}
+            </button>
+            <a className="btn wide stats-link" href="/stats">
+              See stats by topic →
+            </a>
+          </div>
         </>
       )}
     </div>
