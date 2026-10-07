@@ -36,7 +36,7 @@ import { PublicProfile } from "./Profile";
 import { RichText } from "./RichText";
 import Tutorial from "./Tutorial";
 import { UserSearch } from "./UserSearch";
-import Verity, { isVerity, summonVerity } from "./Verity";
+import Verity, { isVerity, summonVerity, takeScareFound } from "./Verity";
 
 type Mode = "daily" | "practice";
 /** Each tab has two tracks: step-by-step probability puzzles, or the market-making game. */
@@ -109,6 +109,7 @@ export default function Game() {
   const [toast, setToast] = useState("");
   const [tutorial, setTutorial] = useState<"gate" | "replay" | null>(null);
   const [eggPops, setEggPops] = useState(0);
+  const [eggWin, setEggWin] = useState<number | null>(null); // points from the hidden egg, shown in a popup
   const [bugUpdates, setBugUpdates] = useState(0);
   const [leaving, setLeaving] = useState(false); // old content fading out before a mode/track/difficulty switch
   const [stats, setStats] = useState<Stats | null>(null);
@@ -182,10 +183,12 @@ export default function Game() {
     setToday(dailyNumber());
     const savedTopic = loadJSON<string>(TOPIC_KEY);
     if (isTopic(savedTopic)) setTopic(savedTopic);
+    const scareFound = takeScareFound();
     fetch("/api/auth")
       .then((r) => r.json())
       .then((b) => {
         setUser(b.user);
+        if (scareFound) claimScareEgg(Boolean(b.user));
         setGoogleOn(Boolean(b.google));
         if (b.bugUpdates > 0) {
           setBugUpdates(b.bugUpdates);
@@ -407,6 +410,23 @@ export default function Game() {
     } catch {
       showToast("Network hiccup. Try again.");
     }
+  }
+
+  /** Easter egg: the page just came back from the hidden scare. Pays out once per account; after that, nothing. */
+  async function claimScareEgg(signedIn: boolean) {
+    if (!signedIn) return showToast("🥚 You found an easter egg! Sign in, then find it again to claim it.");
+    try {
+      const res = await fetch("/api/egg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ egg: "scare" }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.claimed) return;
+      setUser(body.profile);
+      setEggWin(body.points);
+      capture("easter_egg_claimed", { egg: "scare", points: body.points });
+    } catch {}
   }
 
   function nudgeShake() {
@@ -821,6 +841,21 @@ export default function Game() {
 
       {status === "won" && track === "puzzle" && <Confetti />}
     <Verity />
+      {eggWin !== null && (
+        <>
+          <Confetti />
+          <Modal title="Easter egg found! 🥚" onClose={() => setEggWin(null)}>
+            <div className="egg-win">
+              <div className="egg-win-points">+{eggWin} points</div>
+              <p>Congratulations, you found a hidden easter egg and survived it all the way to the end. The points are already on your profile and the leaderboard.</p>
+              <p className="muted">You can find it again any time, but the bonus only pays out once.</p>
+              <button className="btn primary wide" onClick={() => setEggWin(null)}>
+                Nice
+              </button>
+            </div>
+          </Modal>
+        </>
+      )}
       {modal === "help" && (
         <Modal title="How to play" onClose={() => setModal(null)}>
           <HowTo onReplay={replayTutorial} />

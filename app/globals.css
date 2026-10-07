@@ -2165,6 +2165,23 @@ button.lb-person:hover .lb-name {
   outline: 1.5px solid color-mix(in srgb, var(--green) 55%, transparent);
 }
 
+.egg-win {
+  display: grid;
+  gap: 10px;
+  text-align: center;
+}
+
+.egg-win p {
+  margin: 0;
+}
+
+.egg-win-points {
+  font-family: var(--mono);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--green);
+}
+
 .award-total {
   font-family: var(--mono);
   font-size: 1.6rem;
