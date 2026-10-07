@@ -104,7 +104,9 @@ export function LeaderboardPanel({
               <span className="lb-rank">{medal(s.rank)}</span>
               <span className="lb-person static">
                 <SchoolLogo school={s.school} size={30} />
-                <span className="lb-name">{s.school.name}</span>
+                <span className="lb-name" title={s.school.name}>
+                  {s.school.name}
+                </span>
               </span>
               <span className="lb-score">{s.points.toLocaleString()}</span>
             </li>

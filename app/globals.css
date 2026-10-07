@@ -4295,3 +4295,34 @@ b .track-icon {
     animation: none;
   }
 }
+
+/* Leaderboard rows must be allowed to shrink: a long school name used to stretch the whole grid wider
+   than the dialog (cropping the points and adding a scroll bar). */
+.leaderboard {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lb-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lb-list li {
+  min-width: 0;
+}
+
+.lb-score {
+  flex: none;
+}
+
+/* School names wrap onto a second line instead of being cut off. */
+.lb-person.static .lb-name {
+  white-space: normal;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  /* very long names stop after three lines (the full name is in the hover title) */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
