@@ -51,6 +51,19 @@ const BURST_AT = 2000;
 const RELOAD_AT = 3600;
 
 const SUMMON = "verity:summon";
+/** Set just before the reload so the page can pay out the easter egg once it's back. */
+const FOUND = "quantdle-egg-scare";
+
+/** True (once) if the page was just reloaded by the jumpscare. */
+export function takeScareFound(): boolean {
+  try {
+    if (!sessionStorage.getItem(FOUND)) return false;
+    sessionStorage.removeItem(FOUND);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** True if a guess is the magic word. */
 export const isVerity = (guess: string) => guess.trim().toLowerCase() === "verity";
@@ -150,7 +163,12 @@ export default function Verity() {
         a.volume = 1;
         a.play().catch(() => {});
       }, BURST_AT),
-      setTimeout(() => window.location.reload(), RELOAD_AT),
+      setTimeout(() => {
+        try {
+          sessionStorage.setItem(FOUND, "1");
+        } catch {}
+        window.location.reload();
+      }, RELOAD_AT),
     );
   }
 
