@@ -15,8 +15,10 @@ export const DAILY_MULTIPLIER = 2;
 export const PRACTICE_DAILY_CAP = 100;
 export const STREAK_BONUS_PER_DAY = 2;
 export const STREAK_BONUS_MAX_DAYS = 10;
-/** One-time bonus for finding the easter egg in the logo. */
-export const EGG_POINTS = 10;
+/** One-time bonus for each easter egg: the L in the logo, and seeing the hidden scare all the way through. */
+export const EGG_POINTS = { logo: 10, scare: 100 } as const;
+export type Egg = keyof typeof EGG_POINTS;
+export const isEgg = (v: unknown): v is Egg => typeof v === "string" && Object.hasOwn(EGG_POINTS, v);
 
 /** 1.0 when every guess was a step answer, falling linearly to 0.5 when all six guesses were needed. */
 export function efficiency(guesses: number, steps: number): number {

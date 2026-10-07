@@ -18,6 +18,7 @@ import {
   EGG_POINTS,
   PRACTICE_DAILY_CAP,
   dayNumber,
+  type Egg,
   parseDailyId,
   periodEnd,
   weekIndex,
@@ -239,12 +240,13 @@ export async function adminAdjustPoints(name: string, points: number, reason: st
 
 // ───────────── easter egg ─────────────
 
-/** Gives the one-time egg bonus. Returns the new profile, or null if this player already found it. */
-export async function claimEgg(username: string): Promise<Profile | null> {
-  if (!(await setIfAbsent(`egg:${username.toLowerCase()}:logo`, "1"))) return null;
+/** Gives an egg's one-time bonus. Returns the new profile, or null if this player already found that egg. */
+export async function claimEgg(username: string, egg: Egg): Promise<Profile | null> {
+  if (!(await setIfAbsent(`egg:${username.toLowerCase()}:${egg}`, "1"))) return null;
+  const points = EGG_POINTS[egg];
   const s = await load(username);
-  await Promise.all([hIncrBy(profKey(username), "points", EGG_POINTS), addPoints(username, s.school, EGG_POINTS)]);
-  logActivity("egg", username, `found the easter egg: +${EGG_POINTS} pts`);
+  await Promise.all([hIncrBy(profKey(username), "points", points), addPoints(username, s.school, points)]);
+  logActivity("egg", username, `found the ${egg} easter egg: +${points} pts`);
   return getProfile(username);
 }
 
