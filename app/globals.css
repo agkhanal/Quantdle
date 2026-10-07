@@ -3416,6 +3416,7 @@ main.leaving {
 .dist,
 .profile,
 .bug-form,
+.active-step,
 /* chat: header, the message composer, and each message's badge, time and admin buttons */
 .chat-head,
 .chat-form,
