@@ -4242,3 +4242,56 @@ b .track-icon {
     animation: none;
   }
 }
+
+/* Guess distribution heading with a round copy button at the right */
+.dist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0 8px;
+}
+
+.dist-head h3 {
+  margin: 0;
+}
+
+.copy-btn {
+  width: 34px;
+  height: 34px;
+  color: var(--muted);
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.2s ease, transform 0.15s ease;
+}
+
+.copy-btn:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--text) 45%, var(--border));
+}
+
+.copy-btn.is-ok {
+  color: var(--green);
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, var(--surface));
+}
+
+.copy-btn.is-fail {
+  color: #d1495b;
+  border-color: #d1495b;
+}
+
+/* The icon swaps with a little pop (copy -> check). */
+.copy-icon {
+  animation: copy-pop 0.28s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+@keyframes copy-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-icon {
+    animation: none;
+  }
+}
