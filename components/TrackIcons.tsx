@@ -63,3 +63,13 @@ export function StatusIcon({ status, size = 20 }: { status: "won" | "lost" | "pl
     </svg>
   );
 }
+
+/** A lightbulb, sized to the surrounding text, for hints. */
+export function LightbulbIcon() {
+  return (
+    <svg className="hint-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M9.2 18.2h5.6M10.2 21.4h3.6" />
+      <path d="M12 2.6a6.4 6.4 0 0 0-3.8 11.6c.7.6 1.3 1.5 1.3 2.4v.6h5v-.6c0-.9.6-1.8 1.3-2.4A6.4 6.4 0 0 0 12 2.6z" />
+    </svg>
+  );
+}

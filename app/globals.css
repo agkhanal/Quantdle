@@ -4553,3 +4553,11 @@ body,
 .content-in.is-loading {
   min-height: 55vh;
 }
+
+/* the hint lightbulb sits on the text baseline, a touch below centre */
+.hint-icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: -0.16em;
+  margin-right: 0.35em;
+}

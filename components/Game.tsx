@@ -31,7 +31,7 @@ import { AdminPanel } from "./AdminPanel";
 import { Avatar } from "./Avatar";
 import { BugReport } from "./BugReport";
 import { Chat } from "./Chat";
-import { ChartIcon, DiceIcon, CalendarIcon } from "./TrackIcons";
+import { ChartIcon, DiceIcon, CalendarIcon, LightbulbIcon } from "./TrackIcons";
 import { ArchivePanel } from "./Archive";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
@@ -781,7 +781,7 @@ export default function Game() {
 
                 {hintRow && (
                   <p className="hint">
-                    💡 <RichText text={hintRow.text} />
+                    <LightbulbIcon /><RichText text={hintRow.text} />
                   </p>
                 )}
 
@@ -825,7 +825,7 @@ export default function Game() {
                     <span />
                   )}
                   <button className="link" onClick={takeHint} disabled={hintUsed || rowsLeft < 2} type="button" title="Costs one guess">
-                    💡 Hint <span className="muted">(costs a guess)</span>
+                    <LightbulbIcon />Hint <span className="muted">(costs a guess)</span>
                   </button>
                   {mode === "practice" && (
                     <button
@@ -1090,7 +1090,7 @@ function BoardRow({ row, totalSteps }: { row?: Row; totalSteps: number }) {
     return (
       <div className="row hint-row">
         <span className="row-step">{label}</span>
-        <span className="row-text">💡 hint used</span>
+        <span className="row-text"><LightbulbIcon />hint used</span>
       </div>
     );
   }
@@ -1144,7 +1144,7 @@ function HowTo({ onReplay }: { onReplay: () => void }) {
       <p>
         Answer in any form: <code>0.25</code>, <code>1/4</code>, <code>25%</code>, <code>1-(5/6)^4</code>,{" "}
         <code>C(52,5)</code>, <code>e</code>. When the AI judge is on, <b>Show your work</b> lets it read your reasoning. Or burn a
-        guess on a <b>💡 hint</b>. Sign in to earn <b>points</b>, build a streak, and climb the <b>leaderboards</b>.
+        guess on a <b><LightbulbIcon />hint</b>. Sign in to earn <b>points</b>, build a streak, and climb the <b>leaderboards</b>.
       </p>
       <p className="muted small">
         <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> is endless: puzzles are generated from templates with
