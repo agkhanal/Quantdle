@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import type { ChatMessage, Profile } from "@/lib/types";
 import { AdminTag } from "./AdminTag";
 import { Avatar } from "./Avatar";
+import { PlayerMenu, type MenuTarget } from "./PlayerMenu";
 
 const MAX = 280;
 const KEEP = 200;
@@ -38,6 +39,7 @@ export function Chat({
   const [note, setNote] = useState("");
   const [unseen, setUnseen] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+  const [menu, setMenu] = useState<MenuTarget | null>(null);
 
   const list = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -46,6 +48,8 @@ export function Chat({
   const idle = useRef(0);
   const wake = useRef<() => void>(() => {});
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const press = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean }>({ timer: null, fired: false });
+  const closeMenu = useCallback(() => setMenu(null), []);
 
   /** Merge new log entries: add messages, apply delete and clear events, keep order. Returns how many new messages arrived. */
   const apply = useCallback((incoming: ChatMessage[], mine?: string | null) => {
@@ -124,7 +128,35 @@ export function Chat({
     if (open && user && window.innerWidth > 480) input.current?.focus();
   }, [open, user]);
 
+  /** Right-click (or a long press on touch screens) on a name opens the player menu. */
+  function nameHandlers(m: ChatMessage) {
+    const openAt = (x: number, y: number) => setMenu({ username: m.u, messageId: m.id, x, y });
+    const cancel = () => press.current.timer && clearTimeout(press.current.timer);
+    return {
+      onContextMenu: (e: MouseEvent) => {
+        e.preventDefault();
+        openAt(e.clientX, e.clientY);
+      },
+      onTouchStart: (e: TouchEvent) => {
+        const t = e.touches[0];
+        press.current.fired = false;
+        cancel();
+        press.current.timer = setTimeout(() => {
+          press.current.fired = true;
+          openAt(t.clientX, t.clientY);
+        }, 500);
+      },
+      onTouchMove: cancel,
+      onTouchEnd: cancel,
+      onClick: () => {
+        if (press.current.fired) return void (press.current.fired = false); // the long press already opened the menu
+        onOpenPlayer(m.u);
+      },
+    };
+  }
+
   function onScroll() {
+    setMenu(null);
     const el = list.current!;
     stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
     if (stick.current) setUnseen(0);
@@ -141,6 +173,7 @@ export function Chat({
     if (closeTimer.current) clearTimeout(closeTimer.current);
     if (open) {
       setOpen(false);
+      setMenu(null);
       setClosing(true);
       closeTimer.current = setTimeout(() => {
         setShown(false);
@@ -222,7 +255,7 @@ export function Chat({
                 <Avatar name={m.u} src={m.a} size={26} />
                 <div className="chat-body">
                   <div className="chat-meta">
-                    <button className="chat-name" onClick={() => onOpenPlayer(m.u)}>
+                    <button className="chat-name" title="Right-click for more" {...nameHandlers(m)}>
                       {m.u}
                     </button>
                     <AdminTag username={m.u} />
@@ -280,6 +313,8 @@ export function Chat({
           )}
         </section>
       )}
+
+      {menu && <PlayerMenu target={menu} me={user} onClose={closeMenu} onOpenPlayer={onOpenPlayer} onSignIn={onSignIn} onDone={flash} />}
     </>
   );
 }

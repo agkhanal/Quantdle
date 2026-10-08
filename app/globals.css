@@ -4383,3 +4383,112 @@ body,
     transition: none;
   }
 }
+
+/* Right-click menu on a player's name in the chat */
+.player-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 190px;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow), 0 12px 32px rgba(0, 0, 0, 0.18);
+  display: grid;
+  gap: 2px;
+  font-size: 0.86rem;
+  animation: player-menu-in 0.12s ease-out both;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@keyframes player-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.player-menu-head {
+  padding: 4px 10px 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.player-menu > button {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.player-menu > button:hover,
+.player-menu > button:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.player-menu > button.danger {
+  color: #d1495b;
+}
+
+.player-menu-form {
+  display: grid;
+  gap: 8px;
+  padding: 4px;
+}
+
+.player-menu-form input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+
+.player-menu-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.player-menu-chips button {
+  padding: 3px 9px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.player-menu-chips button.on,
+.player-menu-chips button:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.player-menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.player-menu-row .btn {
+  height: 32px;
+  width: auto;
+  padding: 0 12px;
+  font-size: 0.82rem;
+}
