@@ -3443,6 +3443,9 @@ main.leaving {
 /* chat: header, the message composer, and each message's badge, time and admin buttons */
 .chat-head,
 .chat-form,
+.chat-reacts,
+.chat-modmenu,
+.chat-badge,
 .admin-tag,
 .chat-meta .muted,
 .chat-mod {
@@ -4564,4 +4567,213 @@ body,
   flex: none;
   vertical-align: -0.16em;
   margin-right: 0.35em;
+}
+
+/* ───────── chat: reactions, mentions, moderation ───────── */
+
+.chat-msg.mentions-me {
+  margin: 0 -6px;
+  padding: 6px 6px 6px 4px;
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.chat-mention {
+  padding: 0 3px;
+  border: 0;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat-mention:hover {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.chat-mention.me {
+  background: var(--accent);
+  color: #fff;
+}
+
+.chat-reacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.chat-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
+}
+
+.chat-react:not(:disabled):hover {
+  color: var(--text);
+  border-color: var(--muted);
+  transform: translateY(-1px);
+}
+
+.chat-react:disabled {
+  cursor: default;
+}
+
+.chat-react.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.chat-react.add {
+  min-height: 0;
+  padding: 1px 6px;
+  border-color: transparent;
+  opacity: 0;
+}
+
+/* The add button sits in the message's header row: it shows on hover, on keyboard focus, while its picker is open,
+   and always where there's no hover (touch). */
+.chat-msg:hover .chat-react.add,
+.chat-react.add:focus-visible,
+.chat-react.add[aria-expanded="true"] {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .chat-react.add {
+    opacity: 0.75;
+  }
+}
+
+.chat-picker {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  animation: chat-pop 0.16s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.chat-picker .chat-react {
+  border-color: transparent;
+  padding: 4px 6px;
+}
+
+@keyframes chat-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+.chat-modmenu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+  animation: chat-pop 0.16s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.chat-modmenu button {
+  padding: 3px 9px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chat-modmenu button:hover {
+  border-color: #d1495b;
+  color: #d1495b;
+}
+
+.chat-modmenu button.good:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.chat-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg);
+  animation: chat-pop 0.2s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.chat-suggest {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% - 4px);
+  z-index: 3;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow), 0 8px 24px rgba(0, 0, 0, 0.25);
+  animation: chat-pop 0.14s ease both;
+}
+
+.chat-suggest button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-suggest button.on {
+  background: var(--surface-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-picker,
+  .chat-modmenu,
+  .chat-badge,
+  .chat-suggest {
+    animation: none;
+  }
 }

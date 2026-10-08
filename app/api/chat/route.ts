@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { incr } from "@/lib/store";
 import { isAdmin, rateLimited, sessionUser } from "@/lib/auth";
-import { cleanText, deleteMessage, isMuted, isRepeat, postMessage, readChat } from "@/lib/chat";
+import { cleanText, deleteMessage, extractMentions, getMute, isRepeat, muteNotice, postMessage, readChat } from "@/lib/chat";
 import { logActivity } from "@/lib/activity";
-import { getProfile } from "@/lib/profile";
+import { findUser, getProfile } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,8 @@ export async function POST(req: Request) {
   if ((await incr(`rl:chatuser:${username.toLowerCase()}:${Math.floor(Date.now() / 10_000)}`, 20)) > 5) {
     return NextResponse.json({ error: "You're sending messages too fast." }, { status: 429 });
   }
-  if (await isMuted(username)) return NextResponse.json({ error: "You've been muted for a while." }, { status: 403 });
+  const mute = await getMute(username);
+  if (mute) return NextResponse.json({ error: muteNotice(mute) }, { status: 403 });
 
   const body = (await req.json().catch(() => ({}))) as { text?: unknown };
   const text = cleanText(body.text);
@@ -37,7 +38,10 @@ export async function POST(req: Request) {
   if (await isRepeat(username, text)) return NextResponse.json({ error: "Don't repeat yourself." }, { status: 429 });
 
   const { avatar } = await getProfile(username);
-  const message = await postMessage(username, avatar, text);
+  // Only @names that are real accounts count as mentions (and get notified).
+  const found = await Promise.all(extractMentions(text).map((n) => findUser(n)));
+  const mentions = found.filter((n): n is string => n !== null);
+  const message = await postMessage(username, avatar, text, mentions);
   logActivity("chat", username, `said: ${text.slice(0, 120)}`);
   return NextResponse.json({ message });
 }

@@ -77,6 +77,14 @@ Passwords are hashed with scrypt; sessions are signed cookies. Profile pictures 
 
 Everything is stored in Upstash Redis. Without it, an in-memory store is used, which is fine locally but resets on restart and doesn't work reliably on Vercel.
 
+## Global chat
+
+A chat button sits bottom right; everyone can read, signed-in players can write (280 characters, rate-limited, no repeats). Messages are an ordered log in the store (`lib/chat.ts`), polled every few seconds while the panel is open and cached for two seconds at the edge, so many readers cost the database very little.
+
+- **Reactions:** four icon reactions (like, love, funny, fire). Hover a message (or tap, on a phone) for the add-reaction button; click a chip to give or take back your reaction. They update live for everyone with the chat open.
+- **@mentions:** type `@` and pick a player from the suggestions. Only real accounts become mentions: they show as links to the player's profile, the message is highlighted for the person mentioned, and a badge with a count appears on the chat button while the chat is closed (a tiny private check every 45 seconds while the tab is visible).
+- **Moderation (admins):** each message has **mute** and **delete**. Mute opens a menu of 10 minutes, 1 hour, 1 day or a permanent **Ban**, and offers **Unmute** for someone already muted. Muted players can't post or react and are told how long is left. Admins can't be muted, and every action is in the activity log.
+
 ## Analytics
 
 With `NEXT_PUBLIC_POSTHOG_KEY` set, the site reports to [PostHog](https://posthog.com): pageviews, live visitors, session replays and game events. Signed-in players are identified by username (with their points and admin flag), so you can look someone up and watch their games. Everything is viewed in the PostHog dashboard, not in the app.

@@ -174,6 +174,13 @@ export function toPublic(p: Puzzle): PublicPuzzle {
 }
 
 /** One entry in the global chat log. A delete event has `del` set to the id it removes. */
+/** The reactions a message can get. They are drawn as icons (see components/ReactionIcons.tsx). */
+export const CHAT_REACTIONS = ["like", "love", "laugh", "fire"] as const;
+export type ChatReaction = (typeof CHAT_REACTIONS)[number];
+export const isReaction = (v: unknown): v is ChatReaction => typeof v === "string" && (CHAT_REACTIONS as readonly string[]).includes(v);
+/** Who reacted with what. */
+export type ChatReactions = Partial<Record<ChatReaction, string[]>>;
+
 export interface ChatMessage {
   id: number;
   /** Username */
@@ -185,6 +192,12 @@ export interface ChatMessage {
   /** Text */
   t: string;
   at: number;
+  /** Players this message @mentions (real accounts only, display-cased) */
+  n?: string[];
+  /** Reactions on this message */
+  r?: ChatReactions;
+  /** Not a message: an update to the reactions on message `rx`, carried in `r` */
+  rx?: number;
   del?: number;
 }
 
