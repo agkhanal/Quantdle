@@ -196,6 +196,8 @@ export interface ChatMessage {
   n?: string[];
   /** Reactions on this message */
   r?: ChatReactions;
+  /** Client only: a message you just sent, shown while the server confirms it */
+  pending?: boolean;
   /** Not a message: an update to the reactions on message `rx`, carried in `r` */
   rx?: number;
   del?: number;

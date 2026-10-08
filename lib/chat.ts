@@ -10,6 +10,7 @@ import { type ChatMessage, type ChatReaction, type ChatReactions } from "./types
 const LOG = "chat:log";
 const SEQ = "chat:seq";
 const KEEP = 400;
+const TRIM_EVERY = 10; // the log is trimmed on every tenth entry, not every one, so a send does less work (it may briefly hold a few more than KEEP)
 export const FIRST_LOAD = 60;
 export const MAX_LENGTH = 280;
 
@@ -23,6 +24,8 @@ const MENTIONS_KEPT = 50; // per player
 const lastKey = (u: string) => `chat:last:${u.toLowerCase()}`;
 
 const nextId = () => incrBy(SEQ, 1, 10 * 365 * 86_400);
+
+const trimLog = (id: number) => (id % TRIM_EVERY === 0 ? zTrim(LOG, KEEP) : Promise.resolve());
 
 const parse = (raw: string): ChatMessage | null => {
   try {
@@ -80,19 +83,18 @@ export function extractMentions(text: string): string[] {
 
 /** Adds (or, if you'd already reacted that way, removes) your reaction. Returns the message's reactions, or null if it's gone. */
 export async function toggleReaction(username: string, id: number, kind: ChatReaction): Promise<ChatReactions | null> {
-  const [raw] = await zByScore(LOG, String(id), String(id), 1);
+  const [[raw], stored] = await Promise.all([zByScore(LOG, String(id), String(id), 1), get(rxKey(id))]);
   const target = raw ? parse(raw) : null;
   if (!target || target.del || target.rx !== undefined) return null;
-  const current = parseReactions(await get(rxKey(id)));
+  const current = parseReactions(stored);
   const who = current[kind] ?? [];
   const at = who.findIndex((u) => u.toLowerCase() === username.toLowerCase());
   const next = at >= 0 ? who.filter((_, i) => i !== at) : [...who, username].slice(-MAX_REACTORS);
   if (next.length) current[kind] = next;
   else delete current[kind];
-  await set(rxKey(id), JSON.stringify(current), RX_TTL);
-  const event: ChatMessage = { id: await nextId(), u: "", a: null, m: false, t: "", at: Date.now(), rx: id, r: current };
-  await zAddMember(LOG, event.id, JSON.stringify(event));
-  await zTrim(LOG, KEEP);
+  const [, eventId] = await Promise.all([set(rxKey(id), JSON.stringify(current), RX_TTL), nextId()]);
+  const event: ChatMessage = { id: eventId, u: "", a: null, m: false, t: "", at: Date.now(), rx: id, r: current };
+  await Promise.all([zAddMember(LOG, event.id, JSON.stringify(event)), trimLog(event.id)]);
   return current;
 }
 
@@ -138,22 +140,22 @@ export async function listMutes(): Promise<{ username: string; until: Mute["unti
   });
 }
 
-/** Same text from the same player within 30 seconds counts as a repeat. */
+/** Is this the same text this player sent in the last 30 seconds? (Read-only: `rememberText` records a message once it's sent.) */
 export async function isRepeat(username: string, text: string): Promise<boolean> {
-  const last = await get(lastKey(username));
-  await set(lastKey(username), text.toLowerCase(), 30);
-  return last === text.toLowerCase();
+  return (await get(lastKey(username))) === text.toLowerCase();
 }
+
+export const rememberText = (username: string, text: string) => set(lastKey(username), text.toLowerCase(), 30);
 
 export async function postMessage(username: string, avatar: string | null, text: string, mentions: string[] = []): Promise<ChatMessage> {
   const msg: ChatMessage = { id: await nextId(), u: username, a: avatar, m: isAdmin(username), t: text, at: Date.now(), ...(mentions.length ? { n: mentions } : {}) };
-  await zAddMember(LOG, msg.id, JSON.stringify(msg));
-  await zTrim(LOG, KEEP);
-  for (const name of mentions) {
-    if (name.toLowerCase() === username.toLowerCase()) continue; // mentioning yourself isn't a notification
-    await zAddMember(mentionKey(name), msg.id, String(msg.id));
-    await zTrim(mentionKey(name), MENTIONS_KEPT);
-  }
+  await Promise.all([
+    zAddMember(LOG, msg.id, JSON.stringify(msg)),
+    trimLog(msg.id),
+    ...mentions
+      .filter((name) => name.toLowerCase() !== username.toLowerCase()) // mentioning yourself isn't a notification
+      .map((name) => Promise.all([zAddMember(mentionKey(name), msg.id, String(msg.id)), zTrim(mentionKey(name), MENTIONS_KEPT)])),
+  ]);
   return msg;
 }
 

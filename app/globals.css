@@ -4829,3 +4829,8 @@ body,
 .chat-msg.mentions-me.cont {
   margin-top: -2px; /* the highlight has its own padding */
 }
+
+/* a message you just sent, until the server confirms it */
+.chat-msg.pending {
+  opacity: 0.6;
+}

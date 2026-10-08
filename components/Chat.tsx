@@ -1,14 +1,15 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useRef, useState } from "react";
 import { CHAT_REACTIONS, type ChatMessage, type ChatReaction, type ChatReactions, type Profile } from "@/lib/types";
 import { AdminTag } from "./AdminTag";
 import { Avatar } from "./Avatar";
 import { AddReactionIcon, REACTION_LABEL, ReactionIcon } from "./ReactionIcons";
 import { bunchesWith } from "@/lib/chatGroup";
+import { ChatComposer } from "./ChatComposer";
 
-const MAX = 280;
 const KEEP = 200;
+const PENDING_BASE = Number.MAX_SAFE_INTEGER - 1_000_000; // ids for messages still being sent: they sort after everything real
 const MENTION_POLL_MS = 45_000;
 
 const readKey = (u: string) => `quantdle-chat-read:${u.toLowerCase()}`;
@@ -75,8 +76,13 @@ function ago(at: number, now: number) {
   return `${Math.round(s / 86_400)}d`;
 }
 
-/** A floating global chat, bottom right. Everyone can read; signed-in players can write. */
-export function Chat({
+/**
+ * A floating global chat, bottom right. Everyone can read; signed-in players can write. It re-renders only when the
+ * signed-in player changes (not on every keystroke elsewhere on the page, which would redraw the whole message list).
+ */
+export const Chat = memo(ChatImpl, (a, b) => a.user === b.user);
+
+function ChatImpl({
   user,
   onSignIn,
   onOpenPlayer,
@@ -91,9 +97,6 @@ export function Chat({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [unseen, setUnseen] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -101,19 +104,20 @@ export function Chat({
   const [pickerFor, setPickerFor] = useState<number | null>(null); // message whose reaction picker is open
   const [modFor, setModFor] = useState<number | null>(null); // message whose moderation menu is open (admins)
   const [mutedNow, setMutedNow] = useState<Set<string> | null>(null);
-  const [token, setToken] = useState<{ q: string; start: number } | null>(null); // the @name being typed
-  const [suggestions, setSuggestions] = useState<{ name: string; avatar: string | null }[]>([]);
-  const [active, setActive] = useState(0);
   const [tapped, setTapped] = useState<number | null>(null); // a bunched message whose actions are showing (tap, or click)
 
   const list = useRef<HTMLDivElement>(null);
-  const found = useRef(new Map<string, { name: string; avatar: string | null }[]>());
-  const input = useRef<HTMLInputElement>(null);
+  const cb = useRef({ onSignIn, onOpenPlayer }); // the latest callbacks, so the stable wrappers below never go stale
+  cb.current = { onSignIn, onOpenPlayer };
+  const pendingSeq = useRef(0);
   const lastId = useRef<number | null>(null);
   const stick = useRef(true); // is the list scrolled to the bottom?
   const idle = useRef(0);
   const wake = useRef<() => void>(() => {});
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openPlayer = useCallback((u: string) => cb.current.onOpenPlayer(u), []);
+  const signIn = useCallback(() => cb.current.onSignIn(), []);
 
   /** Merge new log entries: add messages, apply delete events, keep order. Returns how many new messages arrived. */
   const apply = useCallback((incoming: ChatMessage[], mine?: string | null) => {
@@ -125,6 +129,9 @@ export function Chat({
         if (m.del) next = next.filter((x) => x.id !== m.del);
         else if (m.rx !== undefined) next = next.map((x) => (x.id === m.rx ? { ...x, r: m.r } : x));
         else if (!known.has(m.id)) {
+          // The real copy of a message that was shown while it sent: swap it in, don't show it twice.
+          const twin = next.findIndex((x) => x.pending && x.u === m.u && x.t === m.t);
+          if (twin >= 0) next = next.filter((_, i) => i !== twin);
           next = [...next, m];
           known.add(m.id);
           if (m.u !== mine) added++;
@@ -164,8 +171,8 @@ export function Chat({
           if (!stopped) setFailed(true);
         }
       }
-      // Quiet rooms are polled less often.
-      const delay = idle.current < 10 ? 3000 : idle.current < 30 ? 6000 : 10_000;
+      // Polled quickly while a conversation is going (anything new, or a message you just sent, resets this), then less often.
+      const delay = idle.current < 8 ? 1500 : idle.current < 20 ? 3000 : idle.current < 40 ? 6000 : 10_000;
       timer = setTimeout(tick, delay);
     }
 
@@ -223,45 +230,11 @@ export function Chat({
     };
   }, [user, open]);
 
-  // Suggest players while an @name is being typed (a short pause first, and answers are remembered).
-  useEffect(() => {
-    if (!token) return setSuggestions([]);
-    const q = token.q.toLowerCase();
-    const cached = found.current.get(q);
-    if (cached) {
-      setSuggestions(cached);
-      setActive(0);
-      return;
-    }
-    let live = true;
-    const t = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/users?q=${encodeURIComponent(q)}`, { cache: "no-store" });
-        if (!res.ok) return;
-        const body = (await res.json()) as { profiles: Profile[] };
-        const list = body.profiles.slice(0, 5).map((p) => ({ name: p.username, avatar: p.avatar }));
-        found.current.set(q, list);
-        if (live) {
-          setSuggestions(list);
-          setActive(0);
-        }
-      } catch {}
-    }, 220);
-    return () => {
-      live = false;
-      clearTimeout(t);
-    };
-  }, [token]);
-
   // Keep the newest message in view unless the reader scrolled up.
   useEffect(() => {
     const el = list.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   }, [messages, open, loaded]);
-
-  useEffect(() => {
-    if (open && user && window.innerWidth > 480) input.current?.focus();
-  }, [open, user]);
 
   function onScroll() {
     const el = list.current!;
@@ -292,24 +265,29 @@ export function Chat({
     }
   }
 
-  async function send() {
-    const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    setError("");
+  /** Send a message. It shows in the list at once (dimmed) and is swapped for the real one when the server confirms. */
+  async function submit(text: string): Promise<string | null> {
+    if (!user) return "Sign in to chat.";
+    const tempId = PENDING_BASE + ++pendingSeq.current;
+    const drop = () => setMessages((prev) => prev.filter((x) => x.id !== tempId));
+    stick.current = true;
+    setMessages((prev) => [...prev, { id: tempId, u: user.username, a: user.avatar, m: Boolean(user.admin), t: text, at: Date.now(), pending: true }]);
     try {
       const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
       const body = await res.json();
-      if (!res.ok) return setError(body.error ?? "Couldn't send that.");
-      stick.current = true;
-      apply([body.message], user?.username);
-      setDraft("");
-      wake.current();
+      if (!res.ok) {
+        drop();
+        return body.error ?? "Couldn't send that.";
+      }
+      setMessages((prev) => {
+        const without = prev.filter((x) => x.id !== tempId);
+        return without.some((x) => x.id === body.message.id) ? without : [...without, body.message].sort((a, b) => a.id - b.id);
+      });
+      wake.current(); // look for replies quickly
+      return null;
     } catch {
-      setError("Network hiccup. Try again.");
-    } finally {
-      setSending(false);
-      input.current?.focus();
+      drop();
+      return "Network hiccup. Try again.";
     }
   }
 
@@ -362,41 +340,6 @@ export function Chat({
     }
   }
 
-  /** Track the @name under the cursor so suggestions can follow what's being typed. */
-  function onDraft(value: string, caret: number) {
-    setDraft(value);
-    const hit = /(?:^|\s)@([A-Za-z0-9_-]{1,20})$/.exec(value.slice(0, caret));
-    setToken(hit ? { q: hit[1], start: caret - hit[1].length - 1 } : null);
-  }
-
-  function pick(name: string) {
-    if (!token) return;
-    const before = draft.slice(0, token.start);
-    const after = draft.slice(token.start + 1 + token.q.length).replace(/^\s/, "");
-    const inserted = `${before}@${name} `;
-    setDraft((inserted + after).slice(0, MAX));
-    setToken(null);
-    setSuggestions([]);
-    setTimeout(() => {
-      input.current?.focus();
-      input.current?.setSelectionRange(inserted.length, inserted.length);
-    }, 0);
-  }
-
-  function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!token || suggestions.length === 0) return;
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((i) => (i + (e.key === "ArrowDown" ? 1 : suggestions.length - 1)) % suggestions.length);
-    } else if (e.key === "Enter" || e.key === "Tab") {
-      e.preventDefault();
-      pick(suggestions[active].name);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      setToken(null);
-    }
-  }
-
   return (
     <>
       <button className={`chat-fab ${open ? "open" : ""}`} aria-label={open ? "Close chat" : mentions > 0 ? `Open global chat (${mentions} ${mentions === 1 ? "mention" : "mentions"} of you)` : "Open global chat"} aria-expanded={open} onClick={toggle}>
@@ -437,24 +380,24 @@ export function Chat({
               return (
                 <div
                   key={m.id}
-                  className={`chat-msg ${m.u === user?.username ? "me" : ""}${mentionsMe ? " mentions-me" : ""}${cont ? " cont" : ""}${tapped === m.id ? " tapped" : ""}`}
+                  className={`chat-msg ${m.u === user?.username ? "me" : ""}${mentionsMe ? " mentions-me" : ""}${cont ? " cont" : ""}${tapped === m.id ? " tapped" : ""}${m.pending ? " pending" : ""}`}
                   onClick={cont ? (e) => !(e.target as HTMLElement).closest("button, a") && setTapped((t) => (t === m.id ? null : m.id)) : undefined}
                 >
                   {cont ? <span className="chat-avatar-gap" aria-hidden /> : <Avatar name={m.u} src={m.a} size={26} />}
                   <div className="chat-body">
                     {(!cont || user) && (
                     <div className="chat-meta">
-                      <button className="chat-name" onClick={() => onOpenPlayer(m.u)}>
+                      <button className="chat-name" onClick={() => openPlayer(m.u)}>
                         {m.u}
                       </button>
                       <AdminTag username={m.u} />
                       <span className="muted">{ago(m.at, now)}</span>
-                      {user && (
+                      {user && !m.pending && (
                         <button className="chat-react add" aria-label="Add a reaction" aria-expanded={pickerFor === m.id} onClick={() => setPickerFor(pickerFor === m.id ? null : m.id)}>
                           <AddReactionIcon size={14} />
                         </button>
                       )}
-                      {user?.admin && (
+                      {user?.admin && !m.pending && (
                         <span className="chat-mod">
                           {!m.m && (
                             <button title={`Mute or ban ${m.u}`} aria-label={`Moderate ${m.u}`} aria-expanded={modFor === m.id} onClick={() => openMod(m)}>
@@ -469,7 +412,7 @@ export function Chat({
                     </div>
                     )}
                     <div className="chat-text" title={cont ? new Date(m.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : undefined}>
-                      <MessageText m={m} me={user?.username} onOpen={onOpenPlayer} />
+                      <MessageText m={m} me={user?.username} onOpen={openPlayer} />
                     </div>
 
                     {modFor === m.id && (
@@ -528,61 +471,7 @@ export function Chat({
 
           {note && <p className="muted small chat-note">{note}</p>}
 
-          {user ? (
-            <form
-              className="chat-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                send();
-              }}
-            >
-              {error && <p className="chat-error">{error}</p>}
-              {token && suggestions.length > 0 && (
-                <ul className="chat-suggest" role="listbox" aria-label="Players">
-                  {suggestions.map((p, i) => (
-                    <li key={p.name} role="option" aria-selected={i === active}>
-                      <button
-                        type="button"
-                        className={i === active ? "on" : ""}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onMouseEnter={() => setActive(i)}
-                        onClick={() => pick(p.name)}
-                      >
-                        <Avatar name={p.name} src={p.avatar} size={20} />
-                        <span>{p.name}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="chat-row">
-                <input
-                  ref={input}
-                  value={draft}
-                  onChange={(e) => onDraft(e.target.value, e.target.selectionStart ?? e.target.value.length)}
-                  onKeyDown={onKey}
-                  onBlur={() => setTimeout(() => setToken(null), 120)}
-                  maxLength={MAX}
-                  placeholder="Say something…"
-                  aria-label="Message"
-                  autoComplete="off"
-                  role="combobox"
-                  aria-expanded={Boolean(token && suggestions.length > 0)}
-                  aria-autocomplete="list"
-                />
-                <button className="btn primary" disabled={sending || !draft.trim()}>
-                  Send
-                </button>
-              </div>
-              {draft.length > MAX - 60 && <span className="muted small chat-count">{MAX - draft.length} left</span>}
-            </form>
-          ) : (
-            <div className="chat-form">
-              <button className="btn primary wide" onClick={onSignIn}>
-                Sign in to chat
-              </button>
-            </div>
-          )}
+          <ChatComposer user={user} open={open} onSignIn={signIn} onSend={submit} />
         </section>
       )}
     </>

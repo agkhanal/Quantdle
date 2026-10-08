@@ -10,11 +10,13 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const username = sessionUser(req);
   if (!username) return NextResponse.json({ error: "Sign in to react." }, { status: 401 });
-  if (await rateLimited(req, "chatreact", 120, 60)) return NextResponse.json({ error: "Slow down a little." }, { status: 429 });
-  if ((await incr(`rl:chatreact:${username.toLowerCase()}:${Math.floor(Date.now() / 10_000)}`, 20)) > 10) {
-    return NextResponse.json({ error: "You're reacting too fast." }, { status: 429 });
-  }
-  const mute = await getMute(username);
+  const [ipLimited, count, mute] = await Promise.all([
+    rateLimited(req, "chatreact", 120, 60),
+    incr(`rl:chatreact:${username.toLowerCase()}:${Math.floor(Date.now() / 10_000)}`, 20),
+    getMute(username),
+  ]);
+  if (ipLimited) return NextResponse.json({ error: "Slow down a little." }, { status: 429 });
+  if (count > 10) return NextResponse.json({ error: "You're reacting too fast." }, { status: 429 });
   if (mute) return NextResponse.json({ error: muteNotice(mute) }, { status: 403 });
 
   const body = (await req.json().catch(() => ({}))) as { id?: unknown; kind?: unknown };

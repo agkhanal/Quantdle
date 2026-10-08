@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
 import { incr } from "@/lib/store";
 import { isAdmin, rateLimited, sessionUser } from "@/lib/auth";
-import { cleanText, deleteMessage, extractMentions, getMute, isRepeat, muteNotice, postMessage, readChat } from "@/lib/chat";
+import { cleanText, deleteMessage, extractMentions, getMute, isRepeat, muteNotice, postMessage, readChat, rememberText } from "@/lib/chat";
 import { logActivity } from "@/lib/activity";
-import { findUser, getProfile } from "@/lib/profile";
+import { avatarUrlFor, findUser } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET [?after=<id>]: the newest messages, or only those after an id. The response is the same for everyone,
- * so it is cached for a couple of seconds at the edge: many people polling cost the database very little.
+ * so it is cached for a second at the edge: many people polling cost the database very little.
  */
 export async function GET(req: Request) {
   const raw = new URL(req.url).searchParams.get("after");
   const after = raw !== null && /^\d{1,15}$/.test(raw) ? Number(raw) : null;
   return NextResponse.json(await readChat(after), {
-    headers: { "Cache-Control": "public, s-maxage=2, stale-while-revalidate=2" },
+    headers: { "Cache-Control": "public, s-maxage=1, stale-while-revalidate=1" },
   });
 }
 
@@ -24,24 +24,28 @@ export async function POST(req: Request) {
   const username = sessionUser(req);
   if (!username) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
 
-  if (await rateLimited(req, "chat", 90, 60)) return NextResponse.json({ error: "Slow down a little." }, { status: 429 });
-  // About one message every 2 seconds per player.
-  if ((await incr(`rl:chatuser:${username.toLowerCase()}:${Math.floor(Date.now() / 10_000)}`, 20)) > 5) {
-    return NextResponse.json({ error: "You're sending messages too fast." }, { status: 429 });
-  }
-  const mute = await getMute(username);
-  if (mute) return NextResponse.json({ error: muteNotice(mute) }, { status: 403 });
-
   const body = (await req.json().catch(() => ({}))) as { text?: unknown };
   const text = cleanText(body.text);
-  if (!text) return NextResponse.json({ error: "Type a message first." }, { status: 400 });
-  if (await isRepeat(username, text)) return NextResponse.json({ error: "Don't repeat yourself." }, { status: 429 });
 
-  const { avatar } = await getProfile(username);
-  // Only @names that are real accounts count as mentions (and get notified).
-  const found = await Promise.all(extractMentions(text).map((n) => findUser(n)));
+  // Everything the checks and the message need is read at once (one round trip, not one after another).
+  const [ipLimited, sent, mute, repeat, avatar, found] = await Promise.all([
+    rateLimited(req, "chat", 90, 60),
+    // About one message every 2 seconds per player.
+    incr(`rl:chatuser:${username.toLowerCase()}:${Math.floor(Date.now() / 10_000)}`, 20),
+    getMute(username),
+    text ? isRepeat(username, text) : false,
+    avatarUrlFor(username),
+    // Only @names that are real accounts count as mentions (and get notified).
+    Promise.all(extractMentions(text).map((n) => findUser(n))),
+  ]);
+  if (ipLimited) return NextResponse.json({ error: "Slow down a little." }, { status: 429 });
+  if (sent > 5) return NextResponse.json({ error: "You're sending messages too fast." }, { status: 429 });
+  if (mute) return NextResponse.json({ error: muteNotice(mute) }, { status: 403 });
+  if (!text) return NextResponse.json({ error: "Type a message first." }, { status: 400 });
+  if (repeat) return NextResponse.json({ error: "Don't repeat yourself." }, { status: 429 });
+
   const mentions = found.filter((n): n is string => n !== null);
-  const message = await postMessage(username, avatar, text, mentions);
+  const [message] = await Promise.all([postMessage(username, avatar, text, mentions), rememberText(username, text)]);
   logActivity("chat", username, `said: ${text.slice(0, 120)}`);
   return NextResponse.json({ message });
 }

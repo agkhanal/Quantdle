@@ -107,9 +107,17 @@ function shape(username: string, s: Stored, rank: number | null): Profile {
     rank,
     school: s.school ? schoolById(s.school) : null,
     linkedin: s.linkedin,
-    avatar: s.avatarV ? `/api/avatar/${encodeURIComponent(username)}?v=${s.avatarV}` : null,
+    avatar: s.avatarV ? avatarUrl(username, s.avatarV) : null,
     admin: isAdmin(username),
   };
+}
+
+const avatarUrl = (username: string, version: number) => `/api/avatar/${encodeURIComponent(username)}?v=${version}`;
+
+/** Just the avatar URL, in one read: for callers (like chat) that don't need the whole profile or the rank. */
+export async function avatarUrlFor(username: string): Promise<string | null> {
+  const v = num((await hGetAll(profKey(username))).avatarV);
+  return v ? avatarUrl(username, v) : null;
 }
 
 export async function getProfile(username: string): Promise<Profile> {

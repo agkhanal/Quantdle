@@ -79,7 +79,7 @@ Everything is stored in Upstash Redis. Without it, an in-memory store is used, w
 
 ## Global chat
 
-A chat button sits bottom right; everyone can read, signed-in players can write (280 characters, rate-limited, no repeats). Messages are an ordered log in the store (`lib/chat.ts`), polled every few seconds while the panel is open and cached for two seconds at the edge, so many readers cost the database very little.
+A chat button sits bottom right; everyone can read, signed-in players can write (280 characters, rate-limited, no repeats). Messages are an ordered log in the store (`lib/chat.ts`), polled every 1.5 seconds while a conversation is active (slowing to every 10 seconds in a quiet room) and cached for one second at the edge, so many readers cost the database very little. Sending is optimistic: your message shows at once, dimmed, and is swapped for the real one when the server confirms (or removed, with your text put back, if it fails). The server reads and writes in parallel, so a send takes about three database round trips, and the message box is its own component so typing never redraws the message list.
 
 - **Bunching:** consecutive messages from the same player, each within five minutes of the one before, share a single avatar and name (`lib/chatGroup.ts`). A bunched message's react, mute and delete actions appear on hover, or when you tap it.
 - **Reactions:** four icon reactions (like, love, funny, fire). Hover a message (or tap, on a phone) for the add-reaction button; click a chip to give or take back your reaction. They update live for everyone with the chat open.
