@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { isTopic } from "@/lib/types";
 import { MARKET_TOPIC, loadHistory, summarize, type GameMode, type GameResult, type TopicSummary } from "@/lib/history";
@@ -41,9 +40,9 @@ export default function StatsPage() {
 
   return (
     <main className="stats-page">
-      <Link href="/" className="legal-back">
+      <a href="/" className="legal-back">
         ← Back to Quantdle
-      </Link>
+      </a>
       <h1>Your stats</h1>
       <p className="muted small">Every puzzle and market you finish on this device, broken down by topic.</p>
 
@@ -61,9 +60,9 @@ export default function StatsPage() {
         <section className="card center stats-empty">
           <p>{history.length ? `No finished ${filter} games yet.` : "No finished games yet."}</p>
           <p className="muted small">Play a puzzle or a market and your topic breakdown shows up here.</p>
-          <Link href="/" className="btn primary">
+          <a href="/" className="btn primary">
             Play now →
-          </Link>
+          </a>
         </section>
       ) : (
         <>

@@ -114,7 +114,6 @@ function AdjustPoints({ me, onChange }: { me: Profile; onChange: (u: Profile) =>
 /** Admin-only activity log (and points tool) in a left-hand drawer. Opening it pushes the page to the right. */
 export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMeChange: (u: Profile) => void; onOpenPlayer: (username: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [live, setLive] = useState(true);
   const [events, setEvents] = useState<ActivityEvent[]>([]); // newest first
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
@@ -157,9 +156,9 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
     });
   }, []);
 
-  // Poll while the drawer is open and live. Nothing runs while it's closed.
+  // Poll while the drawer is open. Nothing runs while it's closed.
   useEffect(() => {
-    if (!open || !live) return;
+    if (!open) return;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     async function tick() {
@@ -188,7 +187,7 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
       stopped = true;
       clearTimeout(timer);
     };
-  }, [open, live, merge]);
+  }, [open, merge]);
 
   // When rows are added above the reader, keep what they're looking at in place.
   useLayoutEffect(() => {
@@ -238,25 +237,9 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
           <AdminReports onOpenPlayer={onOpenPlayer} />
         ) : (
           <>
-        <header className="admin-head">
-          <b className="muted small">Everyone&apos;s actions, live</b>
-          <span className={`admin-live ${live ? "on" : ""}`} aria-hidden />
-          <button className="link" onClick={() => setLive((l) => !l)}>
-            {live ? "Pause" : "Resume"}
-          </button>
-          <button
-            className="link"
-            onClick={() => {
-              setEvents([]);
-            }}
-          >
-            Clear view
-          </button>
-        </header>
-
-        <div className="admin-filters" role="tablist" aria-label="Filter activity">
+        <div className="admin-filters" role="group" aria-label="Filter activity">
           {FILTERS.map((f) => (
-            <button key={f.key} role="tab" aria-selected={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() =>
+            <button key={f.key} aria-pressed={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() =>
                 filter !== f.key &&
                 swap("list", () => {
                   setFilter(f.key);
@@ -267,6 +250,9 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
               {f.label}
             </button>
           ))}
+          <button className="link admin-clear" onClick={() => setEvents([])}>
+            Clear view
+          </button>
         </div>
         <input className="admin-search" type="search" placeholder="Filter by player or text" aria-label="Filter activity" value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" spellCheck={false} />
 

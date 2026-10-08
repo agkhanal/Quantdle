@@ -12,10 +12,8 @@ export interface MenuTarget {
   y: number;
 }
 
-interface Moderation {
-  banned: boolean;
-  mutedUntil: number | null;
-}
+/** From the mute endpoint: false if they can chat, "never" for a ban, when a mute ends (ms), or null for an old mute with no end. */
+type Moderation = { until: number | "never" | null | false };
 
 const MUTES = [
   { label: "10m", minutes: 10 },
@@ -61,9 +59,9 @@ export function PlayerMenu({
   useEffect(() => {
     if (!canModerate) return;
     let stale = false;
-    fetch(`/api/chat/ban?username=${encodeURIComponent(target.username)}`, { cache: "no-store" })
+    fetch(`/api/chat/mute?username=${encodeURIComponent(target.username)}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((b) => !stale && b && setMod({ banned: b.banned, mutedUntil: b.mutedUntil }))
+      .then((b) => !stale && b && setMod({ until: b.until }))
       .catch(() => {});
     return () => {
       stale = true;
@@ -87,7 +85,8 @@ export function PlayerMenu({
     }
   }
 
-  const who = encodeURIComponent(target.username);
+  const banned = mod?.until === "never";
+  const muted = mod !== null && mod.until !== false && !banned;
 
   // Keep the menu on screen: flip it left/up when it would spill over an edge.
   useLayoutEffect(() => {
@@ -153,21 +152,23 @@ export function PlayerMenu({
               </button>
               {canModerate && (
                 <>
-                  {mod?.mutedUntil != null ? (
-                    <button role="menuitem" disabled={busy} onClick={() => run(`/api/chat/mute?username=${who}`, { method: "DELETE" }, `Unmuted ${target.username}.`)}>
-                      Unmute{mod.mutedUntil > Date.now() ? ` (${left(mod.mutedUntil)} left)` : ""}
+                  {muted ? (
+                    <button role="menuitem" disabled={busy} onClick={() => run("/api/chat/mute", json("POST", { username: target.username, unmute: true }), `Unmuted ${target.username}.`)}>
+                      Unmute{typeof mod.until === "number" && mod.until > Date.now() ? ` (${left(mod.until)} left)` : ""}
                     </button>
                   ) : (
-                    <button role="menuitem" onClick={() => setView("mute")}>
-                      Mute…
-                    </button>
+                    !banned && (
+                      <button role="menuitem" onClick={() => setView("mute")}>
+                        Mute…
+                      </button>
+                    )
                   )}
-                  {mod?.banned ? (
-                    <button role="menuitem" disabled={busy} onClick={() => run(`/api/chat/ban?username=${who}`, { method: "DELETE" }, `Unbanned ${target.username} from the chat.`)}>
+                  {banned ? (
+                    <button role="menuitem" disabled={busy} onClick={() => run("/api/chat/mute", json("POST", { username: target.username, unmute: true }), `Unbanned ${target.username} from the chat.`)}>
                       Unban from chat
                     </button>
                   ) : (
-                    <button role="menuitem" className="danger" disabled={busy || !mod} onClick={() => run("/api/chat/ban", json("POST", { username: target.username }), `Banned ${target.username} from the chat.`)}>
+                    <button role="menuitem" className="danger" disabled={busy || !mod} onClick={() => run("/api/chat/mute", json("POST", { username: target.username, ban: true }), `Banned ${target.username} from the chat.`)}>
                       Ban from chat
                     </button>
                   )}

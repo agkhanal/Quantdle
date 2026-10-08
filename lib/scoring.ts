@@ -11,7 +11,9 @@ import { MAX_GUESSES, type Difficulty } from "./types";
 
 export const BASE_POINTS: Record<Difficulty, number> = { easy: 10, medium: 20, hard: 35, expert: 50 };
 export const DAILY_MULTIPLIER = 2;
-/** Practice points stop counting after this many per UTC day (wins still count). */
+/** A past daily played from the archive pays this share of a normal win, with no streak bonus. */
+export const ARCHIVE_MULTIPLIER = 0.5;
+/** Practice and archive points stop counting after this many per UTC day (wins still count). */
 export const PRACTICE_DAILY_CAP = 100;
 export const STREAK_BONUS_PER_DAY = 2;
 export const STREAK_BONUS_MAX_DAYS = 10;
@@ -33,18 +35,25 @@ export interface PointsInput {
   steps: number;
   guesses: number;
   daily: boolean;
+  /** A past daily played from the archive: reduced points, no streak. */
+  archive?: boolean;
   /** Streak after this win (daily only). */
   streak: number;
 }
 
 /** Points for a win, itemised so the result screen can show where they came from. */
-export function winPoints({ difficulty, steps, guesses, daily, streak }: PointsInput) {
+export function winPoints({ difficulty, steps, guesses, daily, archive = false, streak }: PointsInput) {
   const base = BASE_POINTS[difficulty];
   const eff = efficiency(guesses, steps);
   const afterEff = Math.round(base * eff);
   const breakdown: { label: string; value: number }[] = [{ label: `${cap(difficulty)} puzzle`, value: base }];
   if (afterEff !== base) breakdown.push({ label: `Used ${guesses} of ${MAX_GUESSES} guesses`, value: afterEff - base });
   let total = afterEff;
+  if (archive && !daily) {
+    const cut = Math.round(afterEff * ARCHIVE_MULTIPLIER) - afterEff;
+    breakdown.push({ label: "Past daily (half points)", value: cut });
+    total += cut;
+  }
   if (daily) {
     const bonus = afterEff * (DAILY_MULTIPLIER - 1);
     breakdown.push({ label: "Daily puzzle bonus", value: bonus });

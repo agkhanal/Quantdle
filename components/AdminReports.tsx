@@ -185,7 +185,7 @@ function ReportDetail({
           <button type="button" disabled={busy} onClick={() => call("/api/chat/mute", json("POST", { username: report.user, minutes: 24 * 60 }), `Muted ${report.user} for a day.`)}>
             Mute 1d
           </button>
-          <button type="button" disabled={busy} onClick={() => call("/api/chat/ban", json("POST", { username: report.user }), `Banned ${report.user} from the chat.`)}>
+          <button type="button" disabled={busy} onClick={() => call("/api/chat/mute", json("POST", { username: report.user, ban: true }), `Banned ${report.user} from the chat.`)}>
             Ban from chat
           </button>
         </div>

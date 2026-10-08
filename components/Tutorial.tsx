@@ -5,7 +5,7 @@ import { evaluate, fmt, relativeError } from "@/lib/math";
 import { winPoints } from "@/lib/scoring";
 import type { Verdict } from "@/lib/types";
 import Modal from "./Modal";
-import { ChartIcon, DiceIcon } from "./TrackIcons";
+import { ChartIcon, DiceIcon, LightbulbIcon } from "./TrackIcons";
 
 const SLIDE_TITLES = ["Welcome", "How guessing works", "Try it yourself", "Points example", "Market making", "You're set!"];
 
@@ -102,7 +102,7 @@ type DemoItem =
 const DEMO_ITEMS: DemoItem[] = [
   { kind: "guess", text: "1/3", verdict: "grey", direction: "lower" },
   { kind: "guess", text: "1/9", verdict: "yellow", direction: "higher" },
-  { kind: "hint", text: "💡 Count how many of the 36 outcomes sum to 7." },
+  { kind: "hint", text: "Count how many of the 36 outcomes sum to 7." },
   { kind: "guess", text: "1/6", verdict: "green", direction: null },
 ];
 const DEMO_STEP_DELAY_MS = 700;
@@ -136,7 +136,10 @@ function GuessSlide() {
             return (
               <div key={i} className="row hint-row">
                 <span className="row-step">S1</span>
-                <span className="row-text">{item.text}</span>
+                <span className="row-text">
+                  <LightbulbIcon />
+                  {item.text}
+                </span>
               </div>
             );
           return (
@@ -151,8 +154,8 @@ function GuessSlide() {
         })}
       </div>
       <p className="muted small">
-        ⬛ off track, 🟨 close (or the AI judge likes your approach — the arrow says which way to go), 🟩 correct. A
-        💡 hint costs one guess.
+        ⬛ off track, 🟨 close (or the AI judge likes your approach — the arrow says which way to go), 🟩 correct. A{" "}
+        <LightbulbIcon />hint costs one guess.
       </p>
       <button className="link" onClick={play} type="button">
         ▶ Replay demo
@@ -261,7 +264,7 @@ function PointsSlide() {
       </div>
       <p className="muted small">
         Harder puzzles are worth more, fewer guesses is worth more, the daily puzzle is worth double plus a streak
-        bonus, and practice points are capped per day so they can&apos;t be farmed.
+        bonus, past dailies pay half, and practice points are capped per day so they can&apos;t be farmed.
       </p>
     </div>
   );

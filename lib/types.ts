@@ -46,7 +46,29 @@ export interface PuzzleResponse {
   puzzle: PublicPuzzle;
   source: "ai" | "bank" | "generated";
   dailyNumber?: number;
+  /** A past daily, served from the archive (half points, no streak). */
+  archive?: boolean;
   aiJudge?: boolean;
+}
+
+/** One row of the past-dailies archive. Titles are safe to show: the day is over. */
+export interface ArchiveDay {
+  day: number;
+  title: string;
+  category: string;
+  difficulty: Difficulty;
+}
+
+export interface ArchiveResponse {
+  today: number;
+  /** Today's puzzle, for the "Today" row (its title is on the page already). */
+  current: ArchiveDay;
+  /** The first daily that went live. */
+  launch: number;
+  /** Newest first, not including today. */
+  days: ArchiveDay[];
+  /** The signed-in player's result on each daily (today included); absent days weren't finished. */
+  results: Record<number, "won" | "lost">;
 }
 
 export interface GuessRequest {
@@ -151,6 +173,13 @@ export function toPublic(p: Puzzle): PublicPuzzle {
   };
 }
 
+/** The reactions a message can get. They are drawn as icons (see components/ReactionIcons.tsx). */
+export const CHAT_REACTIONS = ["like", "love", "laugh", "fire"] as const;
+export type ChatReaction = (typeof CHAT_REACTIONS)[number];
+export const isReaction = (v: unknown): v is ChatReaction => typeof v === "string" && (CHAT_REACTIONS as readonly string[]).includes(v);
+/** Who reacted with what. */
+export type ChatReactions = Partial<Record<ChatReaction, string[]>>;
+
 /** One entry in the global chat log. A delete event has `del` set to the id it removes; a clear event has `clr` set. */
 export interface ChatMessage {
   id: number;
@@ -163,6 +192,14 @@ export interface ChatMessage {
   /** Text */
   t: string;
   at: number;
+  /** Players this message @mentions (real accounts only, display-cased) */
+  n?: string[];
+  /** Reactions on this message */
+  r?: ChatReactions;
+  /** Client only: a message you just sent, shown while the server confirms it */
+  pending?: boolean;
+  /** Not a message: an update to the reactions on message `rx`, carried in `r` */
+  rx?: number;
   del?: number;
   clr?: boolean;
 }

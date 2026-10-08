@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { aiEnabled, generatePuzzle as generateWithAI } from "@/lib/ai";
 import { dailyNumber, dailyPuzzle } from "@/lib/bank";
+import { LAUNCH_DAY } from "@/lib/day";
 import { generatePuzzle } from "@/lib/generators";
 import { seal } from "@/lib/token";
 import { DIFFICULTIES, isTopic, toPublic, type Difficulty, type Puzzle, type PuzzleResponse } from "@/lib/types";
@@ -16,12 +17,18 @@ export async function GET(req: Request) {
   const mode = url.searchParams.get("mode") === "practice" ? "practice" : "daily";
 
   if (mode === "daily") {
-    const n = dailyNumber();
+    const today = dailyNumber();
+    // ?day=N plays a past daily from the archive (launch day through today). Anything else is an error, never a peek ahead.
+    const asked = url.searchParams.get("day");
+    const n = asked === null ? today : Number(asked);
+    if (!Number.isInteger(n) || n < LAUNCH_DAY || n > today) {
+      return NextResponse.json({ error: "That daily isn't available." }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    }
     // A per-day id, so the leaderboard credits each day's puzzle once even though the bank repeats.
     // It names the bank puzzle too, so progress saved against a different puzzle isn't restored onto this one.
     const bank = dailyPuzzle(n);
     const puzzle: Puzzle = { ...bank, id: `daily-${n}-${bank.id}` };
-    return json({ token: seal(puzzle), puzzle: toPublic(puzzle), source: "bank", dailyNumber: n });
+    return json({ token: seal(puzzle), puzzle: toPublic(puzzle), source: "bank", dailyNumber: n, archive: n < today });
   }
 
   const d = url.searchParams.get("difficulty") as Difficulty;

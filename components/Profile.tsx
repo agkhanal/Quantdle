@@ -177,7 +177,7 @@ export function ProfilePanel({ user, onChange }: { user: Profile; onChange: (u: 
         <button className="btn primary wide" disabled={busy || !dirty} onClick={save}>
           {busy ? "…" : "Save profile"}
         </button>
-        <p className="muted small">Your photo, school, LinkedIn, points and stats are public: anyone can see them by tapping your name on the leaderboard. Your school earns the points you earn from now on.</p>
+        <p className="muted small">Your photo, school, LinkedIn, points and stats are public: anyone can see them by tapping your name on the leaderboard. Your school's total includes your points, and they move with you if you change schools.</p>
       </div>
 
       <Collapsible title="How scoring works" className="how-scored">
@@ -185,7 +185,8 @@ export function ProfilePanel({ user, onChange }: { user: Profile; onChange: (u: 
           <li>Solve a puzzle in six guesses to win points: Easy 10, Medium 20, Hard 35, Expert 50.</li>
           <li>Fewer guesses earn more. Using all six earns half.</li>
           <li>The daily puzzle is worth double, plus +2 per day of streak (up to +20).</li>
-          <li>Practice points stop after 100 a day. Wins still count.</li>
+          <li>Past dailies replayed from the archive pay half points and don't count toward your streak.</li>
+          <li>Practice and archive points stop after 100 a day combined. Wins still count.</li>
           <li>Days reset at 00:00 UTC; weeks start Monday.</li>
         </ul>
       </Collapsible>

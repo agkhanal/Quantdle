@@ -24,6 +24,12 @@ Who trades with you: a **sharp** trader who has peeked at the next draw (adverse
 
 Markets are procedural too: contract families with random parameters, grouped by difficulty. The daily market draws from its own set of 12 families (medians, streaks, matches, ...), separate from the 18 practice families, so the daily is never a contract you just practised. Harder levels have trickier payoffs (products, squares, order statistics) and narrower markets relative to the contract's volatility. Fair value is computed exactly by enumerating every outcome.
 
+### Past dailies (the archive)
+
+The **Past dailies** button on the Daily tab lists every daily since launch (#277, 2026-10-04), newest first, for both the puzzle and the market game. Pick one to replay it: your progress on each day is saved separately, so you can start one and come back, and each row shows whether you solved it, lost it, are partway through, or haven't touched it. For puzzles the result comes from your account, so it follows you across devices; markets are kept in the browser.
+
+A past daily pays **half points** (rounded), never counts toward the streak, and a lost one never resets it. Its points share the 100-a-day cap with practice, so the archive can't be farmed. A puzzle can only score once, so one you already won on its day pays nothing again. Days outside the archive (before launch, or still in the future) are refused by `/api/puzzle?mode=daily&day=N`. `LAUNCH_DAY` in `lib/day.ts` sets where the archive starts.
+
 ## Your stats
 
 The chart button opens your win record and guess distribution, and links to **`/stats`**: a page of donut charts showing which topics you solve and which you miss, with each puzzle topic and the market game ranked by win rate. Your strongest topic and the one that needs work are labelled, and every row has a **Practice →** link that opens practice on that topic. Filter by Daily or Practice.
@@ -59,16 +65,34 @@ Players sign in with a username and password (no email) or with Google. Signed-i
 
 - **Efficiency:** the base is multiplied from 1.0 (every guess was a step answer) down to 0.5 (all six guesses used).
 - **Daily puzzle:** worth double, plus +2 per day of streak (up to +20).
-- **Practice:** capped at 100 points per UTC day (wins still count).
+- **Past daily (archive):** half of a normal win, no streak bonus, and it never affects the streak.
+- **Practice and archive:** capped at 100 points per UTC day combined (wins still count).
 - **Streak:** consecutive daily puzzles won. A missed day or a lost daily resets it.
 
 All of this lives in `lib/scoring.ts` (pure functions; `npx tsx scripts/verify-scoring.ts` prints the points table and checks the rules). Days reset at 00:00 UTC and weeks start Monday.
 
-**Leaderboards** rank players, and schools (the sum of their players' points), by points for today, this week, and all time. Schools come from [Hipo's university-domains-list](https://github.com/Hipo/university-domains-list) (MIT licensed, trimmed into `lib/schools-data.json`); logos are fetched from Google's favicon service by the server and cached.
+**Leaderboards** rank players, and schools (the sum of their players' points), by points for today, this week, and all time. Schools come from [Hipo's university-domains-list](https://github.com/Hipo/university-domains-list) (MIT licensed, trimmed into `lib/schools-data.json`); logos are fetched from Google's favicon service by the server and cached. If a player changes school, their points move with them: their score for today, this week and all time leaves the old school's total and joins the new one's (a school left with nothing drops off the board). A one-time repair (`lib/migrations.ts`, run at server start from `instrumentation.ts`) fixed school totals from changes made before that rule existed; it runs once per database.
 
 Passwords are hashed with scrypt; sessions are signed cookies. Profile pictures are shrunk to a 192px JPEG in the browser, checked server-side (JPEG/PNG/WebP only, 80 KB max) and served with `nosniff`.
 
 Everything is stored in Upstash Redis. Without it, an in-memory store is used, which is fine locally but resets on restart and doesn't work reliably on Vercel.
+
+## Global chat
+
+A chat button sits bottom right; everyone can read, signed-in players can write (280 characters, rate-limited, no repeats). Messages are an ordered log in the store (`lib/chat.ts`), polled every 1.5 seconds while a conversation is active (slowing to every 10 seconds in a quiet room) and cached for one second at the edge, so many readers cost the database very little. Sending is optimistic: your message shows at once, dimmed, and is swapped for the real one when the server confirms (or removed, with your text put back, if it fails). The server reads and writes in parallel, so a send takes about three database round trips, and the message box is its own component so typing never redraws the message list.
+
+- **Bunching:** consecutive messages from the same player, each within five minutes of the one before, share a single avatar and name (`lib/chatGroup.ts`). A bunched message's react, mute and delete actions appear on hover, or when you tap it.
+- **Reactions:** four icon reactions (like, love, funny, fire). Hover a message (or tap, on a phone) for the add-reaction button; click a chip to give or take back your reaction. They update live for everyone with the chat open.
+- **@mentions:** type `@` and pick a player from the suggestions. Only real accounts become mentions: they show as links to the player's profile, the message is highlighted for the person mentioned, and a badge with a count appears on the chat button while the chat is closed (a tiny private check every 45 seconds while the tab is visible).
+- **Moderation (admins):** each message has **mute** and **delete**. Mute opens a menu of 10 minutes, 1 hour, 1 day or a permanent **Ban**, and offers **Unmute** for someone already muted. Muted players can't post or react and are told how long is left. Admins can't be muted, and every action is in the activity log.
+
+## Share cards
+
+Finishing a puzzle or a market shows a result card: a 1200×630 image with the puzzle, difficulty, your guess tiles (a lightbulb tile for a hint), your score or P&L and your name. **Copy image** puts it on the clipboard to paste into a post, and **Share image** hands it to the phone's share sheet (it becomes **Save image** where the browser can't share files). The text version is still there too.
+
+Cards are drawn by `GET /api/share` (`app/api/share/route.tsx`, using `next/og`) from the query string, which `lib/shareCard.ts` validates strictly: unknown values are dropped, a puzzle's title and a market's contract come from our own data rather than the URL, a name only appears if that account exists, and days outside the launch-to-today range are ignored so a card can't reveal a future puzzle. The route is cached at the edge and rate limited (120 a minute per IP). It fetches the Space Grotesk weights from jsDelivr once per server and falls back to the built-in font if that fails.
+
+The same renderer makes the **link-preview image** (`og:image` / `twitter:card`) shown when the site is pasted into X, LinkedIn, Slack or iMessage. The home page is rebuilt every ten minutes so its preview card always shows the current day's puzzle title, difficulty and topic (never the answer). Set `NEXT_PUBLIC_SITE_URL` if the site moves off `quantdle.vercel.app`.
 
 ## Analytics
 

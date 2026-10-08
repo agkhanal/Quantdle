@@ -72,7 +72,7 @@ export function AdminBugs({ onOpenPlayer }: { onOpenPlayer: (username: string) =
        <div className="list-in" key={filter}>
         {reports === null && !failed && <p className="muted small admin-empty">Loading…</p>}
         {failed && <p className="muted small admin-empty">Couldn&apos;t load the reports.</p>}
-        {reports && reports.length === 0 && <p className="muted small admin-empty">{filter === "open" ? "No open bug reports. 🎉" : "Nothing here."}</p>}
+        {reports && reports.length === 0 && <p className="muted small admin-empty">{filter === "open" ? "No open bug reports." : "Nothing here."}</p>}
         {reports?.map((r) => (
           <button key={r.id} className={`bug-row st-${r.status}`} onClick={() => swap("view", () => setOpenId(r.id))}>
             <span className="bug-row-top">

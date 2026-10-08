@@ -1,4 +1,4 @@
-import { addToSet, del, setIfAbsent, get, hDel, hGetAll, hIncrBy, hSet, inSet, incrBy, set, zIncr, zRankOf, zTop } from "./store";
+import { addToSet, del, setIfAbsent, get, hDel, hGetAll, hIncrBy, hSet, inSet, inSetMany, incrBy, set, zIncr, zRankOf, zRemMember, zTop } from "./store";
 import {
   MAX_GUESSES,
   type Award,
@@ -107,9 +107,17 @@ function shape(username: string, s: Stored, rank: number | null): Profile {
     rank,
     school: s.school ? schoolById(s.school) : null,
     linkedin: s.linkedin,
-    avatar: s.avatarV ? `/api/avatar/${encodeURIComponent(username)}?v=${s.avatarV}` : null,
+    avatar: s.avatarV ? avatarUrl(username, s.avatarV) : null,
     admin: isAdmin(username),
   };
+}
+
+const avatarUrl = (username: string, version: number) => `/api/avatar/${encodeURIComponent(username)}?v=${version}`;
+
+/** Just the avatar URL, in one read: for callers (like chat) that don't need the whole profile or the rank. */
+export async function avatarUrlFor(username: string): Promise<string | null> {
+  const v = num((await hGetAll(profKey(username))).avatarV);
+  return v ? avatarUrl(username, v) : null;
 }
 
 export async function getProfile(username: string): Promise<Profile> {
@@ -142,18 +150,43 @@ async function addPoints(username: string, school: string | null, points: number
   await Promise.all(jobs);
 }
 
+/**
+ * A player changed school: their points come with them. For each period (today, this week, all time),
+ * their current score leaves the old school's total and joins the new one's, so the school leaderboards
+ * stay equal to the sum of their players' points. A school that drops to nothing leaves the board.
+ */
+async function moveSchoolPoints(username: string, from: string | null, to: string | null) {
+  if (from === to) return;
+  const periods = [
+    { period: "all" as const, ttl: undefined },
+    { period: "daily" as const, ttl: DAILY_TTL },
+    { period: "weekly" as const, ttl: WEEKLY_TTL },
+  ];
+  await Promise.all(
+    periods.map(async ({ period, ttl }) => {
+      const mine = await zRankOf(boardKey("u", period), username);
+      const points = mine?.score ?? 0;
+      if (points === 0) return;
+      const schools = boardKey("s", period);
+      if (from && (await zIncr(schools, from, -points)) <= 0) await zRemMember(schools, from);
+      if (to) await zIncr(schools, to, points, ttl);
+    }),
+  );
+}
+
 /** A puzzle was solved within the guess limit. Call once per puzzle (the caller guards that). */
 export async function recordWin(username: string, puzzle: Puzzle, guesses: number): Promise<Award> {
   const now = Date.now();
   const today = dayNumber(now);
   const s = await load(username);
   const dailyN = parseDailyId(puzzle.id);
-  const isDaily = dailyN === today; // an old daily token replayed later scores like practice
+  const isDaily = dailyN === today;
+  const isArchive = dailyN !== null && dailyN < today; // a past daily, played from the archive: half points, no streak
 
   let streak = s.streak;
   if (isDaily) streak = s.lastDaily === today - 1 ? s.streak + 1 : s.lastDaily === today ? s.streak : 1;
 
-  const scored = winPoints({ difficulty: puzzle.difficulty, steps: puzzle.steps.length, guesses, daily: isDaily, streak });
+  const scored = winPoints({ difficulty: puzzle.difficulty, steps: puzzle.steps.length, guesses, daily: isDaily, archive: isArchive, streak });
   let { points } = scored;
   const breakdown = [...scored.breakdown];
 
@@ -161,7 +194,7 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
     const used = await incrBy(`pcap:${username.toLowerCase()}:${today}`, points, 2 * 86_400);
     const allowed = Math.min(points, Math.max(0, PRACTICE_DAILY_CAP - (used - points)));
     if (allowed < points) {
-      breakdown.push({ label: `Daily practice cap (${PRACTICE_DAILY_CAP})`, value: allowed - points });
+      breakdown.push({ label: `Daily cap on non-daily points (${PRACTICE_DAILY_CAP})`, value: allowed - points });
       points = allowed;
     }
   }
@@ -185,7 +218,7 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
   logActivity(
     "win",
     username,
-    `won ${puzzle.difficulty} "${puzzle.title}" in ${guesses} ${guesses === 1 ? "guess" : "guesses"}${isDaily ? " (daily)" : ""}: +${points} pts, streak ${shape(username, updated, null).streak}`,
+    `won ${puzzle.difficulty} "${puzzle.title}" in ${guesses} ${guesses === 1 ? "guess" : "guesses"}${isDaily ? " (daily)" : isArchive ? ` (past daily #${dailyN})` : ""}: +${points} pts, streak ${shape(username, updated, null).streak}`,
   );
   const r = await zRankOf(boardKey("u", "all"), username);
   return {
@@ -201,7 +234,9 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
 export async function recordLoss(username: string, puzzle: Puzzle): Promise<Award> {
   const today = dayNumber();
   const s = await load(username);
-  const isDaily = parseDailyId(puzzle.id) === today;
+  const dailyN = parseDailyId(puzzle.id);
+  const isDaily = dailyN === today;
+  const isArchive = dailyN !== null && dailyN < today;
 
   await Promise.all([
     ...(isDaily ? [hSet(profKey(username), { streak: 0 })] : []),
@@ -209,7 +244,7 @@ export async function recordLoss(username: string, puzzle: Puzzle): Promise<Awar
   ]);
 
   const updated: Stored = { ...s, losses: s.losses + 1, streak: isDaily ? 0 : s.streak };
-  logActivity("loss", username, `lost ${puzzle.difficulty} "${puzzle.title}"${isDaily ? " (daily)" : ""}: out of guesses`);
+  logActivity("loss", username, `lost ${puzzle.difficulty} "${puzzle.title}"${isDaily ? " (daily)" : isArchive ? ` (past daily #${dailyN})` : ""}: out of guesses`);
   const r = await zRankOf(boardKey("u", "all"), username);
   return {
     result: "loss",
@@ -225,6 +260,12 @@ export const isSolved = (username: string, puzzleId: string) => inSet(solvedKey(
 export const markLost = (username: string, puzzleId: string) => addToSet(lostKey(username), puzzleId);
 export const progressTtl = WEEK;
 
+/** For each puzzle id: did this player win it, lose it? (One round trip each.) */
+export async function resultsFor(username: string, ids: string[]): Promise<{ won: boolean[]; lost: boolean[] }> {
+  const [won, lost] = await Promise.all([inSetMany(solvedKey(username), ids), inSetMany(lostKey(username), ids)]);
+  return { won, lost };
+}
+
 // ───────────── admin adjustments ─────────────
 
 /** Adds (or, if negative, removes) points from a player, on every board, and records who/why. Returns null for an unknown player. */
@@ -236,6 +277,52 @@ export async function adminAdjustPoints(name: string, points: number, reason: st
   logActivity("admin", by, `adjusted ${username}'s points by ${points > 0 ? "+" : ""}${points}${reason ? ` (${reason})` : ""}`);
   await set(`admin:grant:${Date.now()}:${username.toLowerCase()}`, JSON.stringify({ username, points, reason, at: new Date().toISOString() }));
   return getProfile(username);
+}
+
+// ───────────── repairing the school boards ─────────────
+
+export interface SchoolDiff {
+  school: { id: string; name: string };
+  before: number;
+  after: number;
+}
+
+/**
+ * Compares each school leaderboard (today, this week, all time) with what it should be: the sum of its
+ * players' scores on the matching player board, under the school each player has now. Lists the schools
+ * that are off, and with `apply` corrects them in place (adding the difference, so a board is never empty
+ * mid-repair, and dropping a school that should have nothing). Run once at startup by `lib/migrations.ts`
+ * to repair changes made before points moved with the player.
+ */
+export async function rebuildSchoolBoards(apply: boolean): Promise<Record<Period, SchoolDiff[]>> {
+  const ttl: Record<Period, number | undefined> = { all: undefined, daily: DAILY_TTL, weekly: WEEKLY_TTL };
+  const out = { all: [], daily: [], weekly: [] } as Record<Period, SchoolDiff[]>;
+  for (const period of ["all", "daily", "weekly"] as const) {
+    const players = await zTop(boardKey("u", period), 1_000_000);
+    const expected = new Map<string, number>();
+    for (let i = 0; i < players.length; i += 25) {
+      const batch = players.slice(i, i + 25);
+      const schools = await Promise.all(batch.map(async (p) => (await hGetAll(profKey(p.member))).school || null));
+      batch.forEach((p, j) => {
+        const id = schools[j];
+        if (id && schoolById(id)) expected.set(id, (expected.get(id) ?? 0) + p.score);
+      });
+    }
+    const key = boardKey("s", period);
+    const stored = new Map((await zTop(key, 1_000_000)).map((t) => [t.member, t.score]));
+    for (const id of new Set([...expected.keys(), ...stored.keys()])) {
+      const before = stored.get(id) ?? 0;
+      const after = expected.get(id) ?? 0;
+      if (before === after) continue;
+      const school = schoolById(id);
+      if (apply) {
+        if (after <= 0) await zRemMember(key, id);
+        else await zIncr(key, id, after - before, ttl[period]);
+      }
+      out[period].push({ school: school ? { id, name: school.name } : { id, name: id }, before, after });
+    }
+  }
+  return out;
 }
 
 // ───────────── easter egg ─────────────
@@ -265,9 +352,10 @@ export async function updateProfile(
   username: string,
   edit: { school?: string | null; linkedin?: string | null },
 ): Promise<Profile> {
-  await load(username); // make sure the hash exists
+  const current = await load(username); // also makes sure the hash exists
   const key = profKey(username);
   const jobs: Promise<unknown>[] = [];
+  if (edit.school !== undefined) jobs.push(moveSchoolPoints(username, current.school, edit.school));
   for (const field of ["school", "linkedin"] as const) {
     const value = edit[field];
     if (value === undefined) continue;

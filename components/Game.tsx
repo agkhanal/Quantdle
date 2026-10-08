@@ -6,6 +6,7 @@ import { capture, identify } from "@/lib/analytics";
 import { MARKET_TOPIC, recordGame } from "@/lib/history";
 import { loadJSON, loadStats, recordResult, saveJSON, type Stats } from "@/lib/stats";
 import { dailyNumber } from "@/lib/day";
+import { dayLabel, puzzleSaveKey } from "@/lib/archive";
 import { levelsFor, nearestLevel } from "@/lib/generators";
 import {
   DIFFICULTIES,
@@ -30,7 +31,10 @@ import { AdminPanel } from "./AdminPanel";
 import { Avatar } from "./Avatar";
 import { BugReport } from "./BugReport";
 import { Chat } from "./Chat";
-import { ChartIcon, DiceIcon } from "./TrackIcons";
+import { ChartIcon, DiceIcon, CalendarIcon, LightbulbIcon } from "./TrackIcons";
+import { ArchivePanel } from "./Archive";
+import { ShareCard } from "./ShareCard";
+import { encodeCard, type Tile } from "@/lib/shareCard";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
 import { RichText } from "./RichText";
@@ -84,6 +88,7 @@ export default function Game() {
   const [mode, setMode] = useState<Mode>("daily");
   const [tracks, setTracks] = useState<Record<Mode, Track>>({ daily: "puzzle", practice: "puzzle" });
   const [today, setToday] = useState<number | null>(null);
+  const [archiveDay, setArchiveDay] = useState<number | null>(null); // a past daily being replayed from the archive
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [topic, setTopic] = useState<Topic | null>(null); // practice puzzle topic; null = a mix of everything
   const [data, setData] = useState<PuzzleResponse | null>(null);
@@ -98,7 +103,7 @@ export default function Game() {
   const [submitting, setSubmitting] = useState(false);
   const [shake, setShake] = useState(false);
   const [reveal, setReveal] = useState<RevealResponse | null>(null);
-  const [modal, setModal] = useState<"help" | "stats" | "result" | "account" | "leaderboard" | "search" | "player" | null>(null);
+  const [modal, setModal] = useState<"help" | "stats" | "result" | "account" | "leaderboard" | "search" | "player" | "archive" | null>(null);
   const [user, setUser] = useState<Profile | null>(null);
   const [googleOn, setGoogleOn] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -114,6 +119,7 @@ export default function Game() {
   const [leaving, setLeaving] = useState(false); // old content fading out before a mode/track/difficulty switch
   const [stats, setStats] = useState<Stats | null>(null);
   const [quip, setQuip] = useState(0);
+  const [showLoader, setShowLoader] = useState(false); // the skeleton only appears if loading is slow, so quick loads don't flash it
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const loadSeq = useRef(0);
@@ -132,9 +138,9 @@ export default function Game() {
 
   // ───────────── loading puzzles ─────────────
 
-  const load = useCallback(async (m: Mode, d: Difficulty, t: Topic | null, exclude?: string) => {
+  const load = useCallback(async (m: Mode, d: Difficulty, t: Topic | null, exclude?: string, day?: number) => {
     const seq = ++loadSeq.current;
-    loadedKey.current = puzzleKey(m, d, t);
+    loadedKey.current = puzzleKey(m, d, t, day);
     setStatus("loading");
     setData(null);
     setRows([]);
@@ -146,7 +152,7 @@ export default function Game() {
     setReasoning("");
     setQuip(Math.floor(Math.random() * LOADING_QUIPS.length));
     try {
-      const qs = new URLSearchParams({ mode: m, difficulty: d, ...(t ? { topic: t } : {}), ...(exclude ? { exclude } : {}) });
+      const qs = new URLSearchParams({ mode: m, difficulty: d, ...(t ? { topic: t } : {}), ...(exclude ? { exclude } : {}), ...(day ? { day: String(day) } : {}) });
       const res = await fetch(`/api/puzzle?${qs}`);
       if (!res.ok) throw new Error(`Server said ${res.status}`);
       const body = (await res.json()) as PuzzleResponse;
@@ -154,7 +160,7 @@ export default function Game() {
       setData(body);
 
       if (m === "daily" && body.dailyNumber) {
-        const saved = loadJSON<SavedDaily>(`quantdle-daily-${body.dailyNumber}`);
+        const saved = loadJSON<SavedDaily>(puzzleSaveKey(body.dailyNumber));
         if (saved && saved.puzzleId === body.puzzle.id) {
           setRows(saved.rows);
           setSolved(saved.solved);
@@ -170,6 +176,7 @@ export default function Game() {
         difficulty: body.puzzle.difficulty,
         puzzle_id: body.puzzle.id,
         daily_number: body.dailyNumber,
+        archive: body.archive === true,
       });
     } catch (e) {
       if (seq !== loadSeq.current) return;
@@ -243,6 +250,12 @@ export default function Game() {
     setTutorial("replay");
   }
 
+  useEffect(() => {
+    if (status !== "loading") return setShowLoader(false);
+    const t = setTimeout(() => setShowLoader(true), 250);
+    return () => clearTimeout(t);
+  }, [status]);
+
   // Rotate the loading quips while the AI is cooking.
   useEffect(() => {
     if (status !== "loading") return;
@@ -253,7 +266,7 @@ export default function Game() {
   // Persist daily progress.
   useEffect(() => {
     if (mode !== "daily" || !data?.dailyNumber || status === "loading") return;
-    saveJSON(`quantdle-daily-${data.dailyNumber}`, {
+    saveJSON(puzzleSaveKey(data.dailyNumber), {
       puzzleId: data.puzzle.id,
       rows,
       solved,
@@ -279,7 +292,7 @@ export default function Game() {
 
   function finish(won: boolean, finalRows: Row[]) {
     setStatus(won ? "won" : "lost");
-    setStats(recordResult(won, finalRows.length, data?.dailyNumber));
+    setStats(recordResult(won, finalRows.length, data?.archive ? undefined : data?.dailyNumber)); // a past daily isn't today's daily
     if (data) {
       const guesses = finalRows.filter((r) => r.kind === "guess");
       capture("puzzle_completed", {
@@ -288,6 +301,7 @@ export default function Game() {
         topic: data.puzzle.category,
         difficulty: data.puzzle.difficulty,
         puzzle_id: data.puzzle.id,
+        archive: data.archive === true,
         guesses: guesses.length,
         hints: finalRows.length - guesses.length,
         steps_solved: won ? totalSteps : solved.length,
@@ -310,7 +324,8 @@ export default function Game() {
 
   /** Load the puzzle for a tab unless it's already the one on screen. */
   function ensurePuzzle(m: Mode, d: Difficulty) {
-    if (loadedKey.current !== puzzleKey(m, d, topic) || status === "error") load(m, d, topic);
+    const day = m === "daily" ? archiveDay ?? undefined : undefined;
+    if (loadedKey.current !== puzzleKey(m, d, topic, day) || status === "error") load(m, d, topic, undefined, day);
   }
 
   /** Fade the current content out, then make the change (the new content fades in). */
@@ -345,6 +360,7 @@ export default function Game() {
     capture("tab_switched", { mode: m, track: t });
     swap(() => {
       setMode(m);
+      if (m !== "daily") setArchiveDay(null); // leaving the Daily tab ends an archive replay
       setTracks((ts) => ({ ...ts, [m]: t }));
       if (t === "puzzle") {
         // Market practice allows every level; snap back to one that has puzzles on the topic.
@@ -357,6 +373,29 @@ export default function Game() {
 
   function switchTrack(t: Track) {
     switchMode(mode, t);
+  }
+
+  /** Replay a past daily from the archive (the puzzle or the market, whichever tab was picked). */
+  function openArchiveDay(day: number, t: Track) {
+    capture("archive_opened", { day, track: t });
+    setModal(null);
+    swap(() => {
+      setArchiveDay(day);
+      setMode("daily");
+      setTracks((ts) => ({ ...ts, daily: t }));
+      if (t === "puzzle") load("daily", difficulty, topic, undefined, day);
+    });
+  }
+
+  /** Leave the archive and go back to today's daily. */
+  function backToToday() {
+    setModal(null);
+    if (archiveDay === null && mode === "daily") return;
+    swap(() => {
+      setArchiveDay(null);
+      setMode("daily");
+      if (track === "puzzle") load("daily", difficulty, topic);
+    });
   }
 
   function pickDifficulty(d: Difficulty) {
@@ -508,6 +547,23 @@ export default function Game() {
     }
   }
 
+  /** The result card for the finished puzzle, as a query string for /api/share. */
+  function cardQuery(): string | null {
+    if (!data || !over) return null;
+    const tile = (r: Row): Tile => (r.kind === "hint" ? "h" : r.verdict === "green" ? "g" : r.verdict === "yellow" ? "y" : "x");
+    const daily = mode === "daily" && data.dailyNumber !== undefined;
+    return encodeCard({
+      kind: "puzzle",
+      mode: daily ? "daily" : "practice",
+      n: daily ? data.dailyNumber : undefined,
+      difficulty: data.puzzle.difficulty,
+      topic: data.puzzle.category,
+      rows: data.puzzle.steps.map((_, i) => rows.filter((r) => r.step === i).map(tile)),
+      guesses: status === "won" ? rows.length : null,
+      user: user?.username,
+    });
+  }
+
   function shareText() {
     if (!data) return "";
     const head =
@@ -598,6 +654,28 @@ export default function Game() {
         ))}
       </div>
 
+      <div className={`diffs-wrap${mode === "daily" ? " open" : ""}`} aria-hidden={mode !== "daily"} inert={mode !== "daily"}>
+        <div className="diffs-clip">
+          <div className="archive-bar">
+            {archiveDay ? (
+              <div className="archive-banner" role="status">
+                <span>
+                  <b>Past daily #{archiveDay}</b> · {dayLabel(archiveDay)}
+                  {track === "puzzle" && " · half points, no streak"}
+                </span>
+                <button className="link" onClick={backToToday}>
+                  Back to today →
+                </button>
+              </div>
+            ) : (
+              <button className="archive-open" onClick={() => setModal("archive")}>
+                <CalendarIcon /> Past dailies
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className={`diffs-wrap${mode === "practice" ? " open" : ""}`} aria-hidden={mode !== "practice"} inert={mode !== "practice"}>
         <div className="diffs-clip">
           <div className="diffs">
@@ -642,21 +720,21 @@ export default function Game() {
         <main key={`${mode}-market`} className={leaving ? "leaving" : undefined}>
           <div className="content-in">
             {mode === "daily" ? (
-              today !== null && <MarketGame key={`daily-${today}`} daily dailyNumber={today} onPractice={() => switchMode("practice", "market")} />
+              today !== null && <MarketGame key={`daily-${archiveDay ?? today}`} daily dailyNumber={archiveDay ?? today} username={user?.username} onPractice={() => switchMode("practice", "market")} />
             ) : (
-              <MarketGame key="practice" daily={false} difficulty={difficulty} />
+              <MarketGame key="practice" daily={false} difficulty={difficulty} username={user?.username} />
             )}
           </div>
         </main>
       ) : (
       <main key={`${mode}-puzzle`} className={leaving ? "leaving" : undefined}>
-       <div className="content-in" key={status === "loading" ? "loading" : (data?.puzzle.id ?? status)}>
-        {status === "loading" && <Loading quip={LOADING_QUIPS[quip]} />}
+       <div className={`content-in${status === "loading" ? " is-loading" : ""}`} key={status === "loading" ? "loading" : (data?.puzzle.id ?? status)}>
+        {status === "loading" && showLoader && <Loading quip={LOADING_QUIPS[quip]} />}
 
         {status === "error" && (
           <div className="card center">
             <p className="muted">Couldn&apos;t load a puzzle: {errorMsg}</p>
-            <button className="btn" onClick={() => load(mode, difficulty, topic)}>
+            <button className="btn" onClick={() => load(mode, difficulty, topic, undefined, mode === "daily" ? archiveDay ?? undefined : undefined)}>
               Try again
             </button>
           </div>
@@ -722,7 +800,7 @@ export default function Game() {
 
                 {hintRow && (
                   <p className="hint">
-                    💡 <RichText text={hintRow.text} />
+                    <LightbulbIcon /><RichText text={hintRow.text} />
                   </p>
                 )}
 
@@ -766,7 +844,7 @@ export default function Game() {
                     <span />
                   )}
                   <button className="link" onClick={takeHint} disabled={hintUsed || rowsLeft < 2} type="button" title="Costs one guess">
-                    💡 Hint <span className="muted">(costs a guess)</span>
+                    <LightbulbIcon />Hint <span className="muted">(costs a guess)</span>
                   </button>
                   {mode === "practice" && (
                     <button
@@ -801,6 +879,10 @@ export default function Game() {
                 {mode === "practice" ? (
                   <button className="btn primary" onClick={() => load("practice", difficulty, topic, data.puzzle.id)}>
                     New puzzle →
+                  </button>
+                ) : archiveDay ? (
+                  <button className="btn primary" onClick={backToToday}>
+                    Back to today →
                   </button>
                 ) : (
                   <button className="btn primary" onClick={() => switchMode("practice")}>
@@ -885,6 +967,14 @@ export default function Game() {
             {user && !award && status !== "playing" && (
               <div className="lb-note">This puzzle didn&apos;t score (already played, or not all steps were solved in order while signed in).</div>
             )}
+            {data && cardQuery() && (
+              <ShareCard
+                query={cardQuery()!}
+                filename={`quantdle-${data.dailyNumber && mode === "daily" ? data.dailyNumber : "practice"}.png`}
+                game="puzzle"
+                mode={mode === "daily" ? "daily" : "practice"}
+              />
+            )}
             <pre className="share-preview">{shareText()}</pre>
             <button className="btn primary wide" onClick={share}>
               {copied ? "Copied!" : "Share result"}
@@ -914,6 +1004,12 @@ export default function Game() {
       {modal === "account" && (
         <Modal title={user ? "Your account" : pendingName ? "Pick a username" : "Sign in"} onClose={() => setModal(null)}>
           <AccountPanel user={user} onChange={setUser} google={googleOn} initialError={authError} pending={pendingName} onSignedIn={() => setPendingName(null)} />
+        </Modal>
+      )}
+
+      {modal === "archive" && (
+        <Modal title="Past dailies" onClose={() => setModal(null)}>
+          <ArchivePanel track={track} signedIn={Boolean(user)} onPick={openArchiveDay} onToday={backToToday} />
         </Modal>
       )}
 
@@ -974,7 +1070,8 @@ function AwardCard({ award }: { award: Award }) {
   );
 }
 
-const puzzleKey = (m: Mode, d: Difficulty, t: Topic | null) => (m === "daily" ? "daily" : `practice:${d}:${t ?? "mixed"}`);
+const puzzleKey = (m: Mode, d: Difficulty, t: Topic | null, day?: number | null) =>
+  m === "daily" ? (day ? `daily:${day}` : "daily") : `practice:${d}:${t ?? "mixed"}`;
 
 function Loading({ quip }: { quip: string; }) {
   return (
@@ -1020,7 +1117,7 @@ function BoardRow({ row, totalSteps }: { row?: Row; totalSteps: number }) {
     return (
       <div className="row hint-row">
         <span className="row-step">{label}</span>
-        <span className="row-text">💡 hint used</span>
+        <span className="row-text"><LightbulbIcon />hint used</span>
       </div>
     );
   }
@@ -1074,7 +1171,7 @@ function HowTo({ onReplay }: { onReplay: () => void }) {
       <p>
         Answer in any form: <code>0.25</code>, <code>1/4</code>, <code>25%</code>, <code>1-(5/6)^4</code>,{" "}
         <code>C(52,5)</code>, <code>e</code>. When the AI judge is on, <b>Show your work</b> lets it read your reasoning. Or burn a
-        guess on a <b>💡 hint</b>. Sign in to earn <b>points</b>, build a streak, and climb the <b>leaderboards</b>.
+        guess on a <b><LightbulbIcon />hint</b>. Sign in to earn <b>points</b>, build a streak, and climb the <b>leaderboards</b>.
       </p>
       <p className="muted small">
         <b>Daily</b> is the same puzzle for everyone. <b>Practice</b> is endless: puzzles are generated from templates with
