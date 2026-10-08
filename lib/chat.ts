@@ -1,4 +1,4 @@
-import { incrBy, get, set, zAddMember, zByScore, zNewest, zRemMember, zTrim } from "./store";
+import { del, incrBy, get, set, zAddMember, zByScore, zNewest, zRemMember, zTrim } from "./store";
 import { isAdmin } from "./auth";
 import type { ChatMessage } from "./types";
 
@@ -14,6 +14,7 @@ export const FIRST_LOAD = 60;
 export const MAX_LENGTH = 280;
 
 const mutedKey = (u: string) => `chat:mute:${u.toLowerCase()}`;
+const bannedKey = (u: string) => `chat:ban:${u.toLowerCase()}`;
 const lastKey = (u: string) => `chat:last:${u.toLowerCase()}`;
 
 const nextId = () => incrBy(SEQ, 1, 10 * 365 * 86_400);
@@ -46,6 +47,16 @@ export async function readChat(after: number | null): Promise<{ messages: ChatMe
 
 export async function isMuted(username: string): Promise<boolean> {
   return (await get(mutedKey(username))) !== null;
+}
+
+/** When a player's mute ends (ms since epoch), or null if they aren't muted. Old mutes didn't store an end, so they read as 0. */
+export async function mutedUntil(username: string): Promise<number | null> {
+  const raw = await get(mutedKey(username));
+  return raw === null ? null : Number(raw) > 1 ? Number(raw) : 0;
+}
+
+export async function isBanned(username: string): Promise<boolean> {
+  return (await get(bannedKey(username))) !== null;
 }
 
 /** Same text from the same player within 30 seconds counts as a repeat. */
@@ -82,5 +93,12 @@ export async function clearChat(): Promise<ChatMessage> {
 }
 
 export async function muteUser(username: string, minutes: number) {
-  await set(mutedKey(username), "1", Math.max(1, Math.round(minutes * 60)));
+  const seconds = Math.max(1, Math.round(minutes * 60));
+  await set(mutedKey(username), String(Date.now() + seconds * 1000), seconds);
 }
+
+export const unmuteUser = (username: string) => del(mutedKey(username));
+
+/** A ban stops a player from chatting until an admin lifts it. */
+export const banUser = (username: string, by: string) => set(bannedKey(username), JSON.stringify({ by, at: Date.now() }));
+export const unbanUser = (username: string) => del(bannedKey(username));

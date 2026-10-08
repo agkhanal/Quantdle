@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { incr } from "@/lib/store";
 import { isAdmin, rateLimited, sessionUser } from "@/lib/auth";
-import { clearChat, cleanText, deleteMessage, isMuted, isRepeat, postMessage, readChat } from "@/lib/chat";
+import { clearChat, cleanText, deleteMessage, isBanned, isMuted, isRepeat, postMessage, readChat } from "@/lib/chat";
 import { logActivity } from "@/lib/activity";
 import { getProfile } from "@/lib/profile";
 
@@ -44,6 +44,7 @@ export async function POST(req: Request) {
   if ((await incr(`rl:chatuser:${username.toLowerCase()}:${Math.floor(Date.now() / 10_000)}`, 20)) > 5) {
     return NextResponse.json({ error: "You're sending messages too fast." }, { status: 429 });
   }
+  if (await isBanned(username)) return NextResponse.json({ error: "You've been banned from the chat." }, { status: 403 });
   if (await isMuted(username)) return NextResponse.json({ error: "You've been muted for a while." }, { status: 403 });
 
   const body = (await req.json().catch(() => ({}))) as { text?: unknown };

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdmin, sessionUser } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { muteUser } from "@/lib/chat";
+import { muteUser, unmuteUser } from "@/lib/chat";
 import { findUser } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
@@ -17,4 +17,14 @@ export async function POST(req: Request) {
   await muteUser(target, minutes);
   logActivity("admin", sessionUser(req) ?? "admin", `muted ${target} in chat for ${minutes} min`);
   return NextResponse.json({ muted: target, minutes });
+}
+
+/** DELETE ?username=: lift a mute early (admins only). */
+export async function DELETE(req: Request) {
+  if (!isAdmin(sessionUser(req))) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  const target = await findUser((new URL(req.url).searchParams.get("username") ?? "").slice(0, 40));
+  if (!target) return NextResponse.json({ error: "No such player." }, { status: 404 });
+  await unmuteUser(target);
+  logActivity("admin", sessionUser(req) ?? "admin", `unmuted ${target} in chat`);
+  return NextResponse.json({ unmuted: target });
 }
