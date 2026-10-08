@@ -177,7 +177,7 @@ export function ProfilePanel({ user, onChange }: { user: Profile; onChange: (u: 
         <button className="btn primary wide" disabled={busy || !dirty} onClick={save}>
           {busy ? "…" : "Save profile"}
         </button>
-        <p className="muted small">Your photo, school, LinkedIn, points and stats are public: anyone can see them by tapping your name on the leaderboard. Your school earns the points you earn from now on.</p>
+        <p className="muted small">Your photo, school, LinkedIn, points and stats are public: anyone can see them by tapping your name on the leaderboard. Your school's total includes your points, and they move with you if you change schools.</p>
       </div>
 
       <Collapsible title="How scoring works" className="how-scored">

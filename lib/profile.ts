@@ -1,4 +1,4 @@
-import { addToSet, del, setIfAbsent, get, hDel, hGetAll, hIncrBy, hSet, inSet, inSetMany, incrBy, set, zIncr, zRankOf, zTop } from "./store";
+import { addToSet, del, setIfAbsent, get, hDel, hGetAll, hIncrBy, hSet, inSet, inSetMany, incrBy, set, zIncr, zRankOf, zRemMember, zTop } from "./store";
 import {
   MAX_GUESSES,
   type Award,
@@ -142,6 +142,30 @@ async function addPoints(username: string, school: string | null, points: number
   await Promise.all(jobs);
 }
 
+/**
+ * A player changed school: their points come with them. For each period (today, this week, all time),
+ * their current score leaves the old school's total and joins the new one's, so the school leaderboards
+ * stay equal to the sum of their players' points. A school that drops to nothing leaves the board.
+ */
+async function moveSchoolPoints(username: string, from: string | null, to: string | null) {
+  if (from === to) return;
+  const periods = [
+    { period: "all" as const, ttl: undefined },
+    { period: "daily" as const, ttl: DAILY_TTL },
+    { period: "weekly" as const, ttl: WEEKLY_TTL },
+  ];
+  await Promise.all(
+    periods.map(async ({ period, ttl }) => {
+      const mine = await zRankOf(boardKey("u", period), username);
+      const points = mine?.score ?? 0;
+      if (points === 0) return;
+      const schools = boardKey("s", period);
+      if (from && (await zIncr(schools, from, -points)) <= 0) await zRemMember(schools, from);
+      if (to) await zIncr(schools, to, points, ttl);
+    }),
+  );
+}
+
 /** A puzzle was solved within the guess limit. Call once per puzzle (the caller guards that). */
 export async function recordWin(username: string, puzzle: Puzzle, guesses: number): Promise<Award> {
   const now = Date.now();
@@ -274,9 +298,10 @@ export async function updateProfile(
   username: string,
   edit: { school?: string | null; linkedin?: string | null },
 ): Promise<Profile> {
-  await load(username); // make sure the hash exists
+  const current = await load(username); // also makes sure the hash exists
   const key = profKey(username);
   const jobs: Promise<unknown>[] = [];
+  if (edit.school !== undefined) jobs.push(moveSchoolPoints(username, current.school, edit.school));
   for (const field of ["school", "linkedin"] as const) {
     const value = edit[field];
     if (value === undefined) continue;

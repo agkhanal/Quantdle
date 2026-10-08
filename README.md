@@ -71,7 +71,7 @@ Players sign in with a username and password (no email) or with Google. Signed-i
 
 All of this lives in `lib/scoring.ts` (pure functions; `npx tsx scripts/verify-scoring.ts` prints the points table and checks the rules). Days reset at 00:00 UTC and weeks start Monday.
 
-**Leaderboards** rank players, and schools (the sum of their players' points), by points for today, this week, and all time. Schools come from [Hipo's university-domains-list](https://github.com/Hipo/university-domains-list) (MIT licensed, trimmed into `lib/schools-data.json`); logos are fetched from Google's favicon service by the server and cached.
+**Leaderboards** rank players, and schools (the sum of their players' points), by points for today, this week, and all time. Schools come from [Hipo's university-domains-list](https://github.com/Hipo/university-domains-list) (MIT licensed, trimmed into `lib/schools-data.json`); logos are fetched from Google's favicon service by the server and cached. If a player changes school, their points move with them: their score for today, this week and all time leaves the old school's total and joins the new one's (a school left with nothing drops off the board).
 
 Passwords are hashed with scrypt; sessions are signed cookies. Profile pictures are shrunk to a 192px JPEG in the browser, checked server-side (JPEG/PNG/WebP only, 80 KB max) and served with `nosniff`.
 
