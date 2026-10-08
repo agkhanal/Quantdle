@@ -16,6 +16,7 @@ const FILTERS: { key: string; label: string; types: ActivityType[] | null }[] = 
   { key: "accounts", label: "Accounts", types: ["account"] },
   { key: "chat", label: "Chat", types: ["chat"] },
   { key: "bugs", label: "Bugs", types: ["bug"] },
+  { key: "reports", label: "Reports", types: ["report"] },
   { key: "admin", label: "Admin", types: ["admin"] },
 ];
 
@@ -30,6 +31,7 @@ const LABEL: Record<ActivityType, string> = {
   admin: "admin",
   egg: "egg",
   bug: "bug",
+  report: "report",
 };
 
 function stamp(at: number, now: number) {

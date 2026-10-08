@@ -73,6 +73,13 @@ export async function postMessage(username: string, avatar: string | null, text:
   return msg;
 }
 
+/** One message from the log, or null if it's gone (or was never a message). */
+export async function getMessage(id: number): Promise<ChatMessage | null> {
+  const [raw] = await zByScore(LOG, String(id), String(id), 1);
+  const msg = raw ? parse(raw) : null;
+  return msg && !msg.del && !msg.clr ? msg : null;
+}
+
 export async function deleteMessage(id: number): Promise<ChatMessage | null> {
   const [raw] = await zByScore(LOG, String(id), String(id), 1);
   if (!raw) return null;

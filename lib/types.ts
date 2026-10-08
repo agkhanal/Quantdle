@@ -167,7 +167,7 @@ export interface ChatMessage {
   clr?: boolean;
 }
 
-export type ActivityType = "account" | "guess" | "hint" | "win" | "loss" | "profile" | "chat" | "admin" | "egg" | "bug";
+export type ActivityType = "account" | "guess" | "hint" | "win" | "loss" | "profile" | "chat" | "admin" | "egg" | "bug" | "report";
 
 /** One entry in the admin activity log. */
 export interface ActivityEvent {
@@ -199,4 +199,26 @@ export interface BugReport {
   note?: string;
   /** Points awarded to the reporter for this report. */
   points?: number;
+}
+
+export const REPORT_REASONS = ["Spam", "Harassment", "Inappropriate name or picture", "Cheating", "Other"] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
+/** A report about another player, handled by admins (same statuses as bug reports). */
+export interface PlayerReport {
+  id: number;
+  at: number;
+  /** Who filed it */
+  by: string;
+  /** Who it's about */
+  user: string;
+  reason: ReportReason;
+  details: string;
+  /** The chat message it was filed from, copied from the log so it survives the message being deleted. */
+  message?: { id: number; text: string; at: number };
+  status: BugStatus;
+  handledBy?: string;
+  handledAt?: number;
+  /** What the admin did about it (only admins see it). */
+  note?: string;
 }
