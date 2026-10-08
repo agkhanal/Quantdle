@@ -185,7 +185,8 @@ export function ProfilePanel({ user, onChange }: { user: Profile; onChange: (u: 
           <li>Solve a puzzle in six guesses to win points: Easy 10, Medium 20, Hard 35, Expert 50.</li>
           <li>Fewer guesses earn more. Using all six earns half.</li>
           <li>The daily puzzle is worth double, plus +2 per day of streak (up to +20).</li>
-          <li>Practice points stop after 100 a day. Wins still count.</li>
+          <li>Past dailies replayed from the archive pay half points and don't count toward your streak.</li>
+          <li>Practice and archive points stop after 100 a day combined. Wins still count.</li>
           <li>Days reset at 00:00 UTC; weeks start Monday.</li>
         </ul>
       </Collapsible>

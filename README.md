@@ -24,6 +24,12 @@ Who trades with you: a **sharp** trader who has peeked at the next draw (adverse
 
 Markets are procedural too: contract families with random parameters, grouped by difficulty. The daily market draws from its own set of 12 families (medians, streaks, matches, ...), separate from the 18 practice families, so the daily is never a contract you just practised. Harder levels have trickier payoffs (products, squares, order statistics) and narrower markets relative to the contract's volatility. Fair value is computed exactly by enumerating every outcome.
 
+### Past dailies (the archive)
+
+The **Past dailies** button on the Daily tab lists every daily since launch (#277, 2026-10-04), newest first, for both the puzzle and the market game. Pick one to replay it: your progress on each day is saved separately, so you can start one and come back, and each row shows whether you solved it, lost it, are partway through, or haven't touched it. For puzzles the result comes from your account, so it follows you across devices; markets are kept in the browser.
+
+A past daily pays **half points** (rounded), never counts toward the streak, and a lost one never resets it. Its points share the 100-a-day cap with practice, so the archive can't be farmed. A puzzle can only score once, so one you already won on its day pays nothing again. Days outside the archive (before launch, or still in the future) are refused by `/api/puzzle?mode=daily&day=N`. `LAUNCH_DAY` in `lib/day.ts` sets where the archive starts.
+
 ## Your stats
 
 The chart button opens your win record and guess distribution, and links to **`/stats`**: a page of donut charts showing which topics you solve and which you miss, with each puzzle topic and the market game ranked by win rate. Your strongest topic and the one that needs work are labelled, and every row has a **Practice →** link that opens practice on that topic. Filter by Daily or Practice.
@@ -59,7 +65,8 @@ Players sign in with a username and password (no email) or with Google. Signed-i
 
 - **Efficiency:** the base is multiplied from 1.0 (every guess was a step answer) down to 0.5 (all six guesses used).
 - **Daily puzzle:** worth double, plus +2 per day of streak (up to +20).
-- **Practice:** capped at 100 points per UTC day (wins still count).
+- **Past daily (archive):** half of a normal win, no streak bonus, and it never affects the streak.
+- **Practice and archive:** capped at 100 points per UTC day combined (wins still count).
 - **Streak:** consecutive daily puzzles won. A missed day or a lost daily resets it.
 
 All of this lives in `lib/scoring.ts` (pure functions; `npx tsx scripts/verify-scoring.ts` prints the points table and checks the rules). Days reset at 00:00 UTC and weeks start Monday.

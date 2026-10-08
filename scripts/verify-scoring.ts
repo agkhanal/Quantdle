@@ -5,7 +5,8 @@
  *   npx tsx scripts/verify-scoring.ts
  */
 import { DIFFICULTIES } from "../lib/types";
-import { efficiency, periodEnd, weekIndex, winPoints } from "../lib/scoring";
+import { ARCHIVE_MULTIPLIER, efficiency, periodEnd, weekIndex, winPoints } from "../lib/scoring";
+import { LAUNCH_DAY, dailyNumber, dayStart } from "../lib/day";
 
 let failures = 0;
 const check = (ok: boolean, msg: string) => {
@@ -46,6 +47,22 @@ const nextDay = new Date(periodEnd("daily", Date.UTC(2026, 0, 1, 12)));
 check(nextDay.toISOString() === "2026-01-02T00:00:00.000Z", "daily reset is midnight UTC");
 const wk2 = new Date(periodEnd("weekly", Date.UTC(2026, 0, 7, 12)));
 check(wk2.toISOString() === "2026-01-12T00:00:00.000Z", "weekly reset from mid-week");
+
+// Past dailies (the archive): half of a normal win, never more than practice, no streak, never negative.
+console.log("\nArchive (past daily) vs practice vs today's daily, medium 3-step, 3 guesses");
+for (const d of DIFFICULTIES) {
+  const a = winPoints({ difficulty: d, steps: 3, guesses: 3, daily: false, archive: true, streak: 9 });
+  const p = winPoints({ difficulty: d, steps: 3, guesses: 3, daily: false, streak: 0 });
+  const t = winPoints({ difficulty: d, steps: 3, guesses: 3, daily: true, streak: 1 });
+  console.log(`  ${d.padEnd(7)} archive ${a.points}  practice ${p.points}  daily ${t.points}`);
+  check(a.points === Math.round(p.points * ARCHIVE_MULTIPLIER), `${d}: archive pays ${ARCHIVE_MULTIPLIER} of a normal win`);
+  check(a.points < p.points && a.points < t.points, `${d}: archive pays less than practice and the daily`);
+  check(a.breakdown.reduce((x, y) => x + y.value, 0) === a.points, `${d}: archive breakdown sums to total`);
+  check(!a.breakdown.some((b) => /streak/i.test(b.label)), `${d}: archive has no streak bonus`);
+}
+check(winPoints({ difficulty: "easy", steps: 3, guesses: 6, daily: false, archive: true, streak: 0 }).points >= 0, "archive points never negative");
+check(dailyNumber(dayStart(LAUNCH_DAY)) === LAUNCH_DAY && dailyNumber(dayStart(LAUNCH_DAY) - 1) === LAUNCH_DAY - 1, "dayStart/dailyNumber agree");
+check(new Date(dayStart(LAUNCH_DAY)).toISOString() === "2026-10-04T00:00:00.000Z", "launch day is 2026-10-04");
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nAll scoring checks passed");
 process.exit(failures ? 1 : 0);

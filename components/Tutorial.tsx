@@ -261,7 +261,7 @@ function PointsSlide() {
       </div>
       <p className="muted small">
         Harder puzzles are worth more, fewer guesses is worth more, the daily puzzle is worth double plus a streak
-        bonus, and practice points are capped per day so they can&apos;t be farmed.
+        bonus, past dailies pay half, and practice points are capped per day so they can&apos;t be farmed.
       </p>
     </div>
   );

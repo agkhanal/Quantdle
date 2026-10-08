@@ -20,6 +20,7 @@ import {
 import { capture } from "@/lib/analytics";
 import { MARKET_TOPIC, recordGame } from "@/lib/history";
 import { loadJSON, saveJSON } from "@/lib/stats";
+import { marketSaveKey } from "@/lib/archive";
 import type { Difficulty, Verdict } from "@/lib/types";
 
 const PIPS = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
@@ -35,8 +36,7 @@ type Props =
  * and survives a refresh. Practice markets are random and skippable.
  */
 export default function MarketGame(props: Props) {
-  // v2: daily markets moved to their own contracts, so quotes saved under the old key don't apply.
-  const dailyKey = props.daily ? `quantdle-market-daily-v2-${props.dailyNumber}` : null;
+  const dailyKey = props.daily ? marketSaveKey(props.dailyNumber) : null;
   const [game, setGame] = useState<MarketGameState | null>(null);
   const [bid, setBid] = useState("");
   const [ask, setAsk] = useState("");

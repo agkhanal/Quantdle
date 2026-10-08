@@ -100,6 +100,14 @@ export async function inSet(key: string, member: string): Promise<boolean> {
   return mem.sets.get(key)?.has(member) ?? false;
 }
 
+/** Which of these members are in the set, in one round trip. */
+export async function inSetMany(key: string, members: string[]): Promise<boolean[]> {
+  if (members.length === 0) return [];
+  if (storeKind === "redis") return (await redis<number[]>(["SMISMEMBER", key, ...members])).map((n) => n === 1);
+  const s = mem.sets.get(key);
+  return members.map((m) => s?.has(m) ?? false);
+}
+
 export async function zIncr(key: string, member: string, by: number, ttlSeconds?: number): Promise<number> {
   if (storeKind === "redis") {
     const v = Number(await redis<string>(["ZINCRBY", key, by, member]));

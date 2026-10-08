@@ -1,4 +1,4 @@
-import { addToSet, del, setIfAbsent, get, hDel, hGetAll, hIncrBy, hSet, inSet, incrBy, set, zIncr, zRankOf, zTop } from "./store";
+import { addToSet, del, setIfAbsent, get, hDel, hGetAll, hIncrBy, hSet, inSet, inSetMany, incrBy, set, zIncr, zRankOf, zTop } from "./store";
 import {
   MAX_GUESSES,
   type Award,
@@ -148,12 +148,13 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
   const today = dayNumber(now);
   const s = await load(username);
   const dailyN = parseDailyId(puzzle.id);
-  const isDaily = dailyN === today; // an old daily token replayed later scores like practice
+  const isDaily = dailyN === today;
+  const isArchive = dailyN !== null && dailyN < today; // a past daily, played from the archive: half points, no streak
 
   let streak = s.streak;
   if (isDaily) streak = s.lastDaily === today - 1 ? s.streak + 1 : s.lastDaily === today ? s.streak : 1;
 
-  const scored = winPoints({ difficulty: puzzle.difficulty, steps: puzzle.steps.length, guesses, daily: isDaily, streak });
+  const scored = winPoints({ difficulty: puzzle.difficulty, steps: puzzle.steps.length, guesses, daily: isDaily, archive: isArchive, streak });
   let { points } = scored;
   const breakdown = [...scored.breakdown];
 
@@ -161,7 +162,7 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
     const used = await incrBy(`pcap:${username.toLowerCase()}:${today}`, points, 2 * 86_400);
     const allowed = Math.min(points, Math.max(0, PRACTICE_DAILY_CAP - (used - points)));
     if (allowed < points) {
-      breakdown.push({ label: `Daily practice cap (${PRACTICE_DAILY_CAP})`, value: allowed - points });
+      breakdown.push({ label: `Daily cap on non-daily points (${PRACTICE_DAILY_CAP})`, value: allowed - points });
       points = allowed;
     }
   }
@@ -185,7 +186,7 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
   logActivity(
     "win",
     username,
-    `won ${puzzle.difficulty} "${puzzle.title}" in ${guesses} ${guesses === 1 ? "guess" : "guesses"}${isDaily ? " (daily)" : ""}: +${points} pts, streak ${shape(username, updated, null).streak}`,
+    `won ${puzzle.difficulty} "${puzzle.title}" in ${guesses} ${guesses === 1 ? "guess" : "guesses"}${isDaily ? " (daily)" : isArchive ? ` (past daily #${dailyN})` : ""}: +${points} pts, streak ${shape(username, updated, null).streak}`,
   );
   const r = await zRankOf(boardKey("u", "all"), username);
   return {
@@ -201,7 +202,9 @@ export async function recordWin(username: string, puzzle: Puzzle, guesses: numbe
 export async function recordLoss(username: string, puzzle: Puzzle): Promise<Award> {
   const today = dayNumber();
   const s = await load(username);
-  const isDaily = parseDailyId(puzzle.id) === today;
+  const dailyN = parseDailyId(puzzle.id);
+  const isDaily = dailyN === today;
+  const isArchive = dailyN !== null && dailyN < today;
 
   await Promise.all([
     ...(isDaily ? [hSet(profKey(username), { streak: 0 })] : []),
@@ -209,7 +212,7 @@ export async function recordLoss(username: string, puzzle: Puzzle): Promise<Awar
   ]);
 
   const updated: Stored = { ...s, losses: s.losses + 1, streak: isDaily ? 0 : s.streak };
-  logActivity("loss", username, `lost ${puzzle.difficulty} "${puzzle.title}"${isDaily ? " (daily)" : ""}: out of guesses`);
+  logActivity("loss", username, `lost ${puzzle.difficulty} "${puzzle.title}"${isDaily ? " (daily)" : isArchive ? ` (past daily #${dailyN})` : ""}: out of guesses`);
   const r = await zRankOf(boardKey("u", "all"), username);
   return {
     result: "loss",
@@ -224,6 +227,12 @@ export const markSolved = (username: string, puzzleId: string) => addToSet(solve
 export const isSolved = (username: string, puzzleId: string) => inSet(solvedKey(username), puzzleId);
 export const markLost = (username: string, puzzleId: string) => addToSet(lostKey(username), puzzleId);
 export const progressTtl = WEEK;
+
+/** For each puzzle id: did this player win it, lose it? (One round trip each.) */
+export async function resultsFor(username: string, ids: string[]): Promise<{ won: boolean[]; lost: boolean[] }> {
+  const [won, lost] = await Promise.all([inSetMany(solvedKey(username), ids), inSetMany(lostKey(username), ids)]);
+  return { won, lost };
+}
 
 // ───────────── admin adjustments ─────────────
 

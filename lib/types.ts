@@ -46,7 +46,29 @@ export interface PuzzleResponse {
   puzzle: PublicPuzzle;
   source: "ai" | "bank" | "generated";
   dailyNumber?: number;
+  /** A past daily, served from the archive (half points, no streak). */
+  archive?: boolean;
   aiJudge?: boolean;
+}
+
+/** One row of the past-dailies archive. Titles are safe to show: the day is over. */
+export interface ArchiveDay {
+  day: number;
+  title: string;
+  category: string;
+  difficulty: Difficulty;
+}
+
+export interface ArchiveResponse {
+  today: number;
+  /** Today's puzzle, for the "Today" row (its title is on the page already). */
+  current: ArchiveDay;
+  /** The first daily that went live. */
+  launch: number;
+  /** Newest first, not including today. */
+  days: ArchiveDay[];
+  /** The signed-in player's result on each daily (today included); absent days weren't finished. */
+  results: Record<number, "won" | "lost">;
 }
 
 export interface GuessRequest {
