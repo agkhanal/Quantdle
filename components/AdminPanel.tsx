@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ActivityEvent, ActivityType, Profile } from "@/lib/types";
 import { AdminBugs } from "./AdminBugs";
+import { AdminReports } from "./AdminReports";
 import { AdminTag } from "./AdminTag";
 import { useSwap } from "./useSwap";
 
@@ -119,8 +120,9 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
   const [query, setQuery] = useState("");
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [view, setView] = useState<"activity" | "bugs">("activity");
+  const [view, setView] = useState<"activity" | "bugs" | "reports">("activity");
   const [bugsOpen, setBugsOpen] = useState(0);
+  const [reportsOpen, setReportsOpen] = useState(0);
   const [swapping, swap] = useSwap();
 
   const list = useRef<HTMLDivElement>(null);
@@ -166,10 +168,11 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
         try {
           const res = await fetch(lastId.current === null ? "/api/admin/activity" : `/api/admin/activity?after=${lastId.current}`, { cache: "no-store" });
           if (!res.ok) throw new Error();
-          const body = (await res.json()) as { events: ActivityEvent[]; latest: number; bugsOpen?: number };
+          const body = (await res.json()) as { events: ActivityEvent[]; latest: number; bugsOpen?: number; reportsOpen?: number };
           if (stopped) return;
           lastId.current = Math.max(lastId.current ?? 0, body.latest);
           setBugsOpen(body.bugsOpen ?? 0);
+          setReportsOpen(body.reportsOpen ?? 0);
           idle.current = body.events.length ? 0 : idle.current + 1;
           merge(body.events);
           setLoaded(true);
@@ -217,10 +220,13 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
       <aside className={`admin-panel ${open ? "open" : ""}`} aria-label="Admin activity log" aria-hidden={!open} inert={!open}>
         <div className="admin-views" role="tablist" aria-label="Admin sections">
           <button role="tab" aria-selected={view === "activity"} className={view === "activity" ? "on" : ""} onClick={() => view !== "activity" && swap("view", () => setView("activity"))}>
-            Activity log
+            Activity
           </button>
           <button role="tab" aria-selected={view === "bugs"} className={view === "bugs" ? "on" : ""} onClick={() => view !== "bugs" && swap("view", () => setView("bugs"))}>
-            Bug reports{bugsOpen > 0 && <span className="admin-badge">{bugsOpen}</span>}
+            Bugs{bugsOpen > 0 && <span className="admin-badge">{bugsOpen}</span>}
+          </button>
+          <button role="tab" aria-selected={view === "reports"} className={view === "reports" ? "on" : ""} onClick={() => view !== "reports" && swap("view", () => setView("reports"))}>
+            Reports{reportsOpen > 0 && <span className="admin-badge">{reportsOpen}</span>}
           </button>
         </div>
 
@@ -228,6 +234,8 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
         <div className="admin-view" key={view}>
         {view === "bugs" ? (
           <AdminBugs onOpenPlayer={onOpenPlayer} />
+        ) : view === "reports" ? (
+          <AdminReports onOpenPlayer={onOpenPlayer} />
         ) : (
           <>
         <header className="admin-head">
