@@ -4405,7 +4405,8 @@ body,
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 0 0 12px;
+  /* room on every side: the collapse wrapper clips overflow, which would cut off the border and the hover lift */
+  padding: 4px 8px 14px;
 }
 
 .archive-open {
