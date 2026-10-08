@@ -3102,13 +3102,6 @@ body {
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.admin-head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
 .admin-filters {
   display: flex;
   flex-wrap: wrap;
@@ -3130,6 +3123,18 @@ body {
 .admin-filters button.on {
   border-color: var(--text);
   color: var(--text);
+}
+
+/* Clear view sits at the end of the last row of filters, flush right. */
+.admin-filters .admin-clear {
+  margin-left: auto;
+  align-self: flex-end;
+  border: 0;
+  padding: 4px 2px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 .admin-search {
@@ -3389,7 +3394,6 @@ main.leaving {
 /* ───────── interface chrome you can't (and shouldn't) highlight ───────── */
 
 .admin-tab,
-.admin-head,
 .admin-filters,
 .admin-points-toggle,
 .admin-foot,

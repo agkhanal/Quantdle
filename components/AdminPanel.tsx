@@ -227,20 +227,9 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
           <AdminBugs onOpenPlayer={onOpenPlayer} />
         ) : (
           <>
-        <header className="admin-head">
-          <button
-            className="link"
-            onClick={() => {
-              setEvents([]);
-            }}
-          >
-            Clear view
-          </button>
-        </header>
-
-        <div className="admin-filters" role="tablist" aria-label="Filter activity">
+        <div className="admin-filters" role="group" aria-label="Filter activity">
           {FILTERS.map((f) => (
-            <button key={f.key} role="tab" aria-selected={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() =>
+            <button key={f.key} aria-pressed={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() =>
                 filter !== f.key &&
                 swap("list", () => {
                   setFilter(f.key);
@@ -251,6 +240,9 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
               {f.label}
             </button>
           ))}
+          <button className="link admin-clear" onClick={() => setEvents([])}>
+            Clear view
+          </button>
         </div>
         <input className="admin-search" type="search" placeholder="Filter by player or text" aria-label="Filter activity" value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" spellCheck={false} />
 
