@@ -271,6 +271,51 @@ export async function adminAdjustPoints(name: string, points: number, reason: st
   return getProfile(username);
 }
 
+// ───────────── repairing the school boards ─────────────
+
+export interface SchoolDiff {
+  school: { id: string; name: string };
+  before: number;
+  after: number;
+}
+
+/**
+ * Compares each school leaderboard (today, this week, all time) with what it should be: the sum of its
+ * players' scores on the matching player board, under the school each player has now. Lists the schools
+ * that are off, and with `apply` corrects them in place (adding the difference, so a board is never empty
+ * mid-repair, and dropping a school that should have nothing).
+ */
+export async function rebuildSchoolBoards(apply: boolean): Promise<Record<Period, SchoolDiff[]>> {
+  const ttl: Record<Period, number | undefined> = { all: undefined, daily: DAILY_TTL, weekly: WEEKLY_TTL };
+  const out = { all: [], daily: [], weekly: [] } as Record<Period, SchoolDiff[]>;
+  for (const period of ["all", "daily", "weekly"] as const) {
+    const players = await zTop(boardKey("u", period), 1_000_000);
+    const expected = new Map<string, number>();
+    for (let i = 0; i < players.length; i += 25) {
+      const batch = players.slice(i, i + 25);
+      const schools = await Promise.all(batch.map(async (p) => (await hGetAll(profKey(p.member))).school || null));
+      batch.forEach((p, j) => {
+        const id = schools[j];
+        if (id && schoolById(id)) expected.set(id, (expected.get(id) ?? 0) + p.score);
+      });
+    }
+    const key = boardKey("s", period);
+    const stored = new Map((await zTop(key, 1_000_000)).map((t) => [t.member, t.score]));
+    for (const id of new Set([...expected.keys(), ...stored.keys()])) {
+      const before = stored.get(id) ?? 0;
+      const after = expected.get(id) ?? 0;
+      if (before === after) continue;
+      const school = schoolById(id);
+      if (apply) {
+        if (after <= 0) await zRemMember(key, id);
+        else await zIncr(key, id, after - before, ttl[period]);
+      }
+      out[period].push({ school: school ? { id, name: school.name } : { id, name: id }, before, after });
+    }
+  }
+  return out;
+}
+
 // ───────────── easter egg ─────────────
 
 /** Gives an egg's one-time bonus. Returns the new profile, or null if this player already found that egg. */
