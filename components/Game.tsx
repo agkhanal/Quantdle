@@ -117,6 +117,7 @@ export default function Game() {
   const [leaving, setLeaving] = useState(false); // old content fading out before a mode/track/difficulty switch
   const [stats, setStats] = useState<Stats | null>(null);
   const [quip, setQuip] = useState(0);
+  const [showLoader, setShowLoader] = useState(false); // the skeleton only appears if loading is slow, so quick loads don't flash it
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const loadSeq = useRef(0);
@@ -246,6 +247,12 @@ export default function Game() {
     setModal(null);
     setTutorial("replay");
   }
+
+  useEffect(() => {
+    if (status !== "loading") return setShowLoader(false);
+    const t = setTimeout(() => setShowLoader(true), 250);
+    return () => clearTimeout(t);
+  }, [status]);
 
   // Rotate the loading quips while the AI is cooking.
   useEffect(() => {
@@ -702,8 +709,8 @@ export default function Game() {
         </main>
       ) : (
       <main key={`${mode}-puzzle`} className={leaving ? "leaving" : undefined}>
-       <div className="content-in" key={status === "loading" ? "loading" : (data?.puzzle.id ?? status)}>
-        {status === "loading" && <Loading quip={LOADING_QUIPS[quip]} />}
+       <div className={`content-in${status === "loading" ? " is-loading" : ""}`} key={status === "loading" ? "loading" : (data?.puzzle.id ?? status)}>
+        {status === "loading" && showLoader && <Loading quip={LOADING_QUIPS[quip]} />}
 
         {status === "error" && (
           <div className="card center">

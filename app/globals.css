@@ -1649,6 +1649,36 @@ code {
   }
 }
 
+/* Going back to the home page (see the script in layout.tsx): the page you're leaving sinks away and home
+   settles into place, no blur. The logo's pop-in is skipped, since the page is already in view. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:active-view-transition-type(back)::view-transition-old(root) {
+    animation: page-back-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  :root:active-view-transition-type(back)::view-transition-new(root) {
+    animation: page-back-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  html[data-nav="back"] .logo-tile:not(.egg-pop-0):not(.egg-pop-1) {
+    animation: none;
+  }
+}
+
+@keyframes page-back-out {
+  to {
+    opacity: 0;
+    transform: translateY(28px) scale(0.985);
+  }
+}
+
+@keyframes page-back-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
 @keyframes page-out {
   to {
     opacity: 0;
@@ -4517,4 +4547,9 @@ body,
   .archive-row .chip {
     display: none;
   }
+}
+
+/* Holds the page open while the first puzzle loads, so the footer doesn't jump up and back down. */
+.content-in.is-loading {
+  min-height: 55vh;
 }

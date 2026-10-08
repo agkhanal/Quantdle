@@ -19,8 +19,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Cross-document page transitions: when the home page is reached from another page (Stats, Privacy, Terms),
+            mark it as a "back" transition so the CSS can play the reverse of the way in, and skip the logo's pop-in. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `addEventListener("pagereveal",function(e){try{var t=e.viewTransition,f=navigation.activation&&navigation.activation.from;if(t&&f&&location.pathname==="/"&&new URL(f.url).pathname!=="/"){t.types.add("back");document.documentElement.dataset.nav="back"}}catch(_){}})`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
