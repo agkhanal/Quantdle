@@ -4777,3 +4777,55 @@ body,
     animation: none;
   }
 }
+
+/* ───────── chat: bunched messages from the same player ───────── */
+
+.chat-avatar-gap {
+  flex: none;
+  width: 26px;
+}
+
+.chat-msg.cont {
+  position: relative;
+  margin-top: -6px; /* closes most of the list's gap */
+}
+
+/* A bunched message has no name or time of its own; its actions appear on hover (or when tapped). */
+.chat-msg.cont .chat-name,
+.chat-msg.cont .admin-tag,
+.chat-msg.cont .chat-meta > .muted {
+  display: none;
+}
+
+.chat-msg.cont .chat-meta {
+  position: absolute;
+  top: -8px;
+  right: 0;
+  z-index: 1;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.chat-msg.cont:hover .chat-meta,
+.chat-msg.cont:focus-within .chat-meta,
+.chat-msg.cont.tapped .chat-meta {
+  display: flex;
+}
+
+.chat-msg.cont .chat-mod {
+  margin-left: 0;
+}
+
+.chat-msg.cont .chat-react.add {
+  opacity: 1;
+}
+
+.chat-msg.mentions-me.cont {
+  margin-top: -2px; /* the highlight has its own padding */
+}

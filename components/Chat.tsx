@@ -5,6 +5,7 @@ import { CHAT_REACTIONS, type ChatMessage, type ChatReaction, type ChatReactions
 import { AdminTag } from "./AdminTag";
 import { Avatar } from "./Avatar";
 import { AddReactionIcon, REACTION_LABEL, ReactionIcon } from "./ReactionIcons";
+import { bunchesWith } from "@/lib/chatGroup";
 
 const MAX = 280;
 const KEEP = 200;
@@ -103,6 +104,7 @@ export function Chat({
   const [token, setToken] = useState<{ q: string; start: number } | null>(null); // the @name being typed
   const [suggestions, setSuggestions] = useState<{ name: string; avatar: string | null }[]>([]);
   const [active, setActive] = useState(0);
+  const [tapped, setTapped] = useState<number | null>(null); // a bunched message whose actions are showing (tap, or click)
 
   const list = useRef<HTMLDivElement>(null);
   const found = useRef(new Map<string, { name: string; avatar: string | null }[]>());
@@ -427,14 +429,20 @@ export function Chat({
             {!loaded && !failed && <p className="muted small chat-empty">Loading…</p>}
             {failed && !loaded && <p className="muted small chat-empty">Couldn&apos;t reach the chat. Retrying…</p>}
             {loaded && messages.length === 0 && <p className="muted small chat-empty">No messages yet. Say hi!</p>}
-            {messages.map((m) => {
+            {messages.map((m, i) => {
+              const cont = bunchesWith(messages[i - 1], m);
               const mentionsMe = Boolean(user && m.u !== user.username && m.n?.some((n) => n.toLowerCase() === user.username.toLowerCase()));
               const reactions = CHAT_REACTIONS.filter((k) => (m.r?.[k]?.length ?? 0) > 0);
               const mine = (k: ChatReaction) => Boolean(user && m.r?.[k]?.some((u) => u.toLowerCase() === user.username.toLowerCase()));
               return (
-                <div key={m.id} className={`chat-msg ${m.u === user?.username ? "me" : ""}${mentionsMe ? " mentions-me" : ""}`}>
-                  <Avatar name={m.u} src={m.a} size={26} />
+                <div
+                  key={m.id}
+                  className={`chat-msg ${m.u === user?.username ? "me" : ""}${mentionsMe ? " mentions-me" : ""}${cont ? " cont" : ""}${tapped === m.id ? " tapped" : ""}`}
+                  onClick={cont ? (e) => !(e.target as HTMLElement).closest("button, a") && setTapped((t) => (t === m.id ? null : m.id)) : undefined}
+                >
+                  {cont ? <span className="chat-avatar-gap" aria-hidden /> : <Avatar name={m.u} src={m.a} size={26} />}
                   <div className="chat-body">
+                    {(!cont || user) && (
                     <div className="chat-meta">
                       <button className="chat-name" onClick={() => onOpenPlayer(m.u)}>
                         {m.u}
@@ -459,7 +467,8 @@ export function Chat({
                         </span>
                       )}
                     </div>
-                    <div className="chat-text">
+                    )}
+                    <div className="chat-text" title={cont ? new Date(m.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : undefined}>
                       <MessageText m={m} me={user?.username} onOpen={onOpenPlayer} />
                     </div>
 
