@@ -47,14 +47,15 @@ export function Chat({
   const wake = useRef<() => void>(() => {});
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** Merge new log entries: add messages, apply delete events, keep order. Returns how many new messages arrived. */
+  /** Merge new log entries: add messages, apply delete and clear events, keep order. Returns how many new messages arrived. */
   const apply = useCallback((incoming: ChatMessage[], mine?: string | null) => {
     let added = 0;
     setMessages((prev) => {
       let next = prev;
       const known = new Set(prev.map((m) => m.id));
       for (const m of incoming) {
-        if (m.del) next = next.filter((x) => x.id !== m.del);
+        if (m.clr) next = next.filter((x) => x.id > m.id);
+        else if (m.del) next = next.filter((x) => x.id !== m.del);
         else if (!known.has(m.id)) {
           next = [...next, m];
           known.add(m.id);
@@ -164,6 +165,7 @@ export function Chat({
       stick.current = true;
       apply([body.message], user?.username);
       setDraft("");
+      if (body.info) flash(body.info);
       wake.current();
     } catch {
       setError("Network hiccup. Try again.");
@@ -178,10 +180,14 @@ export function Chat({
     if (res?.ok) apply([{ id: -1, u: "", a: null, m: false, t: "", at: 0, del: id }]);
   }
 
+  function flash(text: string) {
+    setNote(text);
+    setTimeout(() => setNote((n) => (n === text ? "" : n)), 4000);
+  }
+
   async function mute(username: string) {
     const res = await fetch("/api/chat/mute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, minutes: 60 }) }).catch(() => null);
-    setNote(res?.ok ? `Muted ${username} for 60 minutes.` : "Couldn't mute that player.");
-    setTimeout(() => setNote(""), 4000);
+    flash(res?.ok ? `Muted ${username} for 60 minutes.` : "Couldn't mute that player.");
   }
 
   return (
@@ -258,7 +264,7 @@ export function Chat({
             >
               {error && <p className="chat-error">{error}</p>}
               <div className="chat-row">
-                <input ref={input} value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={MAX} placeholder="Say something…" aria-label="Message" autoComplete="off" />
+                <input ref={input} value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={MAX} placeholder={user.admin ? "Say something… (/clear to wipe the chat)" : "Say something…"} aria-label="Message" autoComplete="off" />
                 <button className="btn primary" disabled={sending || !draft.trim()}>
                   Send
                 </button>

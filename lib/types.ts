@@ -151,7 +151,7 @@ export function toPublic(p: Puzzle): PublicPuzzle {
   };
 }
 
-/** One entry in the global chat log. A delete event has `del` set to the id it removes. */
+/** One entry in the global chat log. A delete event has `del` set to the id it removes; a clear event has `clr` set. */
 export interface ChatMessage {
   id: number;
   /** Username */
@@ -164,6 +164,7 @@ export interface ChatMessage {
   t: string;
   at: number;
   del?: number;
+  clr?: boolean;
 }
 
 export type ActivityType = "account" | "guess" | "hint" | "win" | "loss" | "profile" | "chat" | "admin" | "egg" | "bug";

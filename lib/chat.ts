@@ -66,11 +66,19 @@ export async function deleteMessage(id: number): Promise<ChatMessage | null> {
   const [raw] = await zByScore(LOG, String(id), String(id), 1);
   if (!raw) return null;
   const target = parse(raw);
-  if (!target || target.del) return null;
+  if (!target || target.del || target.clr) return null;
   await zRemMember(LOG, raw);
   const event: ChatMessage = { id: await nextId(), u: "", a: null, m: false, t: "", at: Date.now(), del: id };
   await zAddMember(LOG, event.id, JSON.stringify(event));
   return target;
+}
+
+/** Empties the log and appends a "clear" event, so clients that are already up to date wipe their copy too. */
+export async function clearChat(): Promise<ChatMessage> {
+  await zTrim(LOG, 0);
+  const event: ChatMessage = { id: await nextId(), u: "", a: null, m: false, t: "", at: Date.now(), clr: true };
+  await zAddMember(LOG, event.id, JSON.stringify(event));
+  return event;
 }
 
 export async function muteUser(username: string, minutes: number) {

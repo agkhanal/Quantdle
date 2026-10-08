@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { incr } from "@/lib/store";
 import { isAdmin, rateLimited, sessionUser } from "@/lib/auth";
-import { cleanText, deleteMessage, isMuted, isRepeat, postMessage, readChat } from "@/lib/chat";
+import { clearChat, cleanText, deleteMessage, isMuted, isRepeat, postMessage, readChat } from "@/lib/chat";
 import { logActivity } from "@/lib/activity";
 import { getProfile } from "@/lib/profile";
 
@@ -19,7 +19,22 @@ export async function GET(req: Request) {
   });
 }
 
-/** POST { text }: send a message (signed-in players only). */
+/** Chat commands (a message starting with "/"), admins only. Returns the response, or null if it isn't a known command. */
+async function command(username: string, text: string): Promise<NextResponse | null> {
+  const [name] = text.slice(1).split(" ");
+  switch (name.toLowerCase()) {
+    case "clear": {
+      if (!isAdmin(username)) return NextResponse.json({ error: "Only admins can use that command." }, { status: 403 });
+      const event = await clearChat();
+      logActivity("admin", username, "cleared the chat");
+      return NextResponse.json({ message: event, info: "Chat cleared." });
+    }
+    default:
+      return null;
+  }
+}
+
+/** POST { text }: send a message (signed-in players only). Admins can also send commands like "/clear". */
 export async function POST(req: Request) {
   const username = sessionUser(req);
   if (!username) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
@@ -34,6 +49,10 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { text?: unknown };
   const text = cleanText(body.text);
   if (!text) return NextResponse.json({ error: "Type a message first." }, { status: 400 });
+  if (text.startsWith("/")) {
+    const done = await command(username, text);
+    if (done) return done;
+  }
   if (await isRepeat(username, text)) return NextResponse.json({ error: "Don't repeat yourself." }, { status: 429 });
 
   const { avatar } = await getProfile(username);
