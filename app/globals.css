@@ -3075,30 +3075,8 @@ body {
 .admin-head {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
-}
-
-.admin-head b {
-  margin-right: auto;
-}
-
-.admin-live {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--grey);
-}
-
-.admin-live.on {
-  background: var(--green);
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 60%, transparent);
-  animation: admin-pulse 1.8s ease-out infinite;
-}
-
-@keyframes admin-pulse {
-  to {
-    box-shadow: 0 0 0 7px transparent;
-  }
 }
 
 .admin-filters {
@@ -3248,9 +3226,6 @@ body {
   .admin-panel,
   .admin-panel.open {
     transition: none;
-  }
-  .admin-live.on {
-    animation: none;
   }
 }
 
