@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { isAdmin } from "@/lib/admins";
 import { REPORT_REASONS, type Profile, type ReportReason } from "@/lib/types";
 
 export interface MenuTarget {
@@ -11,7 +12,21 @@ export interface MenuTarget {
   y: number;
 }
 
-/** The right-click menu on a player's name in the chat: view their profile or report them. */
+interface Moderation {
+  banned: boolean;
+  mutedUntil: number | null;
+}
+
+const MUTES = [
+  { label: "10m", minutes: 10 },
+  { label: "1h", minutes: 60 },
+  { label: "1d", minutes: 24 * 60 },
+  { label: "1w", minutes: 7 * 24 * 60 },
+];
+
+const json = (method: string, body: unknown): RequestInit => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+/** The right-click menu on a player's name in the chat: view their profile or report them; admins can also moderate. */
 export function PlayerMenu({
   target,
   me,
@@ -19,6 +34,7 @@ export function PlayerMenu({
   onOpenPlayer,
   onSignIn,
   onDone,
+  onDelete,
 }: {
   target: MenuTarget;
   me: Profile | null;
@@ -27,12 +43,51 @@ export function PlayerMenu({
   onSignIn: () => void;
   /** Called with a confirmation to show in the chat once an action worked. */
   onDone: (note: string) => void;
+  /** Admins: remove the message the menu was opened on. */
+  onDelete: (id: number) => void;
 }) {
-  const [view, setView] = useState<"menu" | "report">("menu");
+  const [view, setView] = useState<"menu" | "report" | "points" | "mute">("menu");
+  const [mod, setMod] = useState<Moderation | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [pos, setPos] = useState({ left: target.x, top: target.y });
   const box = useRef<HTMLDivElement>(null);
 
   const self = me?.username.toLowerCase() === target.username.toLowerCase();
+  const admin = !!me?.admin;
+  const canModerate = admin && !isAdmin(target.username);
+
+  // Admins: look up whether this player is muted or banned, to offer the right actions.
+  useEffect(() => {
+    if (!canModerate) return;
+    let stale = false;
+    fetch(`/api/chat/ban?username=${encodeURIComponent(target.username)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b) => !stale && b && setMod({ banned: b.banned, mutedUntil: b.mutedUntil }))
+      .catch(() => {});
+    return () => {
+      stale = true;
+    };
+  }, [canModerate, target.username]);
+
+  /** Runs an admin action; on success closes the menu and shows `ok` in the chat. */
+  async function run(url: string, init: RequestInit, ok: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch(url, init);
+      const b = await res.json().catch(() => ({}));
+      if (!res.ok) return setError(b.error ?? "That didn't work.");
+      onClose();
+      onDone(ok);
+    } catch {
+      setError("Network hiccup. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const who = encodeURIComponent(target.username);
 
   // Keep the menu on screen: flip it left/up when it would spill over an edge.
   useLayoutEffect(() => {
@@ -90,10 +145,118 @@ export function PlayerMenu({
               Report…
             </button>
           )}
+          {admin && (
+            <>
+              <div className="player-menu-sep">Admin</div>
+              <button role="menuitem" onClick={() => setView("points")}>
+                Edit points…
+              </button>
+              {canModerate && (
+                <>
+                  {mod?.mutedUntil != null ? (
+                    <button role="menuitem" disabled={busy} onClick={() => run(`/api/chat/mute?username=${who}`, { method: "DELETE" }, `Unmuted ${target.username}.`)}>
+                      Unmute{mod.mutedUntil > Date.now() ? ` (${left(mod.mutedUntil)} left)` : ""}
+                    </button>
+                  ) : (
+                    <button role="menuitem" onClick={() => setView("mute")}>
+                      Mute…
+                    </button>
+                  )}
+                  {mod?.banned ? (
+                    <button role="menuitem" disabled={busy} onClick={() => run(`/api/chat/ban?username=${who}`, { method: "DELETE" }, `Unbanned ${target.username} from the chat.`)}>
+                      Unban from chat
+                    </button>
+                  ) : (
+                    <button role="menuitem" className="danger" disabled={busy || !mod} onClick={() => run("/api/chat/ban", json("POST", { username: target.username }), `Banned ${target.username} from the chat.`)}>
+                      Ban from chat
+                    </button>
+                  )}
+                </>
+              )}
+              {target.messageId !== null && (
+                <button
+                  role="menuitem"
+                  className="danger"
+                  onClick={() => {
+                    onClose();
+                    onDelete(target.messageId!);
+                  }}
+                >
+                  Delete message
+                </button>
+              )}
+              {error && <p className="chat-error">{error}</p>}
+            </>
+          )}
         </>
       )}
+      {view === "mute" && (
+        <div className="player-menu-form">
+          <span className="muted small">Mute {target.username} for…</span>
+          <div className="player-menu-chips">
+            {MUTES.map((m) => (
+              <button key={m.label} type="button" disabled={busy} onClick={() => run("/api/chat/mute", json("POST", { username: target.username, minutes: m.minutes }), `Muted ${target.username} for ${m.label}.`)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          {error && <p className="chat-error">{error}</p>}
+          <div className="player-menu-row">
+            <button type="button" className="link" onClick={() => setView("menu")}>
+              ← Back
+            </button>
+          </div>
+        </div>
+      )}
+      {view === "points" && <PointsForm target={target} busy={busy} error={error} onBack={() => setView("menu")} onApply={(points, reason) => run("/api/admin/points", json("POST", { username: target.username, points, reason }), `Adjusted ${target.username}'s points by ${points > 0 ? "+" : ""}${points}.`)} />}
       {view === "report" && <ReportForm target={target} onBack={() => setView("menu")} onDone={(n) => (onClose(), onDone(n))} />}
     </div>
+  );
+}
+
+function left(until: number) {
+  const m = Math.ceil((until - Date.now()) / 60_000);
+  return m < 60 ? `${m}m` : m < 48 * 60 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
+}
+
+function PointsForm({
+  target,
+  busy,
+  error,
+  onBack,
+  onApply,
+}: {
+  target: MenuTarget;
+  busy: boolean;
+  error: string;
+  onBack: () => void;
+  onApply: (points: number, reason: string) => void;
+}) {
+  const [points, setPoints] = useState("");
+  const [reason, setReason] = useState("");
+  const valid = /^-?\d+$/.test(points.trim()) && Number(points) !== 0;
+
+  return (
+    <form
+      className="player-menu-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valid) onApply(Number(points), reason.trim());
+      }}
+    >
+      <span className="muted small">Add points to {target.username} (negative to remove)</span>
+      <input value={points} onChange={(e) => setPoints(e.target.value)} inputMode="numeric" placeholder="e.g. 50 or -50" autoComplete="off" />
+      <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} placeholder="Reason (saved in the log)" autoComplete="off" />
+      {error && <p className="chat-error">{error}</p>}
+      <div className="player-menu-row">
+        <button type="button" className="link" onClick={onBack}>
+          ← Back
+        </button>
+        <button className="btn primary" disabled={busy || !valid}>
+          {busy ? "…" : "Apply"}
+        </button>
+      </div>
+    </form>
   );
 }
 

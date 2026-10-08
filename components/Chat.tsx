@@ -218,11 +218,6 @@ export function Chat({
     setTimeout(() => setNote((n) => (n === text ? "" : n)), 4000);
   }
 
-  async function mute(username: string) {
-    const res = await fetch("/api/chat/mute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, minutes: 60 }) }).catch(() => null);
-    flash(res?.ok ? `Muted ${username} for 60 minutes.` : "Couldn't mute that player.");
-  }
-
   return (
     <>
       <button className={`chat-fab ${open ? "open" : ""}`} aria-label={open ? "Close chat" : "Open global chat"} aria-expanded={open} onClick={toggle}>
@@ -262,11 +257,6 @@ export function Chat({
                     <span className="muted">{ago(m.at, now)}</span>
                     {user?.admin && (
                       <span className="chat-mod">
-                        {!m.m && (
-                          <button title={`Mute ${m.u} for 60 minutes`} aria-label={`Mute ${m.u}`} onClick={() => mute(m.u)}>
-                            mute
-                          </button>
-                        )}
                         <button title="Delete message" aria-label="Delete message" onClick={() => remove(m.id)}>
                           delete
                         </button>
@@ -314,7 +304,7 @@ export function Chat({
         </section>
       )}
 
-      {menu && <PlayerMenu target={menu} me={user} onClose={closeMenu} onOpenPlayer={onOpenPlayer} onSignIn={onSignIn} onDone={flash} />}
+      {menu && <PlayerMenu target={menu} me={user} onClose={closeMenu} onOpenPlayer={onOpenPlayer} onSignIn={onSignIn} onDone={flash} onDelete={remove} />}
     </>
   );
 }

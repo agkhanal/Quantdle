@@ -4492,3 +4492,23 @@ body,
   padding: 0 12px;
   font-size: 0.82rem;
 }
+
+.player-menu-sep {
+  margin-top: 4px;
+  padding: 6px 10px 2px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.player-menu > button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.player-menu > .chat-error {
+  margin: 4px 10px;
+}
