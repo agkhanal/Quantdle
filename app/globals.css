@@ -4542,37 +4542,3 @@ body,
     display: none;
   }
 }
-
-/* admin: school board repair preview */
-
-.admin-diffs {
-  display: grid;
-  gap: 10px;
-  font-size: 0.85rem;
-}
-
-.admin-diffs ul {
-  list-style: none;
-  margin: 4px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.admin-diffs li {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.admin-diffs li span:first-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admin-diffs .mono {
-  flex: none;
-  font-family: var(--mono);
-}

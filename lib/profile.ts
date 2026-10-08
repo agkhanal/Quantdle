@@ -283,7 +283,8 @@ export interface SchoolDiff {
  * Compares each school leaderboard (today, this week, all time) with what it should be: the sum of its
  * players' scores on the matching player board, under the school each player has now. Lists the schools
  * that are off, and with `apply` corrects them in place (adding the difference, so a board is never empty
- * mid-repair, and dropping a school that should have nothing).
+ * mid-repair, and dropping a school that should have nothing). Run once at startup by `lib/migrations.ts`
+ * to repair changes made before points moved with the player.
  */
 export async function rebuildSchoolBoards(apply: boolean): Promise<Record<Period, SchoolDiff[]>> {
   const ttl: Record<Period, number | undefined> = { all: undefined, daily: DAILY_TTL, weekly: WEEKLY_TTL };

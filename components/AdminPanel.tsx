@@ -108,103 +108,6 @@ function AdjustPoints({ me, onChange }: { me: Profile; onChange: (u: Profile) =>
   );
 }
 
-interface SchoolDiffRow {
-  school: { id: string; name: string };
-  before: number;
-  after: number;
-}
-type SchoolDiffs = Record<"all" | "weekly" | "daily", SchoolDiffRow[]>;
-const PERIOD_LABEL = { all: "All time", weekly: "This week", daily: "Today" } as const;
-
-/** Checks the school leaderboards against the players' points and, once you've seen what's off, corrects them. */
-function RebuildSchools() {
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [diffs, setDiffs] = useState<SchoolDiffs | null>(null);
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-  const changes = diffs ? diffs.all.length + diffs.weekly.length + diffs.daily.length : 0;
-
-  async function run(apply: boolean) {
-    setBusy(true);
-    setError("");
-    setNote("");
-    try {
-      const res = await fetch("/api/admin/schools", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apply }),
-      });
-      const body = await res.json();
-      if (!res.ok) return setError(body.error ?? "That didn't work.");
-      if (apply) {
-        setDiffs(null);
-        setNote(body.changes ? `Done: corrected ${body.changes} school ${body.changes === 1 ? "total" : "totals"}.` : "Nothing needed correcting.");
-      } else {
-        setDiffs(body.changes ? (body.diffs as SchoolDiffs) : null);
-        setNote(body.changes ? "" : "The school boards already match the players' points.");
-      }
-    } catch {
-      setError("Network hiccup. Try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className={`admin-points${open ? " open" : ""}`}>
-      <button className="admin-points-toggle" aria-expanded={open} aria-controls="admin-schools-body" onClick={() => setOpen((o) => !o)}>
-        <svg className="admin-points-chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-          <path d="M2 1l6 4-6 4z" fill="currentColor" />
-        </svg>
-        Admin: school boards
-      </button>
-      <div className="admin-points-body" id="admin-schools-body" inert={!open}>
-        <div className="admin-points-clip">
-          <div className="profile-form">
-            <p className="muted small">
-              Each school&apos;s total should equal the sum of its players&apos; points. Preview shows which totals are off (for example, from players who changed school before points moved with them). Nothing changes until you apply.
-            </p>
-            {error && <p className="quote-note bad">{error}</p>}
-            {note && <p className="muted small">{note}</p>}
-            {diffs && (
-              <div className="admin-diffs">
-                {(["all", "weekly", "daily"] as const).map(
-                  (p) =>
-                    diffs[p].length > 0 && (
-                      <div key={p}>
-                        <b>{PERIOD_LABEL[p]}</b>
-                        <ul>
-                          {diffs[p].map((d) => (
-                            <li key={d.school.id}>
-                              <span>{d.school.name}</span>
-                              <span className="mono">
-                                {d.before.toLocaleString()} → {d.after.toLocaleString()}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ),
-                )}
-              </div>
-            )}
-            {diffs ? (
-              <button className="btn primary wide" disabled={busy} onClick={() => run(true)}>
-                {busy ? "…" : `Apply ${changes} ${changes === 1 ? "correction" : "corrections"}`}
-              </button>
-            ) : (
-              <button className="btn wide" disabled={busy} onClick={() => run(false)}>
-                {busy ? "…" : "Preview"}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /** Admin-only activity log (and points tool) in a left-hand drawer. Opening it pushes the page to the right. */
 export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMeChange: (u: Profile) => void; onOpenPlayer: (username: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -392,7 +295,6 @@ export function AdminPanel({ me, onMeChange, onOpenPlayer }: { me: Profile; onMe
         </div>
 
         <AdjustPoints me={me} onChange={onMeChange} />
-        <RebuildSchools />
       </aside>
     </>
   );
