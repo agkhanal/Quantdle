@@ -21,15 +21,21 @@ import { capture } from "@/lib/analytics";
 import { MARKET_TOPIC, recordGame } from "@/lib/history";
 import { loadJSON, saveJSON } from "@/lib/stats";
 import { marketSaveKey } from "@/lib/archive";
+import { encodeCard, type Tile } from "@/lib/shareCard";
+import { ShareCard } from "./ShareCard";
 import type { Difficulty, Verdict } from "@/lib/types";
 
 const PIPS = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
 const EMOJI: Record<Verdict, string> = { green: "🟩", yellow: "🟨", grey: "⬛" };
 const DIFF_LABEL: Record<Difficulty, string> = { easy: "Easy", medium: "Medium", hard: "Hard", expert: "Expert" };
 
-type Props =
+type Props = (
   | { daily: true; dailyNumber: number; onPractice: () => void }
-  | { daily: false; difficulty: Difficulty };
+  | { daily: false; difficulty: Difficulty }
+) & {
+  /** The signed-in player, for the name on the result card. */
+  username?: string;
+};
 
 /**
  * The market-making game. The daily market is the same for everyone, can't be skipped,
@@ -284,6 +290,21 @@ export default function MarketGame(props: Props) {
             ⬛ far off. A big trade from the sharp trader is a hint about which way the next {unit} leans.
           </p>
 
+          <ShareCard
+            query={encodeCard({
+              kind: "market",
+              mode: props.daily ? "daily" : "practice",
+              n: props.daily ? props.dailyNumber : undefined,
+              difficulty,
+              rows: [game.rounds.map((r): Tile => (r.verdict === "green" ? "g" : r.verdict === "yellow" ? "y" : "x"))],
+              guesses: null,
+              pnl: pnl ?? 0,
+              user: props.username,
+            })}
+            filename={`quantdle-markets-${props.daily ? props.dailyNumber : "practice"}.png`}
+            game="market"
+            mode={props.daily ? "daily" : "practice"}
+          />
           <pre className="share-preview">{shareText()}</pre>
           <div className="end-actions">
             <button className="btn" onClick={share}>

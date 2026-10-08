@@ -3,9 +3,22 @@ import "katex/dist/katex.min.css";
 import "./globals.css";
 import { PHProvider } from "./providers";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://quantdle.vercel.app";
+const DESCRIPTION = "A daily quant puzzle. Solve it step by step, in six guesses.";
+
+// Link previews (X, LinkedIn, Slack, iMessage...) use a generated card; the home page swaps in the day's own (see app/page.tsx).
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
   title: "Quantdle",
-  description: "A daily quant puzzle. Solve it step by step, in six guesses.",
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "Quantdle",
+    title: "Quantdle",
+    description: DESCRIPTION,
+    images: [{ url: "/api/share?kind=site", width: 1200, height: 630, alt: "Quantdle, a daily quant puzzle" }],
+  },
+  twitter: { card: "summary_large_image", title: "Quantdle", description: DESCRIPTION, images: ["/api/share?kind=site"] },
 };
 
 export const viewport: Viewport = {

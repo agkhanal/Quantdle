@@ -86,6 +86,14 @@ A chat button sits bottom right; everyone can read, signed-in players can write 
 - **@mentions:** type `@` and pick a player from the suggestions. Only real accounts become mentions: they show as links to the player's profile, the message is highlighted for the person mentioned, and a badge with a count appears on the chat button while the chat is closed (a tiny private check every 45 seconds while the tab is visible).
 - **Moderation (admins):** each message has **mute** and **delete**. Mute opens a menu of 10 minutes, 1 hour, 1 day or a permanent **Ban**, and offers **Unmute** for someone already muted. Muted players can't post or react and are told how long is left. Admins can't be muted, and every action is in the activity log.
 
+## Share cards
+
+Finishing a puzzle or a market shows a result card: a 1200×630 image with the puzzle, difficulty, your guess tiles (a lightbulb tile for a hint), your score or P&L and your name. **Copy image** puts it on the clipboard to paste into a post, and **Share image** hands it to the phone's share sheet (it becomes **Save image** where the browser can't share files). The text version is still there too.
+
+Cards are drawn by `GET /api/share` (`app/api/share/route.tsx`, using `next/og`) from the query string, which `lib/shareCard.ts` validates strictly: unknown values are dropped, a puzzle's title and a market's contract come from our own data rather than the URL, a name only appears if that account exists, and days outside the launch-to-today range are ignored so a card can't reveal a future puzzle. The route is cached at the edge and rate limited (120 a minute per IP). It fetches the Space Grotesk weights from jsDelivr once per server and falls back to the built-in font if that fails.
+
+The same renderer makes the **link-preview image** (`og:image` / `twitter:card`) shown when the site is pasted into X, LinkedIn, Slack or iMessage. The home page is rebuilt every ten minutes so its preview card always shows the current day's puzzle title, difficulty and topic (never the answer). Set `NEXT_PUBLIC_SITE_URL` if the site moves off `quantdle.vercel.app`.
+
 ## Analytics
 
 With `NEXT_PUBLIC_POSTHOG_KEY` set, the site reports to [PostHog](https://posthog.com): pageviews, live visitors, session replays and game events. Signed-in players are identified by username (with their points and admin flag), so you can look someone up and watch their games. Everything is viewed in the PostHog dashboard, not in the app.

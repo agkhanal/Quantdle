@@ -33,6 +33,8 @@ import { BugReport } from "./BugReport";
 import { Chat } from "./Chat";
 import { ChartIcon, DiceIcon, CalendarIcon, LightbulbIcon } from "./TrackIcons";
 import { ArchivePanel } from "./Archive";
+import { ShareCard } from "./ShareCard";
+import { encodeCard, type Tile } from "@/lib/shareCard";
 import { LeaderboardPanel } from "./Leaderboard";
 import { PublicProfile } from "./Profile";
 import { RichText } from "./RichText";
@@ -545,6 +547,23 @@ export default function Game() {
     }
   }
 
+  /** The result card for the finished puzzle, as a query string for /api/share. */
+  function cardQuery(): string | null {
+    if (!data || !over) return null;
+    const tile = (r: Row): Tile => (r.kind === "hint" ? "h" : r.verdict === "green" ? "g" : r.verdict === "yellow" ? "y" : "x");
+    const daily = mode === "daily" && data.dailyNumber !== undefined;
+    return encodeCard({
+      kind: "puzzle",
+      mode: daily ? "daily" : "practice",
+      n: daily ? data.dailyNumber : undefined,
+      difficulty: data.puzzle.difficulty,
+      topic: data.puzzle.category,
+      rows: data.puzzle.steps.map((_, i) => rows.filter((r) => r.step === i).map(tile)),
+      guesses: status === "won" ? rows.length : null,
+      user: user?.username,
+    });
+  }
+
   function shareText() {
     if (!data) return "";
     const head =
@@ -701,9 +720,9 @@ export default function Game() {
         <main key={`${mode}-market`} className={leaving ? "leaving" : undefined}>
           <div className="content-in">
             {mode === "daily" ? (
-              today !== null && <MarketGame key={`daily-${archiveDay ?? today}`} daily dailyNumber={archiveDay ?? today} onPractice={() => switchMode("practice", "market")} />
+              today !== null && <MarketGame key={`daily-${archiveDay ?? today}`} daily dailyNumber={archiveDay ?? today} username={user?.username} onPractice={() => switchMode("practice", "market")} />
             ) : (
-              <MarketGame key="practice" daily={false} difficulty={difficulty} />
+              <MarketGame key="practice" daily={false} difficulty={difficulty} username={user?.username} />
             )}
           </div>
         </main>
@@ -947,6 +966,14 @@ export default function Game() {
             )}
             {user && !award && status !== "playing" && (
               <div className="lb-note">This puzzle didn&apos;t score (already played, or not all steps were solved in order while signed in).</div>
+            )}
+            {data && cardQuery() && (
+              <ShareCard
+                query={cardQuery()!}
+                filename={`quantdle-${data.dailyNumber && mode === "daily" ? data.dailyNumber : "practice"}.png`}
+                game="puzzle"
+                mode={mode === "daily" ? "daily" : "practice"}
+              />
             )}
             <pre className="share-preview">{shareText()}</pre>
             <button className="btn primary wide" onClick={share}>

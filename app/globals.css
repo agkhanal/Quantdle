@@ -3426,6 +3426,7 @@ main.leaving {
 .profile,
 .bug-form,
 .active-step,
+.share-card,
 .archive,
 .archive-bar,
 .btn,
@@ -4833,4 +4834,48 @@ body,
 /* a message you just sent, until the server confirms it */
 .chat-msg.pending {
   opacity: 0.6;
+}
+
+/* ───────── share card (result image) ───────── */
+
+.share-card {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.share-card-frame {
+  aspect-ratio: 1200 / 630;
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+}
+
+.share-card-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.share-card-frame.ready img {
+  opacity: 1;
+}
+
+.share-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.share-card-actions .btn {
+  flex: 1;
+}
+
+.share-card-note {
+  margin: 0;
+  text-align: center;
 }
